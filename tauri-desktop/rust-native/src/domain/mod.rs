@@ -3,4 +3,5 @@
 
 pub mod entities;
 pub mod errors;
+pub mod input_source;
 pub mod repositories;
