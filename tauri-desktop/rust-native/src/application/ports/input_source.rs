@@ -33,3 +33,17 @@ pub trait InputSourceGateway: Send {
     fn current(&self) -> Result<InputSourceId, GatewayError>;
     fn select(&mut self, id: &InputSourceId) -> Result<(), GatewayError>;
 }
+
+impl<T: InputSourceGateway + ?Sized> InputSourceGateway for Box<T> {
+    fn list(&mut self, refresh: bool) -> Result<Vec<AvailableInputSource>, GatewayError> {
+        (**self).list(refresh)
+    }
+
+    fn current(&self) -> Result<InputSourceId, GatewayError> {
+        (**self).current()
+    }
+
+    fn select(&mut self, id: &InputSourceId) -> Result<(), GatewayError> {
+        (**self).select(id)
+    }
+}

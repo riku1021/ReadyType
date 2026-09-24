@@ -1,0 +1,680 @@
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc::{self, Receiver, RecvTimeoutError, Sender},
+        Arc, Mutex, MutexGuard,
+    },
+    thread::{self, JoinHandle},
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
+
+use crate::domain::input_source::{
+    default_rules, AxAttribute, FocusRule, FocusSnapshot, InputSourceId, PlatformAppId,
+};
+
+use super::{
+    input_source_switcher::{ApplicationError, InputSourceSwitcher},
+    ports::{
+        clock::Clock,
+        focus_monitor::{AccessibilityPermission, FocusMonitor, FocusMonitorError},
+        input_source::{AvailableInputSource, InputSourceGateway},
+        settings_repository::SettingsRepository,
+        switcher_events::SwitcherEventPublisher,
+    },
+    settings::SwitcherSettings,
+    switcher_state::{SwitchLogEntry, SwitcherState},
+};
+
+type RuntimeSwitcher = InputSourceSwitcher<
+    Box<dyn InputSourceGateway>,
+    Arc<dyn SettingsRepository>,
+    Arc<dyn Clock>,
+    Arc<dyn SwitcherEventPublisher>,
+>;
+
+#[derive(Debug)]
+pub enum ControllerError {
+    Application(ApplicationError),
+    Monitor(FocusMonitorError),
+    InvalidRequest(String),
+    WorkerStopped,
+}
+
+impl fmt::Display for ControllerError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Application(error) => error.fmt(formatter),
+            Self::Monitor(error) => write!(formatter, "focus monitor error: {error:?}"),
+            Self::InvalidRequest(message) => write!(formatter, "invalid request: {message}"),
+            Self::WorkerStopped => write!(formatter, "focus worker has stopped"),
+        }
+    }
+}
+
+impl std::error::Error for ControllerError {}
+
+impl From<ApplicationError> for ControllerError {
+    fn from(value: ApplicationError) -> Self {
+        Self::Application(value)
+    }
+}
+
+impl From<FocusMonitorError> for ControllerError {
+    fn from(value: FocusMonitorError) -> Self {
+        Self::Monitor(value)
+    }
+}
+
+#[derive(Default)]
+pub struct SystemClock;
+
+impl Clock for SystemClock {
+    fn now_unix_ms(&self) -> u64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+            .try_into()
+            .unwrap_or(u64::MAX)
+    }
+}
+
+enum WorkerMessage {
+    Focus(FocusSnapshot),
+    SettingsChanged,
+    Stop,
+}
+
+pub struct SwitcherController {
+    switcher: Arc<Mutex<RuntimeSwitcher>>,
+    monitor: Mutex<Box<dyn FocusMonitor>>,
+    sender: Sender<WorkerMessage>,
+    worker: Mutex<Option<JoinHandle<()>>>,
+    monitoring: AtomicBool,
+    debug_capture: AtomicBool,
+    last_snapshot: Arc<Mutex<Option<FocusSnapshot>>>,
+}
+
+impl SwitcherController {
+    pub fn new(
+        settings: SwitcherSettings,
+        gateway: Box<dyn InputSourceGateway>,
+        repository: Arc<dyn SettingsRepository>,
+        clock: Arc<dyn Clock>,
+        publisher: Arc<dyn SwitcherEventPublisher>,
+        monitor: Box<dyn FocusMonitor>,
+    ) -> Result<Arc<Self>, ControllerError> {
+        let switcher = Arc::new(Mutex::new(InputSourceSwitcher::new(
+            settings,
+            repository_gateway(gateway),
+            repository,
+            clock,
+            publisher,
+        )?));
+        let (sender, receiver) = mpsc::channel();
+        let last_snapshot = Arc::new(Mutex::new(None));
+        let controller = Arc::new(Self {
+            switcher: Arc::clone(&switcher),
+            monitor: Mutex::new(monitor),
+            sender,
+            worker: Mutex::new(None),
+            monitoring: AtomicBool::new(false),
+            debug_capture: AtomicBool::new(false),
+            last_snapshot: Arc::clone(&last_snapshot),
+        });
+        let worker = thread::Builder::new()
+            .name("readytype-switcher".to_owned())
+            .spawn(move || run_worker(receiver, switcher, last_snapshot))
+            .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
+        *controller.lock_worker()? = Some(worker);
+        Ok(controller)
+    }
+
+    pub fn state(&self) -> Result<SwitcherState, ControllerError> {
+        Ok(self.lock_switcher()?.state().clone())
+    }
+
+    pub fn settings(&self) -> Result<SwitcherSettings, ControllerError> {
+        Ok(self.lock_switcher()?.settings().clone())
+    }
+
+    pub fn permission_status(&self) -> Result<AccessibilityPermission, ControllerError> {
+        Ok(self.lock_monitor()?.permission_status())
+    }
+
+    pub fn is_monitoring(&self) -> bool {
+        self.monitoring.load(Ordering::Acquire)
+    }
+
+    pub fn is_debug_capture_enabled(&self) -> bool {
+        self.debug_capture.load(Ordering::Acquire)
+    }
+
+    pub fn refresh_permission(
+        self: &Arc<Self>,
+    ) -> Result<AccessibilityPermission, ControllerError> {
+        let permission = self.permission_status()?;
+        match permission {
+            AccessibilityPermission::Granted if !self.is_monitoring() => self.start_monitoring()?,
+            AccessibilityPermission::Denied if self.is_monitoring() => self.stop_monitoring()?,
+            AccessibilityPermission::Granted
+            | AccessibilityPermission::Denied
+            | AccessibilityPermission::Unsupported => {}
+        }
+        Ok(permission)
+    }
+
+    pub fn request_permission(
+        self: &Arc<Self>,
+    ) -> Result<AccessibilityPermission, ControllerError> {
+        let permission = self.lock_monitor()?.request_permission()?;
+        if permission == AccessibilityPermission::Granted && !self.is_monitoring() {
+            self.start_monitoring()?;
+        }
+        Ok(permission)
+    }
+
+    pub fn open_accessibility_settings(&self) -> Result<(), ControllerError> {
+        self.lock_monitor()?.open_settings()?;
+        Ok(())
+    }
+
+    pub fn start_monitoring(self: &Arc<Self>) -> Result<(), ControllerError> {
+        if self.is_monitoring() {
+            return Ok(());
+        }
+        let attributes = required_attributes(self.lock_switcher()?.rules());
+        let sender = self.sender.clone();
+        self.lock_monitor()?.start(
+            attributes,
+            Arc::new(move |snapshot| {
+                let _ = sender.send(WorkerMessage::Focus(snapshot));
+            }),
+        )?;
+        self.monitoring.store(true, Ordering::Release);
+        Ok(())
+    }
+
+    pub fn stop_monitoring(&self) -> Result<(), ControllerError> {
+        self.lock_monitor()?.stop()?;
+        self.monitoring.store(false, Ordering::Release);
+        Ok(())
+    }
+
+    pub fn set_enabled(&self, enabled: bool) -> Result<SwitcherState, ControllerError> {
+        self.lock_switcher()?.set_enabled(enabled)?;
+        self.state()
+    }
+
+    pub fn set_snooze_minutes(&self, minutes: u64) -> Result<SwitcherState, ControllerError> {
+        self.lock_switcher()?.snooze_for_minutes(minutes)?;
+        self.wake_worker()?;
+        self.state()
+    }
+
+    pub fn resume(&self) -> Result<SwitcherState, ControllerError> {
+        self.lock_switcher()?.set_snoozed_until(None)?;
+        self.wake_worker()?;
+        self.state()
+    }
+
+    pub fn list_input_sources(
+        &self,
+        refresh: bool,
+    ) -> Result<Vec<AvailableInputSource>, ControllerError> {
+        Ok(self.lock_switcher()?.list_input_sources(refresh)?)
+    }
+
+    pub fn rules(&self) -> Result<Vec<FocusRule>, ControllerError> {
+        Ok(self.lock_switcher()?.rules().to_vec())
+    }
+
+    pub fn create_rule(
+        self: &Arc<Self>,
+        rule: FocusRule,
+    ) -> Result<SwitcherState, ControllerError> {
+        let mut rules = self.rules()?;
+        rules.push(rule);
+        self.replace_rules(rules)
+    }
+
+    pub fn update_rule(
+        self: &Arc<Self>,
+        rule: FocusRule,
+    ) -> Result<SwitcherState, ControllerError> {
+        let mut rules = self.rules()?;
+        let target = rules
+            .iter_mut()
+            .find(|candidate| candidate.id() == rule.id())
+            .ok_or_else(|| ControllerError::InvalidRequest("rule not found".to_owned()))?;
+        *target = rule;
+        self.replace_rules(rules)
+    }
+
+    pub fn delete_rule(self: &Arc<Self>, id: &str) -> Result<SwitcherState, ControllerError> {
+        let mut rules = self.rules()?;
+        let previous_len = rules.len();
+        rules.retain(|rule| rule.id() != id);
+        if rules.len() == previous_len {
+            return Err(ControllerError::InvalidRequest("rule not found".to_owned()));
+        }
+        self.replace_rules(rules)
+    }
+
+    pub fn reorder_rules(
+        self: &Arc<Self>,
+        ids: &[String],
+    ) -> Result<SwitcherState, ControllerError> {
+        let rules = self.rules()?;
+        if ids.len() != rules.len() || ids.iter().collect::<HashSet<_>>().len() != ids.len() {
+            return Err(ControllerError::InvalidRequest(
+                "rule order must contain every rule exactly once".to_owned(),
+            ));
+        }
+        let mut by_id: HashMap<String, FocusRule> = rules
+            .into_iter()
+            .map(|rule| (rule.id().to_owned(), rule))
+            .collect();
+        let reordered = ids
+            .iter()
+            .enumerate()
+            .map(|(priority, id)| {
+                let rule = by_id
+                    .remove(id)
+                    .ok_or_else(|| ControllerError::InvalidRequest("unknown rule id".to_owned()))?;
+                with_priority(rule, u32::try_from(priority).unwrap_or(u32::MAX))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        if !by_id.is_empty() {
+            return Err(ControllerError::InvalidRequest(
+                "rule order omitted an existing rule".to_owned(),
+            ));
+        }
+        self.replace_rules(reordered)
+    }
+
+    pub fn reset_default_rules(self: &Arc<Self>) -> Result<SwitcherState, ControllerError> {
+        self.replace_rules(default_rules())
+    }
+
+    pub fn update_input_source_preferences(
+        &self,
+        english: InputSourceId,
+        japanese: InputSourceId,
+    ) -> Result<SwitcherState, ControllerError> {
+        self.lock_switcher()?
+            .update_input_source_preferences(english, japanese)?;
+        self.state()
+    }
+
+    pub fn set_debug_capture(&self, enabled: bool) -> Result<SwitcherState, ControllerError> {
+        self.lock_monitor()?.set_debug_capture(enabled)?;
+        self.debug_capture.store(enabled, Ordering::Release);
+        self.state()
+    }
+
+    pub fn set_debug_logging(&self, enabled: bool) -> Result<SwitcherState, ControllerError> {
+        self.lock_switcher()?.set_debug_logging(enabled)?;
+        self.state()
+    }
+
+    pub fn focus_snapshot(&self) -> Result<Option<FocusSnapshot>, ControllerError> {
+        Ok(self.lock_last_snapshot()?.clone())
+    }
+
+    pub fn logs(&self) -> Result<Vec<SwitchLogEntry>, ControllerError> {
+        Ok(self.lock_switcher()?.state().logs.clone())
+    }
+
+    pub fn clear_logs(&self) -> Result<SwitcherState, ControllerError> {
+        self.lock_switcher()?.clear_logs();
+        self.state()
+    }
+
+    fn replace_rules(
+        self: &Arc<Self>,
+        rules: Vec<FocusRule>,
+    ) -> Result<SwitcherState, ControllerError> {
+        self.lock_switcher()?.replace_rules(rules)?;
+        if self.is_monitoring() {
+            self.stop_monitoring()?;
+            self.start_monitoring()?;
+        }
+        self.wake_worker()?;
+        self.state()
+    }
+
+    fn wake_worker(&self) -> Result<(), ControllerError> {
+        self.sender
+            .send(WorkerMessage::SettingsChanged)
+            .map_err(|_| ControllerError::WorkerStopped)
+    }
+
+    fn lock_switcher(&self) -> Result<MutexGuard<'_, RuntimeSwitcher>, ControllerError> {
+        self.switcher
+            .lock()
+            .map_err(|_| ControllerError::WorkerStopped)
+    }
+
+    fn lock_monitor(&self) -> Result<MutexGuard<'_, Box<dyn FocusMonitor>>, ControllerError> {
+        self.monitor
+            .lock()
+            .map_err(|_| ControllerError::WorkerStopped)
+    }
+
+    fn lock_worker(&self) -> Result<MutexGuard<'_, Option<JoinHandle<()>>>, ControllerError> {
+        self.worker
+            .lock()
+            .map_err(|_| ControllerError::WorkerStopped)
+    }
+
+    fn lock_last_snapshot(&self) -> Result<MutexGuard<'_, Option<FocusSnapshot>>, ControllerError> {
+        self.last_snapshot
+            .lock()
+            .map_err(|_| ControllerError::WorkerStopped)
+    }
+}
+
+impl Drop for SwitcherController {
+    fn drop(&mut self) {
+        let _ = self.monitor.get_mut().map(|monitor| monitor.stop());
+        let _ = self.sender.send(WorkerMessage::Stop);
+        if let Ok(worker) = self.worker.get_mut() {
+            if let Some(worker) = worker.take() {
+                let _ = worker.join();
+            }
+        }
+    }
+}
+
+fn repository_gateway(gateway: Box<dyn InputSourceGateway>) -> Box<dyn InputSourceGateway> {
+    gateway
+}
+
+fn run_worker(
+    receiver: Receiver<WorkerMessage>,
+    switcher: Arc<Mutex<RuntimeSwitcher>>,
+    last_snapshot: Arc<Mutex<Option<FocusSnapshot>>>,
+) {
+    let mut active: Option<(PlatformAppId, u64)> = None;
+    loop {
+        let wait = switcher
+            .lock()
+            .ok()
+            .and_then(|switcher| switcher.snooze_remaining_ms())
+            .map(Duration::from_millis);
+        let message = match wait {
+            Some(wait) => receiver.recv_timeout(wait),
+            None => receiver.recv().map_err(|_| RecvTimeoutError::Disconnected),
+        };
+        match message {
+            Ok(WorkerMessage::Focus(snapshot)) => {
+                if let Ok(mut latest) = last_snapshot.lock() {
+                    *latest = Some(snapshot.clone());
+                }
+                let key = (snapshot.app().clone(), snapshot.generation());
+                if let Ok(mut switcher) = switcher.lock() {
+                    if active.as_ref() != Some(&key) {
+                        let _ = switcher.activate(key.0.clone(), key.1);
+                        active = Some(key);
+                    }
+                    let _ = switcher.handle_focus(snapshot);
+                }
+            }
+            Ok(WorkerMessage::SettingsChanged) => {}
+            Ok(WorkerMessage::Stop) | Err(RecvTimeoutError::Disconnected) => break,
+            Err(RecvTimeoutError::Timeout) => {
+                if let Ok(mut switcher) = switcher.lock() {
+                    let _ = switcher.resume_if_due();
+                }
+            }
+        }
+    }
+}
+
+fn required_attributes(rules: &[FocusRule]) -> Vec<AxAttribute> {
+    let mut seen = HashSet::new();
+    rules
+        .iter()
+        .filter(|rule| rule.enabled())
+        .flat_map(|rule| rule.conditions())
+        .map(|condition| condition.attribute())
+        .filter(|attribute| seen.insert(*attribute))
+        .collect()
+}
+
+fn with_priority(rule: FocusRule, priority: u32) -> Result<FocusRule, ControllerError> {
+    FocusRule::new(
+        rule.id(),
+        rule.name(),
+        rule.enabled(),
+        rule.platform(),
+        rule.app_id(),
+        priority,
+        rule.conditions().to_vec(),
+        rule.target().clone(),
+    )
+    .map_err(|error| ControllerError::InvalidRequest(error.to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::{
+        atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
+        Arc,
+    };
+
+    use super::SwitcherController;
+    use crate::{
+        application::{
+            ports::{
+                clock::Clock,
+                focus_monitor::{
+                    AccessibilityPermission, FocusEventSink, FocusMonitor, FocusMonitorError,
+                },
+                input_source::{AvailableInputSource, GatewayError, InputSourceGateway},
+                settings_repository::{LoadOutcome, SettingsError, SettingsRepository},
+                switcher_events::SwitcherEventPublisher,
+            },
+            settings::SwitcherSettings,
+            switcher_state::SwitcherState,
+        },
+        domain::input_source::{AxAttribute, InputSourceId},
+    };
+
+    struct FakeGateway;
+
+    impl InputSourceGateway for FakeGateway {
+        fn list(&mut self, _refresh: bool) -> Result<Vec<AvailableInputSource>, GatewayError> {
+            Ok(Vec::new())
+        }
+
+        fn current(&self) -> Result<InputSourceId, GatewayError> {
+            InputSourceId::parse("en").map_err(|error| GatewayError::Operation(error.to_string()))
+        }
+
+        fn select(&mut self, _id: &InputSourceId) -> Result<(), GatewayError> {
+            Ok(())
+        }
+    }
+
+    struct FakeRepository;
+
+    impl SettingsRepository for FakeRepository {
+        fn load(&self) -> Result<LoadOutcome, SettingsError> {
+            Ok(LoadOutcome::Defaults {
+                settings: SwitcherSettings::defaults(),
+            })
+        }
+
+        fn save(&self, _settings: &SwitcherSettings) -> Result<(), SettingsError> {
+            Ok(())
+        }
+    }
+
+    struct FakeClock(AtomicU64);
+
+    impl Clock for FakeClock {
+        fn now_unix_ms(&self) -> u64 {
+            self.0.load(Ordering::Acquire)
+        }
+    }
+
+    struct NoopPublisher;
+
+    impl SwitcherEventPublisher for NoopPublisher {
+        fn publish(&self, _state: &SwitcherState) {}
+    }
+
+    #[derive(Default)]
+    struct MonitorData {
+        trusted: AtomicBool,
+        starts: AtomicUsize,
+        stops: AtomicUsize,
+    }
+
+    struct FakeMonitor(Arc<MonitorData>);
+
+    impl FocusMonitor for FakeMonitor {
+        fn start(
+            &mut self,
+            _attributes: Vec<AxAttribute>,
+            _sink: FocusEventSink,
+        ) -> Result<(), FocusMonitorError> {
+            self.0.starts.fetch_add(1, Ordering::AcqRel);
+            Ok(())
+        }
+
+        fn stop(&mut self) -> Result<(), FocusMonitorError> {
+            self.0.stops.fetch_add(1, Ordering::AcqRel);
+            Ok(())
+        }
+
+        fn set_debug_capture(&mut self, _enabled: bool) -> Result<(), FocusMonitorError> {
+            Ok(())
+        }
+
+        fn permission_status(&self) -> AccessibilityPermission {
+            if self.0.trusted.load(Ordering::Acquire) {
+                AccessibilityPermission::Granted
+            } else {
+                AccessibilityPermission::Denied
+            }
+        }
+
+        fn request_permission(&self) -> Result<AccessibilityPermission, FocusMonitorError> {
+            Ok(self.permission_status())
+        }
+
+        fn open_settings(&self) -> Result<(), FocusMonitorError> {
+            Ok(())
+        }
+    }
+
+    fn controller(monitor: Arc<MonitorData>) -> Arc<SwitcherController> {
+        SwitcherController::new(
+            SwitcherSettings::defaults(),
+            Box::new(FakeGateway),
+            Arc::new(FakeRepository),
+            Arc::new(FakeClock(AtomicU64::new(1_000))),
+            Arc::new(NoopPublisher),
+            Box::new(FakeMonitor(monitor)),
+        )
+        .expect("controller")
+    }
+
+    #[test]
+    fn permission_restoration_restarts_monitoring_without_process_restart() {
+        let monitor = Arc::new(MonitorData::default());
+        let controller = controller(Arc::clone(&monitor));
+        controller.refresh_permission().expect("denied state");
+        monitor.trusted.store(true, Ordering::Release);
+
+        controller.refresh_permission().expect("restart");
+
+        assert_eq!(monitor.starts.load(Ordering::Acquire), 1);
+        assert!(controller.is_monitoring());
+    }
+
+    #[test]
+    fn permission_revocation_stops_monitoring_without_terminating_controller() {
+        let monitor = Arc::new(MonitorData::default());
+        monitor.trusted.store(true, Ordering::Release);
+        let controller = controller(Arc::clone(&monitor));
+        controller.refresh_permission().expect("start");
+        monitor.trusted.store(false, Ordering::Release);
+
+        controller.refresh_permission().expect("stop");
+
+        assert_eq!(monitor.stops.load(Ordering::Acquire), 1);
+        assert!(!controller.is_monitoring());
+        assert!(controller.state().is_ok());
+    }
+
+    #[test]
+    fn rules_can_be_deleted_reordered_and_reset() {
+        let controller = controller(Arc::new(MonitorData::default()));
+        let first_id = controller.rules().expect("rules")[0].id().to_owned();
+        controller.delete_rule(&first_id).expect("delete");
+        let mut ids: Vec<_> = controller
+            .rules()
+            .expect("rules")
+            .iter()
+            .map(|rule| rule.id().to_owned())
+            .collect();
+        ids.reverse();
+        controller.reorder_rules(&ids).expect("reorder");
+        assert_eq!(controller.rules().expect("rules")[0].id(), ids[0]);
+
+        controller.reset_default_rules().expect("reset");
+        assert!(controller
+            .rules()
+            .expect("rules")
+            .iter()
+            .any(|rule| rule.id() == first_id));
+    }
+
+    #[test]
+    fn preferences_debug_options_and_duplicate_rules_are_validated() {
+        let controller = controller(Arc::new(MonitorData::default()));
+        controller
+            .update_input_source_preferences(
+                InputSourceId::parse("english.custom").expect("english"),
+                InputSourceId::parse("japanese.custom").expect("japanese"),
+            )
+            .expect("preferences");
+        controller.set_debug_logging(true).expect("debug logging");
+        controller.set_debug_capture(true).expect("capture");
+        let settings = controller.settings().expect("settings");
+        assert_eq!(settings.preferred_english.as_str(), "english.custom");
+        assert_eq!(settings.preferred_japanese.as_str(), "japanese.custom");
+        assert!(settings.debug_logging);
+        assert!(controller.is_debug_capture_enabled());
+
+        let duplicate = controller.rules().expect("rules")[0].clone();
+        assert!(controller.create_rule(duplicate).is_err());
+        controller.clear_logs().expect("clear logs");
+        assert!(controller.logs().expect("logs").is_empty());
+    }
+
+    #[test]
+    fn zero_minute_snooze_expires_without_a_focus_event() {
+        let controller = controller(Arc::new(MonitorData::default()));
+        controller.set_snooze_minutes(0).expect("snooze");
+
+        for _ in 0..100 {
+            if controller
+                .state()
+                .expect("state")
+                .snoozed_until_unix_ms
+                .is_none()
+            {
+                return;
+            }
+            std::thread::yield_now();
+        }
+        panic!("snooze did not expire");
+    }
+}

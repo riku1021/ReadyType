@@ -113,6 +113,79 @@ where
         self.rules.rules()
     }
 
+    pub fn settings(&self) -> &SwitcherSettings {
+        &self.settings
+    }
+
+    pub fn list_input_sources(
+        &mut self,
+        refresh: bool,
+    ) -> Result<Vec<super::ports::input_source::AvailableInputSource>, ApplicationError> {
+        self.gateway.list(refresh).map_err(ApplicationError::from)
+    }
+
+    pub fn set_enabled(&mut self, enabled: bool) -> Result<(), ApplicationError> {
+        let mut candidate = self.settings.clone();
+        candidate.enabled = enabled;
+        self.commit_settings(candidate, None)
+    }
+
+    pub fn set_snoozed_until(
+        &mut self,
+        deadline_unix_ms: Option<u64>,
+    ) -> Result<(), ApplicationError> {
+        let mut candidate = self.settings.clone();
+        candidate.snoozed_until_unix_ms = deadline_unix_ms;
+        self.commit_settings(candidate, None)
+    }
+
+    pub fn snooze_for_minutes(&mut self, minutes: u64) -> Result<(), ApplicationError> {
+        let deadline = self
+            .clock
+            .now_unix_ms()
+            .saturating_add(minutes.saturating_mul(60_000));
+        self.set_snoozed_until(Some(deadline))
+    }
+
+    pub fn resume_if_due(&mut self) -> Result<bool, ApplicationError> {
+        let Some(deadline) = self.settings.snoozed_until_unix_ms else {
+            return Ok(false);
+        };
+        if deadline > self.clock.now_unix_ms() {
+            return Ok(false);
+        }
+        self.set_snoozed_until(None)?;
+        Ok(true)
+    }
+
+    pub fn snooze_remaining_ms(&self) -> Option<u64> {
+        self.settings
+            .snoozed_until_unix_ms
+            .map(|deadline| deadline.saturating_sub(self.clock.now_unix_ms()))
+    }
+
+    pub fn update_input_source_preferences(
+        &mut self,
+        preferred_english: InputSourceId,
+        preferred_japanese: InputSourceId,
+    ) -> Result<(), ApplicationError> {
+        let mut candidate = self.settings.clone();
+        candidate.preferred_english = preferred_english;
+        candidate.preferred_japanese = preferred_japanese;
+        self.commit_settings(candidate, None)
+    }
+
+    pub fn set_debug_logging(&mut self, enabled: bool) -> Result<(), ApplicationError> {
+        let mut candidate = self.settings.clone();
+        candidate.debug_logging = enabled;
+        self.commit_settings(candidate, None)
+    }
+
+    pub fn clear_logs(&mut self) {
+        self.state.logs.clear();
+        self.bump_and_publish();
+    }
+
     pub fn activate(
         &mut self,
         app: PlatformAppId,
@@ -203,13 +276,23 @@ where
             .map_err(|error| ApplicationError::InvalidSettings(error.to_string()))?;
         let mut candidate = self.settings.clone();
         candidate.rules = rules;
+        self.commit_settings(candidate, Some(validated))
+    }
+
+    fn commit_settings(
+        &mut self,
+        candidate: SwitcherSettings,
+        validated_rules: Option<RuleSet>,
+    ) -> Result<(), ApplicationError> {
         candidate
             .validate()
             .map_err(|error| ApplicationError::InvalidSettings(error.to_string()))?;
         self.repository.save(&candidate)?;
         self.settings = candidate;
-        self.rules = validated;
-        self.state.rules_version = self.state.rules_version.saturating_add(1);
+        if let Some(rules) = validated_rules {
+            self.rules = rules;
+            self.state.rules_version = self.state.rules_version.saturating_add(1);
+        }
         self.bump_and_publish();
         Ok(())
     }

@@ -1,0 +1,461 @@
+use serde::{Deserialize, Serialize};
+
+use crate::{
+    application::{
+        input_source_switcher::SwitchDecision,
+        ports::{focus_monitor::AccessibilityPermission, input_source::AvailableInputSource},
+        settings::SwitcherSettings,
+        switcher_state::{SwitchLogEntry, SwitcherState},
+    },
+    domain::input_source::{
+        AxAttribute, AxElementSnapshot, FocusRule, FocusSnapshot, InputSourceId, MatchOperator,
+        Platform, RuleCondition, RuleTarget, SearchScope,
+    },
+};
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StateDto {
+    pub version: u64,
+    pub rules_version: u64,
+    pub enabled: bool,
+    pub snoozed_until_unix_ms: Option<u64>,
+    pub current_app: Option<AppDto>,
+    pub matched_rule_id: Option<String>,
+    pub current_input_source_id: Option<String>,
+    pub target_input_source_id: Option<String>,
+    pub last_decision: Option<DecisionDto>,
+}
+
+impl From<&SwitcherState> for StateDto {
+    fn from(state: &SwitcherState) -> Self {
+        Self {
+            version: state.version,
+            rules_version: state.rules_version,
+            enabled: state.enabled,
+            snoozed_until_unix_ms: state.snoozed_until_unix_ms,
+            current_app: state.current_app.as_ref().map(AppDto::from),
+            matched_rule_id: state.matched_rule_id.clone(),
+            current_input_source_id: state
+                .current_input_source
+                .as_ref()
+                .map(|id| id.as_str().to_owned()),
+            target_input_source_id: state
+                .target_input_source
+                .as_ref()
+                .map(|id| id.as_str().to_owned()),
+            last_decision: state.last_decision.map(DecisionDto::from),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StateEventDto {
+    pub version: u64,
+    pub state: StateDto,
+}
+
+impl From<&SwitcherState> for StateEventDto {
+    fn from(state: &SwitcherState) -> Self {
+        Self {
+            version: state.version,
+            state: StateDto::from(state),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppDto {
+    pub platform: PlatformDto,
+    pub app_id: String,
+    pub pid: i32,
+}
+
+impl From<&crate::domain::input_source::PlatformAppId> for AppDto {
+    fn from(app: &crate::domain::input_source::PlatformAppId) -> Self {
+        Self {
+            platform: PlatformDto::from(app.platform()),
+            app_id: app.app_id().to_owned(),
+            pid: app.pid(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum PlatformDto {
+    MacOs,
+    Windows,
+    Linux,
+}
+
+impl From<Platform> for PlatformDto {
+    fn from(platform: Platform) -> Self {
+        match platform {
+            Platform::MacOs => Self::MacOs,
+            Platform::Windows => Self::Windows,
+            Platform::Linux => Self::Linux,
+        }
+    }
+}
+
+impl From<PlatformDto> for Platform {
+    fn from(platform: PlatformDto) -> Self {
+        match platform {
+            PlatformDto::MacOs => Self::MacOs,
+            PlatformDto::Windows => Self::Windows,
+            PlatformDto::Linux => Self::Linux,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum DecisionDto {
+    Ignored,
+    Disabled,
+    Snoozed,
+    NoRule,
+    AlreadySelected,
+    Switched,
+}
+
+impl From<SwitchDecision> for DecisionDto {
+    fn from(decision: SwitchDecision) -> Self {
+        match decision {
+            SwitchDecision::Ignored => Self::Ignored,
+            SwitchDecision::Disabled => Self::Disabled,
+            SwitchDecision::Snoozed => Self::Snoozed,
+            SwitchDecision::NoRule => Self::NoRule,
+            SwitchDecision::AlreadySelected => Self::AlreadySelected,
+            SwitchDecision::Switched => Self::Switched,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum PermissionDto {
+    Granted,
+    Denied,
+    Unsupported,
+}
+
+impl From<AccessibilityPermission> for PermissionDto {
+    fn from(permission: AccessibilityPermission) -> Self {
+        match permission {
+            AccessibilityPermission::Granted => Self::Granted,
+            AccessibilityPermission::Denied => Self::Denied,
+            AccessibilityPermission::Unsupported => Self::Unsupported,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InputSourceDto {
+    pub id: String,
+    pub name: String,
+    pub available: bool,
+}
+
+impl From<AvailableInputSource> for InputSourceDto {
+    fn from(source: AvailableInputSource) -> Self {
+        Self {
+            id: source.id.as_str().to_owned(),
+            name: source.name,
+            available: source.available,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RuleDto {
+    pub id: String,
+    pub name: String,
+    pub enabled: bool,
+    pub platform: PlatformDto,
+    pub app_id: String,
+    pub priority: u32,
+    pub conditions: Vec<ConditionDto>,
+    pub target: RuleTargetDto,
+}
+
+impl TryFrom<RuleDto> for FocusRule {
+    type Error = String;
+
+    fn try_from(rule: RuleDto) -> Result<Self, Self::Error> {
+        let conditions = rule
+            .conditions
+            .into_iter()
+            .map(RuleCondition::try_from)
+            .collect::<Result<Vec<_>, _>>()?;
+        FocusRule::new(
+            &rule.id,
+            &rule.name,
+            rule.enabled,
+            rule.platform.into(),
+            &rule.app_id,
+            rule.priority,
+            conditions,
+            rule.target.try_into()?,
+        )
+        .map_err(|error| error.to_string())
+    }
+}
+
+impl From<&FocusRule> for RuleDto {
+    fn from(rule: &FocusRule) -> Self {
+        Self {
+            id: rule.id().to_owned(),
+            name: rule.name().to_owned(),
+            enabled: rule.enabled(),
+            platform: rule.platform().into(),
+            app_id: rule.app_id().to_owned(),
+            priority: rule.priority(),
+            conditions: rule.conditions().iter().map(ConditionDto::from).collect(),
+            target: RuleTargetDto::from(rule.target()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConditionDto {
+    pub attribute: AxAttributeDto,
+    pub operator: MatchOperatorDto,
+    pub scope: SearchScopeDto,
+    pub value: String,
+}
+
+impl TryFrom<ConditionDto> for RuleCondition {
+    type Error = String;
+
+    fn try_from(condition: ConditionDto) -> Result<Self, Self::Error> {
+        RuleCondition::new(
+            condition.attribute.into(),
+            condition.operator.into(),
+            condition.scope.into(),
+            &condition.value,
+        )
+        .map_err(|error| error.to_string())
+    }
+}
+
+impl From<&RuleCondition> for ConditionDto {
+    fn from(condition: &RuleCondition) -> Self {
+        Self {
+            attribute: condition.attribute().into(),
+            operator: condition.operator().into(),
+            scope: condition.scope().into(),
+            value: condition.value().to_owned(),
+        }
+    }
+}
+
+macro_rules! wire_enum {
+    ($wire:ident, $domain:ty, { $($variant:ident),+ $(,)? }) => {
+        #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        pub enum $wire { $($variant),+ }
+
+        impl From<$wire> for $domain {
+            fn from(value: $wire) -> Self {
+                match value { $($wire::$variant => Self::$variant),+ }
+            }
+        }
+
+        impl From<$domain> for $wire {
+            fn from(value: $domain) -> Self {
+                match value { $(<$domain>::$variant => Self::$variant),+ }
+            }
+        }
+    };
+}
+
+wire_enum!(AxAttributeDto, AxAttribute, {
+    Role,
+    Subrole,
+    RoleDescription,
+    Title,
+    Description,
+    Identifier,
+    DomIdentifier,
+    Help,
+});
+wire_enum!(MatchOperatorDto, MatchOperator, { Equals, Contains });
+wire_enum!(SearchScopeDto, SearchScope, {
+    FocusedOnly,
+    FocusedAndAncestors,
+});
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum RuleTargetDto {
+    PreferredEnglish,
+    PreferredJapanese,
+    Exact { input_source_id: String },
+}
+
+impl TryFrom<RuleTargetDto> for RuleTarget {
+    type Error = String;
+
+    fn try_from(target: RuleTargetDto) -> Result<Self, Self::Error> {
+        match target {
+            RuleTargetDto::PreferredEnglish => Ok(Self::PreferredEnglish),
+            RuleTargetDto::PreferredJapanese => Ok(Self::PreferredJapanese),
+            RuleTargetDto::Exact { input_source_id } => InputSourceId::parse(&input_source_id)
+                .map(Self::Exact)
+                .map_err(|error| error.to_string()),
+        }
+    }
+}
+
+impl From<&RuleTarget> for RuleTargetDto {
+    fn from(target: &RuleTarget) -> Self {
+        match target {
+            RuleTarget::PreferredEnglish => Self::PreferredEnglish,
+            RuleTarget::PreferredJapanese => Self::PreferredJapanese,
+            RuleTarget::Exact(id) => Self::Exact {
+                input_source_id: id.as_str().to_owned(),
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SettingsDto {
+    pub preferred_english: String,
+    pub preferred_japanese: String,
+    pub debug_logging: bool,
+}
+
+impl From<&SwitcherSettings> for SettingsDto {
+    fn from(settings: &SwitcherSettings) -> Self {
+        Self {
+            preferred_english: settings.preferred_english.as_str().to_owned(),
+            preferred_japanese: settings.preferred_japanese.as_str().to_owned(),
+            debug_logging: settings.debug_logging,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SwitchLogDto {
+    pub timestamp_unix_ms: u64,
+    pub app_id: String,
+    pub rule_id: String,
+    pub from: String,
+    pub to: String,
+    pub success: bool,
+    pub reason: String,
+    pub processing_micros: u64,
+}
+
+impl From<SwitchLogEntry> for SwitchLogDto {
+    fn from(log: SwitchLogEntry) -> Self {
+        Self {
+            timestamp_unix_ms: log.timestamp_unix_ms,
+            app_id: log.app_id,
+            rule_id: log.rule_id,
+            from: log.from.as_str().to_owned(),
+            to: log.to.as_str().to_owned(),
+            success: log.success,
+            reason: log.reason,
+            processing_micros: log.processing_micros,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FocusSnapshotDto {
+    pub app: AppDto,
+    pub generation: u64,
+    pub elements: Vec<AxElementDto>,
+}
+
+impl From<&FocusSnapshot> for FocusSnapshotDto {
+    fn from(snapshot: &FocusSnapshot) -> Self {
+        Self {
+            app: snapshot.app().into(),
+            generation: snapshot.generation(),
+            elements: snapshot.elements().iter().map(AxElementDto::from).collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AxElementDto {
+    pub role: String,
+    pub subrole: String,
+    pub role_description: String,
+    pub title: String,
+    pub description: String,
+    pub identifier: String,
+    pub dom_identifier: String,
+    pub help: String,
+}
+
+impl From<&AxElementSnapshot> for AxElementDto {
+    fn from(element: &AxElementSnapshot) -> Self {
+        Self {
+            role: element.value(AxAttribute::Role).to_owned(),
+            subrole: element.value(AxAttribute::Subrole).to_owned(),
+            role_description: element.value(AxAttribute::RoleDescription).to_owned(),
+            title: element.value(AxAttribute::Title).to_owned(),
+            description: element.value(AxAttribute::Description).to_owned(),
+            identifier: element.value(AxAttribute::Identifier).to_owned(),
+            dom_identifier: element.value(AxAttribute::DomIdentifier).to_owned(),
+            help: element.value(AxAttribute::Help).to_owned(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{RuleDto, StateDto};
+    use crate::{
+        application::switcher_state::SwitcherState,
+        domain::input_source::{Platform, PlatformAppId},
+    };
+
+    #[test]
+    fn dto_uses_camel_case_and_preserves_state_version() {
+        let mut state = SwitcherState::new(true, None);
+        state.version = 9;
+        state.current_app =
+            Some(PlatformAppId::new(Platform::MacOs, "com.example", 42).expect("valid app"));
+        let json = serde_json::to_value(StateDto::from(&state)).expect("serialize");
+        assert_eq!(json["version"], 9);
+        assert!(json.get("currentApp").is_some());
+        assert!(json.get("current_app").is_none());
+    }
+
+    #[test]
+    fn invalid_rule_dto_is_rejected() {
+        let json = serde_json::json!({
+            "id": "rule",
+            "name": "Rule",
+            "enabled": true,
+            "platform": "macOs",
+            "appId": "com.example",
+            "priority": 0,
+            "conditions": [{
+                "attribute": "role",
+                "operator": "equals",
+                "scope": "focusedOnly",
+                "value": " "
+            }],
+            "target": { "kind": "preferredEnglish" }
+        });
+        let dto: RuleDto = serde_json::from_value(json).expect("wire shape");
+        assert!(crate::domain::input_source::FocusRule::try_from(dto).is_err());
+    }
+}

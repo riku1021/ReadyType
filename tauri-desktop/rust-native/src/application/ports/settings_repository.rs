@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::{fmt, path::Path};
 
 use crate::application::settings::SwitcherSettings;
@@ -65,4 +66,14 @@ impl LoadOutcome {
 pub trait SettingsRepository: Send + Sync {
     fn load(&self) -> Result<LoadOutcome, SettingsError>;
     fn save(&self, settings: &SwitcherSettings) -> Result<(), SettingsError>;
+}
+
+impl<T: SettingsRepository + ?Sized> SettingsRepository for Arc<T> {
+    fn load(&self) -> Result<LoadOutcome, SettingsError> {
+        (**self).load()
+    }
+
+    fn save(&self, settings: &SwitcherSettings) -> Result<(), SettingsError> {
+        (**self).save(settings)
+    }
 }
