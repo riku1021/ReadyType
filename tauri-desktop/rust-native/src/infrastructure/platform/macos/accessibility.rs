@@ -1,0 +1,95 @@
+use std::ptr::NonNull;
+
+use objc2_application_services::{
+    kAXTrustedCheckOptionPrompt, AXError, AXIsProcessTrusted, AXIsProcessTrustedWithOptions,
+    AXUIElement,
+};
+use objc2_core_foundation::{CFBoolean, CFDictionary, CFRetained, CFString, CFType};
+
+use crate::domain::input_source::{AxAttribute, AxElementSnapshot};
+
+use super::super::focus_monitor::{AttributePlan, MAX_PARENT_DEPTH};
+
+const FOCUSED_ELEMENT: &str = "AXFocusedUIElement";
+const PARENT: &str = "AXParent";
+
+pub fn is_process_trusted() -> bool {
+    // SAFETY: this function has no parameters and only reads the current process trust state.
+    unsafe { AXIsProcessTrusted() }
+}
+
+pub fn request_process_trust() -> bool {
+    let prompt = unsafe { kAXTrustedCheckOptionPrompt };
+    let enabled = CFBoolean::new(true);
+    let options = CFDictionary::from_slices(&[prompt], &[enabled]);
+    // SAFETY: type erasure preserves the CFDictionary object and its entries.
+    let options: CFRetained<CFDictionary> = unsafe { CFRetained::cast_unchecked(options) };
+    // SAFETY: the dictionary uses the documented CFString key and CFBoolean value.
+    unsafe { AXIsProcessTrustedWithOptions(Some(&options)) }
+}
+
+pub fn application_element(pid: i32) -> CFRetained<AXUIElement> {
+    // SAFETY: AXUIElementCreateApplication accepts any process identifier and returns an owned ref.
+    unsafe { AXUIElement::new_application(pid) }
+}
+
+pub fn snapshot_elements(
+    application: &AXUIElement,
+    plan: &AttributePlan,
+) -> Vec<AxElementSnapshot> {
+    let Some(mut current) = copy_element(application, FOCUSED_ELEMENT) else {
+        return Vec::new();
+    };
+    let mut result = Vec::with_capacity(MAX_PARENT_DEPTH);
+    for _ in 0..MAX_PARENT_DEPTH {
+        let mut snapshot = AxElementSnapshot::new();
+        for attribute in plan.attributes() {
+            if let Some(value) = copy_string(&current, attribute_name(*attribute)) {
+                snapshot = snapshot.with(*attribute, value);
+            }
+        }
+        result.push(snapshot);
+        let Some(parent) = copy_element(&current, PARENT) else {
+            break;
+        };
+        current = parent;
+    }
+    result
+}
+
+fn attribute_name(attribute: AxAttribute) -> &'static str {
+    match attribute {
+        AxAttribute::Role => "AXRole",
+        AxAttribute::Subrole => "AXSubrole",
+        AxAttribute::RoleDescription => "AXRoleDescription",
+        AxAttribute::Title => "AXTitle",
+        AxAttribute::Description => "AXDescription",
+        AxAttribute::Identifier => "AXIdentifier",
+        AxAttribute::DomIdentifier => "AXDOMIdentifier",
+        AxAttribute::Help => "AXHelp",
+    }
+}
+
+fn copy_value(element: &AXUIElement, name: &'static str) -> Option<CFRetained<CFType>> {
+    let name = CFString::from_static_str(name);
+    let mut value = std::ptr::null();
+    // SAFETY: `value` is a valid out pointer and the returned create-rule object is owned below.
+    let error = unsafe { element.copy_attribute_value(&name, NonNull::from(&mut value)) };
+    if error != AXError::Success {
+        return None;
+    }
+    let value = NonNull::new(value.cast_mut())?;
+    // SAFETY: a successful AX copy call returns a non-null create-rule CF object.
+    Some(unsafe { CFRetained::from_raw(value) })
+}
+
+fn copy_element(element: &AXUIElement, name: &'static str) -> Option<CFRetained<AXUIElement>> {
+    copy_value(element, name)?.downcast().ok()
+}
+
+fn copy_string(element: &AXUIElement, name: &'static str) -> Option<String> {
+    copy_value(element, name)?
+        .downcast::<CFString>()
+        .ok()
+        .map(|value| value.to_string())
+}

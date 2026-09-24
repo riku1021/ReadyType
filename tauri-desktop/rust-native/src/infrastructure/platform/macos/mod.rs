@@ -1,8 +1,11 @@
 //! macOS-specific infrastructure adapters.
 
+mod accessibility;
+mod focus_monitor;
 mod tis;
 mod window_chrome;
 
+pub use focus_monitor::MacOsFocusMonitor;
 pub use tis::SystemTisBackend;
 pub use window_chrome::set_window_background_main;
 
