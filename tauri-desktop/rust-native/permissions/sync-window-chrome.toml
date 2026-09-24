@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-sync-window-chrome-theme"
+description = "Allows syncing the native window chrome background with the UI theme"
+commands.allow = ["sync_window_chrome_theme"]

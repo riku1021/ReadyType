@@ -1,0 +1,59 @@
+# mise tasks for ReadyType (Tauri + React)
+# Run with: mise run <task>
+# Paths: see [env] in .mise.toml (TAURI_APP_PATH / TAURI_FRONTEND_PATH)
+# Rust toolchain: see rust-toolchain.toml
+
+[install]
+description = "Install frontend dependencies"
+dir = "tauri-desktop/react-ui"
+run = "pnpm install"
+
+[dev]
+description = "Start Tauri development (Vite + Rust)"
+dir = "tauri-desktop/react-ui"
+run = "pnpm tauri dev"
+
+[build]
+description = "Build the Tauri application"
+dir = "tauri-desktop/react-ui"
+run = "pnpm tauri build"
+
+[check]
+description = "Type-check the frontend TypeScript"
+dir = "tauri-desktop/react-ui"
+run = "pnpm typecheck"
+
+[test]
+description = "Run frontend unit tests with Vitest"
+dir = "tauri-desktop/react-ui"
+run = "pnpm test"
+
+[lint]
+description = "Lint & format-check the frontend with Biome"
+dir = "tauri-desktop/react-ui"
+run = "pnpm lint"
+
+[fix]
+description = "Auto-fix frontend lint & format issues with Biome"
+dir = "tauri-desktop/react-ui"
+run = "pnpm fix"
+
+[format]
+description = "Format the frontend with Biome"
+dir = "tauri-desktop/react-ui"
+run = "pnpm format"
+
+[fmt]
+description = "Format Rust code with rustfmt"
+dir = "tauri-desktop/rust-native"
+run = "cargo fmt"
+
+["fmt:check"]
+description = "Check Rust formatting without writing"
+dir = "tauri-desktop/rust-native"
+run = "cargo fmt -- --check"
+
+[clippy]
+description = "Lint Rust code with Clippy"
+dir = "tauri-desktop/rust-native"
+run = "cargo clippy --all-targets -- -D warnings"

@@ -1,0 +1,61 @@
+import { useAtomValue } from "jotai";
+import { useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { themeAtom } from "@/atoms/theme";
+
+async function syncNativeWindowChrome(resolved: "light" | "dark") {
+  try {
+    await invoke("sync_window_chrome_theme", { theme: resolved });
+  } catch {
+    // ブラウザ単体起動など、ネイティブ未接続時は無視
+  }
+}
+
+/** ウィンドウ表示・テーマ反映後にだけトランジションを付け、起動時の色アニメを避ける */
+const ENABLE_TRANSITIONS_MS = 150;
+
+/**
+ * `data-theme` を html 要素へ同期し、Panda CSS の light/dark 条件を有効化する。
+ * macOS の Transparent タイトルバー背景も `background.main` に揃える。
+ *
+ * 起動時のネイティブ同期は `useRevealMainWindow` が await する。
+ * ここでは値が変わったときだけ同期し、二重 invoke を避ける。
+ */
+export const useThemeManager = () => {
+  const theme = useAtomValue(themeAtom);
+
+  useEffect(() => {
+    const root = document.documentElement;
+
+    const applyTheme = (value: "light" | "dark") => {
+      const previous = root.getAttribute("data-theme");
+      root.setAttribute("data-theme", value);
+      if (previous !== value) {
+        void syncNativeWindowChrome(value);
+      }
+    };
+
+    const transitionsTimer = window.setTimeout(() => {
+      root.classList.add("enable-transitions");
+    }, ENABLE_TRANSITIONS_MS);
+
+    if (theme === "system") {
+      const media = window.matchMedia("(prefers-color-scheme: dark)");
+      applyTheme(media.matches ? "dark" : "light");
+
+      const onChange = (event: MediaQueryListEvent) => {
+        applyTheme(event.matches ? "dark" : "light");
+      };
+      media.addEventListener("change", onChange);
+      return () => {
+        media.removeEventListener("change", onChange);
+        window.clearTimeout(transitionsTimer);
+      };
+    }
+
+    applyTheme(theme);
+    return () => window.clearTimeout(transitionsTimer);
+  }, [theme]);
+
+  return { theme };
+};

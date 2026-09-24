@@ -1,0 +1,17 @@
+
+[tools]
+node = "24.21.0"
+pnpm = "12.5.1"
+
+# Rust version + rustfmt/clippy live in rust-toolchain.toml (not duplicated here).
+[settings]
+idiomatic_version_file_enable_tools = ["rust"]
+
+# Sibling layout: Tauri CLI only discovers paths via these env vars
+# (no tauri.conf.json option). See https://v2.tauri.app/release/tauri-cli/v2.0.4/
+[env]
+TAURI_APP_PATH = "{{config_root}}/tauri-desktop/rust-native"
+TAURI_FRONTEND_PATH = "{{config_root}}/tauri-desktop/react-ui"
+
+[task_config]
+includes = ["tasks.toml"]
