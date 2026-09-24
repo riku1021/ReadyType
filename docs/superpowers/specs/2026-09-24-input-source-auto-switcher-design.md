@@ -304,6 +304,7 @@ UIライブラリを追加せず、既存のReact、Jotai、Panda CSS、Tauri AP
 - `open_accessibility_settings`
 - `start_debug_capture`
 - `stop_debug_capture`
+- `set_debug_logging`
 - `get_focus_snapshot`
 - `list_switch_logs`
 - `clear_switch_logs`
@@ -399,4 +400,3 @@ cargo build --release
 - [Apple: AXIsProcessTrustedWithOptions](https://developer.apple.com/documentation/applicationservices/1459186-axisprocesstrustedwithoptions)
 - [Tauri 2: Autostart plugin](https://v2.tauri.app/plugin/autostart/)
 - [objc2-application-services: AXObserver](https://docs.rs/objc2-application-services/latest/objc2_application_services/struct.AXObserver.html)
-
