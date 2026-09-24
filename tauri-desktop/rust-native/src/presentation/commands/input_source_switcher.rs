@@ -45,6 +45,7 @@ impl TauriSwitcherEventPublisher {
 impl SwitcherEventPublisher for TauriSwitcherEventPublisher {
     fn publish(&self, state: &SwitcherState) {
         let _ = self.app.emit(STATE_EVENT_NAME, StateEventDto::from(state));
+        let _ = crate::infrastructure::desktop::tray::update(&self.app, state);
     }
 }
 

@@ -31,7 +31,12 @@ fn current_platform_name() -> &'static str {
 pub fn run() {
     let _ = current_platform_name();
 
+    let autostart = tauri_plugin_autostart::Builder::new().arg("--autostart");
+    #[cfg(target_os = "macos")]
+    let autostart = autostart.macos_launcher(tauri_plugin_autostart::MacosLauncher::LaunchAgent);
+
     tauri::Builder::default()
+        .plugin(autostart.build())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let config_directory = app.path().app_config_dir()?;
@@ -77,7 +82,13 @@ pub fn run() {
                 monitor,
             )?;
             controller.refresh_permission()?;
+            let initial_state = controller.state()?;
             app.manage(controller);
+            infrastructure::desktop::tray::install(app.handle(), &initial_state)?;
+
+            #[cfg(target_os = "macos")]
+            app.handle()
+                .set_activation_policy(tauri::ActivationPolicy::Accessory)?;
 
             #[cfg(target_os = "macos")]
             if let Some(window) = app.get_webview_window("main") {
@@ -90,14 +101,22 @@ pub fn run() {
             }
             Ok(())
         })
-        .on_window_event(|window, event| {
-            if matches!(event, tauri::WindowEvent::Focused(true)) {
+        .on_window_event(|window, event| match event {
+            tauri::WindowEvent::Focused(true) => {
                 let controller =
                     window.state::<Arc<application::switcher_controller::SwitcherController>>();
                 let _ = controller.inner().refresh_permission();
             }
+            tauri::WindowEvent::CloseRequested { api, .. } => {
+                api.prevent_close();
+                let _ = window.hide();
+            }
+            _ => {}
         })
         .invoke_handler(tauri::generate_handler![
+            presentation::commands::autostart::get_autostart_enabled,
+            presentation::commands::autostart::set_autostart_enabled,
+            presentation::commands::autostart::should_show_main_window_on_launch,
             presentation::commands::greet::greet,
             presentation::commands::input_source_switcher::get_input_source_switcher_state,
             presentation::commands::input_source_switcher::set_input_source_switcher_enabled,

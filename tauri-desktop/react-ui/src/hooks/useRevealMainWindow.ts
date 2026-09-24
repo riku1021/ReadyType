@@ -37,6 +37,12 @@ export function useRevealMainWindow() {
         // ブラウザ単体起動など
       }
 
+      const shouldShow = await invoke<boolean>("should_show_main_window_on_launch");
+      if (!shouldShow || cancelled) {
+        clearBootstrapBackground();
+        return;
+      }
+
       await new Promise<void>((resolve) => {
         window.setTimeout(resolve, SETTLE_MS);
       });
@@ -47,7 +53,7 @@ export function useRevealMainWindow() {
 
       try {
         await getCurrentWindow().show();
-      } catch (error: unknown) {
+      } catch (error) {
         console.error("Failed to show main window", error);
         return;
       }
