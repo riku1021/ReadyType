@@ -10,6 +10,8 @@ pub mod windows;
 #[cfg(target_os = "windows")]
 pub use windows::WindowsPlatform as CurrentPlatform;
 
+pub mod input_source;
+
 #[cfg(target_os = "linux")]
 pub mod linux;
 #[cfg(target_os = "linux")]
