@@ -1,0 +1,31 @@
+[[permission]]
+identifier = "allow-input-source-switcher"
+description = "Allows input-source switcher, autostart, and launch-visibility IPC commands"
+commands.allow = [
+  "should_show_main_window_on_launch",
+  "get_autostart_enabled",
+  "set_autostart_enabled",
+  "greet",
+  "get_input_source_switcher_state",
+  "set_input_source_switcher_enabled",
+  "set_snooze",
+  "resume_input_source_switcher",
+  "list_input_sources",
+  "list_rules",
+  "create_rule",
+  "update_rule",
+  "delete_rule",
+  "reorder_rules",
+  "reset_default_rules",
+  "update_input_source_preferences",
+  "get_input_source_settings",
+  "get_accessibility_permission",
+  "request_accessibility_permission",
+  "open_accessibility_settings",
+  "start_debug_capture",
+  "stop_debug_capture",
+  "set_debug_logging",
+  "get_focus_snapshot",
+  "list_switch_logs",
+  "clear_switch_logs",
+]

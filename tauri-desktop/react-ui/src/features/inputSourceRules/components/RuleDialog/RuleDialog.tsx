@@ -31,6 +31,7 @@ const ATTRIBUTES = [
   "description",
   "identifier",
   "domIdentifier",
+  "domClassList",
   "help",
 ] as const;
 

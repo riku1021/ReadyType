@@ -170,6 +170,10 @@ fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
 }
 
 fn show_main_window(app: &AppHandle, route: Option<&str>) {
+    #[cfg(target_os = "macos")]
+    {
+        let _ = app.set_activation_policy(tauri::ActivationPolicy::Regular);
+    }
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
         let _ = window.set_focus();

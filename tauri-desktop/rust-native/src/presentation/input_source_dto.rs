@@ -120,6 +120,7 @@ pub enum DecisionDto {
     NoRule,
     AlreadySelected,
     Switched,
+    Failed,
 }
 
 impl From<SwitchDecision> for DecisionDto {
@@ -131,6 +132,7 @@ impl From<SwitchDecision> for DecisionDto {
             SwitchDecision::NoRule => Self::NoRule,
             SwitchDecision::AlreadySelected => Self::AlreadySelected,
             SwitchDecision::Switched => Self::Switched,
+            SwitchDecision::Failed => Self::Failed,
         }
     }
 }
@@ -284,6 +286,7 @@ wire_enum!(AxAttributeDto, AxAttribute, {
     Description,
     Identifier,
     DomIdentifier,
+    DomClassList,
     Help,
 });
 wire_enum!(MatchOperatorDto, MatchOperator, { Equals, Contains });
@@ -349,11 +352,16 @@ impl From<&SwitcherSettings> for SettingsDto {
 pub struct SwitchLogDto {
     pub timestamp_unix_ms: u64,
     pub app_id: String,
+    pub pid: i32,
+    pub generation: u64,
     pub rule_id: String,
+    pub decision: DecisionDto,
     pub from: String,
     pub to: String,
     pub success: bool,
+    pub attempted: bool,
     pub reason: String,
+    pub detail: String,
     pub processing_micros: u64,
 }
 
@@ -362,11 +370,16 @@ impl From<SwitchLogEntry> for SwitchLogDto {
         Self {
             timestamp_unix_ms: log.timestamp_unix_ms,
             app_id: log.app_id,
+            pid: log.pid,
+            generation: log.generation,
             rule_id: log.rule_id,
-            from: log.from.as_str().to_owned(),
-            to: log.to.as_str().to_owned(),
+            decision: DecisionDto::from(log.decision),
+            from: log.from,
+            to: log.to,
             success: log.success,
+            attempted: log.attempted,
             reason: log.reason,
+            detail: log.detail,
             processing_micros: log.processing_micros,
         }
     }
@@ -400,6 +413,7 @@ pub struct AxElementDto {
     pub description: String,
     pub identifier: String,
     pub dom_identifier: String,
+    pub dom_class_list: String,
     pub help: String,
 }
 
@@ -413,6 +427,7 @@ impl From<&AxElementSnapshot> for AxElementDto {
             description: element.value(AxAttribute::Description).to_owned(),
             identifier: element.value(AxAttribute::Identifier).to_owned(),
             dom_identifier: element.value(AxAttribute::DomIdentifier).to_owned(),
+            dom_class_list: element.value(AxAttribute::DomClassList).to_owned(),
             help: element.value(AxAttribute::Help).to_owned(),
         }
     }

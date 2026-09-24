@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutIndexRouteImport } from './routes/about/index'
+import { Route as AccessibilityIndexRouteImport } from './routes/accessibility/index'
 import { Route as DiagnosticsIndexRouteImport } from './routes/diagnostics/index'
 import { Route as LabIndexRouteImport } from './routes/lab/index'
 import { Route as RulesIndexRouteImport } from './routes/rules/index'
@@ -25,6 +26,11 @@ const IndexRoute = IndexRouteImport.update({
 const AboutIndexRoute = AboutIndexRouteImport.update({
   id: '/about/',
   path: '/about/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccessibilityIndexRoute = AccessibilityIndexRouteImport.update({
+  id: '/accessibility/',
+  path: '/accessibility/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiagnosticsIndexRoute = DiagnosticsIndexRouteImport.update({
@@ -56,6 +62,7 @@ const UpdateIndexRoute = UpdateIndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about/': typeof AboutIndexRoute
+  '/accessibility/': typeof AccessibilityIndexRoute
   '/diagnostics/': typeof DiagnosticsIndexRoute
   '/lab/': typeof LabIndexRoute
   '/rules/': typeof RulesIndexRoute
@@ -65,6 +72,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutIndexRoute
+  '/accessibility': typeof AccessibilityIndexRoute
   '/diagnostics': typeof DiagnosticsIndexRoute
   '/lab': typeof LabIndexRoute
   '/rules': typeof RulesIndexRoute
@@ -75,6 +83,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about/': typeof AboutIndexRoute
+  '/accessibility/': typeof AccessibilityIndexRoute
   '/diagnostics/': typeof DiagnosticsIndexRoute
   '/lab/': typeof LabIndexRoute
   '/rules/': typeof RulesIndexRoute
@@ -86,6 +95,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about/'
+    | '/accessibility/'
     | '/diagnostics/'
     | '/lab/'
     | '/rules/'
@@ -95,6 +105,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/accessibility'
     | '/diagnostics'
     | '/lab'
     | '/rules'
@@ -104,6 +115,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about/'
+    | '/accessibility/'
     | '/diagnostics/'
     | '/lab/'
     | '/rules/'
@@ -114,6 +126,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutIndexRoute: typeof AboutIndexRoute
+  AccessibilityIndexRoute: typeof AccessibilityIndexRoute
   DiagnosticsIndexRoute: typeof DiagnosticsIndexRoute
   LabIndexRoute: typeof LabIndexRoute
   RulesIndexRoute: typeof RulesIndexRoute
@@ -135,6 +148,13 @@ declare module '@tanstack/react-router' {
       path: '/about'
       fullPath: '/about/'
       preLoaderRoute: typeof AboutIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accessibility/': {
+      id: '/accessibility/'
+      path: '/accessibility'
+      fullPath: '/accessibility/'
+      preLoaderRoute: typeof AccessibilityIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/diagnostics/': {
@@ -178,6 +198,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutIndexRoute: AboutIndexRoute,
+  AccessibilityIndexRoute: AccessibilityIndexRoute,
   DiagnosticsIndexRoute: DiagnosticsIndexRoute,
   LabIndexRoute: LabIndexRoute,
   RulesIndexRoute: RulesIndexRoute,

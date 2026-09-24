@@ -128,7 +128,31 @@ pub fn default_rules() -> Vec<FocusRule> {
         vec![condition(
             AxAttribute::DomIdentifier,
             MatchOperator::Contains,
-            "workbench.panel.aichat",
+            "aichat",
+        )],
+        RuleTarget::PreferredJapanese,
+    ));
+    cursor.push(rule(
+        "preset-cursor-composer",
+        "Cursor Composer",
+        CURSOR_BUNDLE_ID,
+        111,
+        vec![condition(
+            AxAttribute::DomClassList,
+            MatchOperator::Contains,
+            "composer-",
+        )],
+        RuleTarget::PreferredJapanese,
+    ));
+    cursor.push(rule(
+        "preset-cursor-ai-input",
+        "Cursor AI Input",
+        CURSOR_BUNDLE_ID,
+        112,
+        vec![condition(
+            AxAttribute::DomClassList,
+            MatchOperator::Contains,
+            "aislash-editor-input",
         )],
         RuleTarget::PreferredJapanese,
     ));
@@ -206,6 +230,37 @@ mod tests {
         ]);
 
         assert_eq!(matched_rule_name(&snapshot).as_deref(), Some("Cursor Chat"));
+    }
+
+    #[test]
+    fn cursor_composer_class_list_matches_preferred_japanese_rule() {
+        let snapshot = cursor_snapshot(vec![
+            element(&[
+                (AxAttribute::Role, "AXTextArea"),
+                (AxAttribute::DomClassList, "aislash-editor-input"),
+            ]),
+            element(&[(AxAttribute::DomClassList, "composer-input-blur-wrapper")]),
+            element(&[(AxAttribute::DomClassList, "composer-bar editor")]),
+            element(&[(AxAttribute::DomIdentifier, "workbench.parts.editor")]),
+        ]);
+
+        assert_eq!(
+            matched_rule_name(&snapshot).as_deref(),
+            Some("Cursor Composer")
+        );
+    }
+
+    #[test]
+    fn cursor_ai_input_class_list_matches_when_composer_prefix_absent() {
+        let snapshot = cursor_snapshot(vec![element(&[
+            (AxAttribute::Role, "AXTextArea"),
+            (AxAttribute::DomClassList, "aislash-editor-input"),
+        ])]);
+
+        assert_eq!(
+            matched_rule_name(&snapshot).as_deref(),
+            Some("Cursor AI Input")
+        );
     }
 
     #[test]
@@ -304,6 +359,8 @@ mod tests {
 
         assert!(ids.iter().any(|id| id == "preset-terminal"));
         assert!(ids.iter().any(|id| id == "preset-cursor-chat"));
+        assert!(ids.iter().any(|id| id == "preset-cursor-composer"));
+        assert!(ids.iter().any(|id| id == "preset-cursor-ai-input"));
         assert!(ids.iter().any(|id| id == "preset-vscode-editor"));
         assert_eq!(
             RuleSet::new(rules).expect("unique presets").rules().len(),

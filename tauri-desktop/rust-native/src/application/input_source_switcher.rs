@@ -1,7 +1,11 @@
-use std::{fmt, time::Instant};
+use std::{
+    fmt,
+    sync::{Arc, Mutex},
+    time::Instant,
+};
 
 use crate::domain::input_source::{
-    FocusRule, FocusSnapshot, InputSourceId, PlatformAppId, RuleSet, RuleTarget,
+    AxAttribute, FocusRule, FocusSnapshot, InputSourceId, PlatformAppId, RuleSet, RuleTarget,
 };
 
 use super::{
@@ -25,6 +29,7 @@ pub enum SwitchDecision {
     NoRule,
     AlreadySelected,
     Switched,
+    Failed,
 }
 
 #[derive(Debug)]
@@ -61,7 +66,7 @@ impl From<GatewayError> for ApplicationError {
 pub struct InputSourceSwitcher<G, R, C, E> {
     settings: SwitcherSettings,
     rules: RuleSet,
-    gateway: G,
+    gateway: Arc<Mutex<G>>,
     repository: R,
     clock: C,
     publisher: E,
@@ -69,6 +74,16 @@ pub struct InputSourceSwitcher<G, R, C, E> {
     active_app: Option<PlatformAppId>,
     active_generation: u64,
     handled_generation: Option<u64>,
+}
+
+/// `prepare_focus` の結果。gateway 呼び出しはロック外で行う。
+pub enum PreparedFocus {
+    Done(SwitchDecision),
+    NeedsSwitch {
+        snapshot: FocusSnapshot,
+        rule: Box<FocusRule>,
+        target: InputSourceId,
+    },
 }
 
 impl<G, R, C, E> InputSourceSwitcher<G, R, C, E>
@@ -80,7 +95,7 @@ where
 {
     pub fn new(
         settings: SwitcherSettings,
-        gateway: G,
+        gateway: Arc<Mutex<G>>,
         repository: R,
         clock: C,
         publisher: E,
@@ -105,6 +120,10 @@ where
         })
     }
 
+    pub fn gateway_handle(&self) -> Arc<Mutex<G>> {
+        Arc::clone(&self.gateway)
+    }
+
     pub fn state(&self) -> &SwitcherState {
         &self.state
     }
@@ -121,7 +140,11 @@ where
         &mut self,
         refresh: bool,
     ) -> Result<Vec<super::ports::input_source::AvailableInputSource>, ApplicationError> {
-        self.gateway.list(refresh).map_err(ApplicationError::from)
+        self.gateway
+            .lock()
+            .map_err(|_| ApplicationError::InvalidSettings("gateway lock poisoned".to_owned()))?
+            .list(refresh)
+            .map_err(ApplicationError::from)
     }
 
     pub fn set_enabled(&mut self, enabled: bool) -> Result<(), ApplicationError> {
@@ -202,25 +225,68 @@ where
         Ok(())
     }
 
-    pub fn handle_focus(
+    pub fn prepare_focus(
         &mut self,
         snapshot: FocusSnapshot,
-    ) -> Result<SwitchDecision, ApplicationError> {
+    ) -> Result<PreparedFocus, ApplicationError> {
+        let started = Instant::now();
         if !self.accepts(&snapshot) {
-            return Ok(SwitchDecision::Ignored);
+            let reason = self.reject_reason(&snapshot);
+            // 重複フォーカスはノイズになりやすいので、デバッグ時のみ残す。
+            if self.settings.debug_logging {
+                self.push_log(
+                    &snapshot,
+                    "",
+                    SwitchDecision::Ignored,
+                    "",
+                    "",
+                    false,
+                    false,
+                    reason,
+                    started,
+                );
+            }
+            return Ok(PreparedFocus::Done(SwitchDecision::Ignored));
         }
         self.handled_generation = Some(snapshot.generation());
         self.state.current_app = Some(snapshot.app().clone());
 
         if !self.settings.enabled {
-            return Ok(self.finish(SwitchDecision::Disabled));
+            self.push_log(
+                &snapshot,
+                "",
+                SwitchDecision::Disabled,
+                "",
+                "",
+                false,
+                false,
+                "auto switch is disabled".to_owned(),
+                started,
+            );
+            return Ok(PreparedFocus::Done(self.finish(SwitchDecision::Disabled)));
         }
         if self
             .settings
             .snoozed_until_unix_ms
             .is_some_and(|deadline| deadline > self.clock.now_unix_ms())
         {
-            return Ok(self.finish(SwitchDecision::Snoozed));
+            let remaining = self
+                .settings
+                .snoozed_until_unix_ms
+                .map(|deadline| deadline.saturating_sub(self.clock.now_unix_ms()))
+                .unwrap_or(0);
+            self.push_log(
+                &snapshot,
+                "",
+                SwitchDecision::Snoozed,
+                "",
+                "",
+                false,
+                false,
+                format!("snoozed for remaining {remaining}ms"),
+                started,
+            );
+            return Ok(PreparedFocus::Done(self.finish(SwitchDecision::Snoozed)));
         }
         if self.settings.snoozed_until_unix_ms.is_some() {
             self.settings.snoozed_until_unix_ms = None;
@@ -230,45 +296,147 @@ where
         let Some(rule) = self.rules.first_match(&snapshot).cloned() else {
             self.state.matched_rule_id = None;
             self.state.target_input_source = None;
-            return Ok(self.finish(SwitchDecision::NoRule));
+            self.push_log(
+                &snapshot,
+                "",
+                SwitchDecision::NoRule,
+                "",
+                "",
+                false,
+                false,
+                format!(
+                    "no matching rule among {} enabled rules",
+                    self.rules
+                        .rules()
+                        .iter()
+                        .filter(|rule| rule.enabled())
+                        .count()
+                ),
+                started,
+            );
+            return Ok(PreparedFocus::Done(self.finish(SwitchDecision::NoRule)));
         };
         let target = self.resolve_target(rule.target()).clone();
-        let current = self.gateway.current()?;
+        Ok(PreparedFocus::NeedsSwitch {
+            snapshot,
+            rule: Box::new(rule),
+            target,
+        })
+    }
+
+    pub fn complete_focus(
+        &mut self,
+        snapshot: FocusSnapshot,
+        rule: FocusRule,
+        target: InputSourceId,
+        current: InputSourceId,
+        select_result: Result<(), GatewayError>,
+    ) -> Result<SwitchDecision, ApplicationError> {
+        let started = Instant::now();
         self.state.matched_rule_id = Some(rule.id().to_owned());
         self.state.current_input_source = Some(current.clone());
         self.state.target_input_source = Some(target.clone());
         if current == target {
+            self.push_log(
+                &snapshot,
+                rule.id(),
+                SwitchDecision::AlreadySelected,
+                current.as_str(),
+                target.as_str(),
+                true,
+                true,
+                "current input source already matches target; reselected to refresh field context"
+                    .to_owned(),
+                started,
+            );
             return Ok(self.finish(SwitchDecision::AlreadySelected));
         }
 
-        let started = Instant::now();
-        if self.gateway.select(&target).is_err() {
-            self.gateway.list(true)?;
-            if let Err(error) = self.gateway.select(&target) {
+        match select_result {
+            Ok(()) => {
                 self.push_log(
                     &snapshot,
-                    &rule,
-                    current,
-                    target,
-                    false,
-                    error.to_string(),
+                    rule.id(),
+                    SwitchDecision::Switched,
+                    current.as_str(),
+                    target.as_str(),
+                    true,
+                    true,
+                    String::new(),
                     started,
                 );
-                self.bump_and_publish();
-                return Err(ApplicationError::Gateway(error));
+                self.state.current_input_source = Some(target);
+                Ok(self.finish(SwitchDecision::Switched))
+            }
+            Err(error) => {
+                let message = error.to_string();
+                self.push_log(
+                    &snapshot,
+                    rule.id(),
+                    SwitchDecision::Failed,
+                    current.as_str(),
+                    target.as_str(),
+                    false,
+                    true,
+                    message.clone(),
+                    started,
+                );
+                let _ = self.finish(SwitchDecision::Failed);
+                Err(ApplicationError::Gateway(error))
             }
         }
+    }
+
+    /// gateway 呼び出し自体が失敗したとき（current/list 失敗など）。
+    pub fn record_switch_pipeline_error(
+        &mut self,
+        snapshot: &FocusSnapshot,
+        rule_id: &str,
+        target: &InputSourceId,
+        error: &ApplicationError,
+    ) {
         self.push_log(
-            &snapshot,
-            &rule,
-            current,
-            target.clone(),
+            snapshot,
+            rule_id,
+            SwitchDecision::Failed,
+            "",
+            target.as_str(),
+            false,
             true,
-            String::new(),
-            started,
+            error.to_string(),
+            Instant::now(),
         );
-        self.state.current_input_source = Some(target);
-        Ok(self.finish(SwitchDecision::Switched))
+        let _ = self.finish(SwitchDecision::Failed);
+    }
+
+    pub fn handle_focus(
+        &mut self,
+        snapshot: FocusSnapshot,
+    ) -> Result<SwitchDecision, ApplicationError> {
+        match self.prepare_focus(snapshot)? {
+            PreparedFocus::Done(decision) => Ok(decision),
+            PreparedFocus::NeedsSwitch {
+                snapshot,
+                rule,
+                target,
+            } => {
+                let switch_result = {
+                    let mut gateway = self.gateway.lock().map_err(|_| {
+                        ApplicationError::InvalidSettings("gateway lock poisoned".to_owned())
+                    })?;
+                    switch_input_source(&mut *gateway, &target)
+                };
+                match switch_result {
+                    Ok((current, select_result)) => {
+                        self.complete_focus(snapshot, *rule, target, current, select_result)
+                    }
+                    Err(error) => {
+                        self.record_switch_pipeline_error(&snapshot, rule.id(), &target, &error);
+                        Err(error)
+                    }
+                }
+            }
+        }
     }
 
     pub fn replace_rules(&mut self, rules: Vec<FocusRule>) -> Result<(), ApplicationError> {
@@ -308,6 +476,35 @@ where
             && self.handled_generation != Some(snapshot.generation())
     }
 
+    fn reject_reason(&self, snapshot: &FocusSnapshot) -> String {
+        let Some(active_app) = &self.active_app else {
+            return "no active app (waiting for activation)".to_owned();
+        };
+        if active_app.platform() != snapshot.app().platform()
+            || active_app.app_id() != snapshot.app().app_id()
+            || active_app.pid() != snapshot.app().pid()
+        {
+            return format!(
+                "active app mismatch: active={} pid={} snapshot={} pid={}",
+                active_app.app_id(),
+                active_app.pid(),
+                snapshot.app().app_id(),
+                snapshot.app().pid()
+            );
+        }
+        if snapshot.generation() < self.active_generation {
+            return format!(
+                "stale generation: snapshot={} active={}",
+                snapshot.generation(),
+                self.active_generation
+            );
+        }
+        if self.handled_generation == Some(snapshot.generation()) {
+            return format!("generation {} already handled", snapshot.generation());
+        }
+        "focus rejected".to_owned()
+    }
+
     fn resolve_target<'a>(&'a self, target: &'a RuleTarget) -> &'a InputSourceId {
         match target {
             RuleTarget::PreferredEnglish => &self.settings.preferred_english,
@@ -316,14 +513,34 @@ where
         }
     }
 
+    fn focus_detail(snapshot: &FocusSnapshot) -> String {
+        let elements = snapshot.elements();
+        let Some(focused) = elements.first() else {
+            return format!("elements=0 generation={}", snapshot.generation());
+        };
+        format!(
+            "elements={} generation={} focused[role={} title={} id={} dom={} class={} desc={}]",
+            elements.len(),
+            snapshot.generation(),
+            focused.value(AxAttribute::Role),
+            focused.value(AxAttribute::Title),
+            focused.value(AxAttribute::Identifier),
+            focused.value(AxAttribute::DomIdentifier),
+            focused.value(AxAttribute::DomClassList),
+            focused.value(AxAttribute::Description),
+        )
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn push_log(
         &mut self,
         snapshot: &FocusSnapshot,
-        rule: &FocusRule,
-        from: InputSourceId,
-        to: InputSourceId,
+        rule_id: &str,
+        decision: SwitchDecision,
+        from: &str,
+        to: &str,
         success: bool,
+        attempted: bool,
         reason: String,
         started: Instant,
     ) {
@@ -332,11 +549,16 @@ where
             SwitchLogEntry {
                 timestamp_unix_ms: self.clock.now_unix_ms(),
                 app_id: snapshot.app().app_id().to_owned(),
-                rule_id: rule.id().to_owned(),
-                from,
-                to,
+                pid: snapshot.app().pid(),
+                generation: snapshot.generation(),
+                rule_id: rule_id.to_owned(),
+                decision,
+                from: from.to_owned(),
+                to: to.to_owned(),
                 success,
+                attempted,
                 reason,
+                detail: Self::focus_detail(snapshot),
                 processing_micros: u64::try_from(started.elapsed().as_micros()).unwrap_or(u64::MAX),
             },
         );
@@ -355,6 +577,21 @@ where
         self.state.snoozed_until_unix_ms = self.settings.snoozed_until_unix_ms;
         self.publisher.publish(&self.state);
     }
+}
+
+pub(crate) fn switch_input_source<G: InputSourceGateway>(
+    gateway: &mut G,
+    target: &InputSourceId,
+) -> Result<(InputSourceId, Result<(), GatewayError>), ApplicationError> {
+    let current = gateway.current()?;
+    let select_result = match gateway.select(target) {
+        Ok(()) => Ok(()),
+        Err(_) => {
+            gateway.list(true)?;
+            gateway.select(target)
+        }
+    };
+    Ok((current, select_result))
 }
 
 #[cfg(test)]
@@ -485,7 +722,7 @@ mod tests {
             let versions = Arc::new(Mutex::new(Vec::new()));
             let switcher = InputSourceSwitcher::new(
                 settings,
-                FakeGateway(Arc::clone(&gateway)),
+                Arc::new(Mutex::new(FakeGateway(Arc::clone(&gateway)))),
                 FakeRepository {
                     fail_save: Arc::clone(&fail_save),
                 },
@@ -634,7 +871,7 @@ mod tests {
     }
 
     #[test]
-    fn same_source_is_a_no_op() {
+    fn same_source_still_reselects_to_refresh_context() {
         let mut fixture = Fixture::active();
         fixture.gateway.lock().expect("gateway lock").current = "en".to_owned();
 
@@ -650,8 +887,11 @@ mod tests {
                 .lock()
                 .expect("gateway lock")
                 .select_attempts,
-            0
+            1
         );
+        let log = &fixture.switcher.state().logs[0];
+        assert!(log.attempted);
+        assert!(log.reason.contains("reselected"));
     }
 
     #[test]
@@ -678,6 +918,11 @@ mod tests {
                 .select_attempts,
             0
         );
+        let log = &fixture.switcher.state().logs[0];
+        assert_eq!(log.decision, SwitchDecision::NoRule);
+        assert!(!log.attempted);
+        assert!(log.reason.contains("no matching rule"));
+        assert!(log.detail.contains("elements=0"));
     }
 
     #[test]

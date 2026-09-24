@@ -26,6 +26,7 @@ const DECISION_LABELS: Record<SwitchDecision, string> = {
   noRule: "一致ルールなし",
   alreadySelected: "すでに切替済み",
   switched: "切替成功",
+  failed: "切替失敗",
 };
 
 export function toStatusViewModel(state: InputSourceViewState | null): StatusViewModel {

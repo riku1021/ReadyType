@@ -20,7 +20,8 @@ use crate::{
     },
     domain::input_source::{AxAttribute, FocusSnapshot, Platform, PlatformAppId},
     infrastructure::platform::focus_monitor::{
-        AttributePlan, MonitorState, MonitoringMode, ObserverRegistration, FALLBACK_INTERVAL_MS,
+        focus_fingerprint, AttributePlan, MonitorState, MonitoringMode, ObserverRegistration,
+        FALLBACK_INTERVAL_MS,
     },
 };
 
@@ -34,7 +35,7 @@ const CONSISTENCY_CHECK_INTERVAL: Duration = Duration::from_secs(2);
 
 enum MonitorCommand {
     ActiveApplication(PlatformAppId),
-    Evaluate { pid: i32, generation: u64 },
+    Evaluate { pid: i32 },
     SetDebug(bool),
     Stop,
 }
@@ -42,7 +43,6 @@ enum MonitorCommand {
 struct CallbackContext {
     sender: Sender<MonitorCommand>,
     pid: i32,
-    generation: u64,
 }
 
 struct ActiveObserver {
@@ -228,8 +228,8 @@ fn run_monitor(
                     debug,
                     &sink,
                 ),
-                Ok(MonitorCommand::Evaluate { pid, generation }) => {
-                    if state.enqueue(pid, generation) {
+                Ok(MonitorCommand::Evaluate { pid }) => {
+                    if state.enqueue(pid) {
                         evaluate_pending(&mut state, &normal_plan, debug, &sink);
                     }
                 }
@@ -272,8 +272,8 @@ fn run_monitor(
         let consistency_due = state.mode() == MonitoringMode::AxNotification
             && last_consistency.elapsed() >= CONSISTENCY_CHECK_INTERVAL;
         if fallback_due || consistency_due {
-            if let Some((pid, generation)) = state.active_identity() {
-                if state.enqueue(pid, generation) {
+            if let Some(pid) = state.active_app().map(PlatformAppId::pid) {
+                if state.enqueue(pid) {
                     evaluate_pending(&mut state, &normal_plan, debug, &sink);
                 }
             }
@@ -307,16 +307,15 @@ fn activate(
     if let Some(active) = observer.take() {
         active.unregister(run_loop);
     }
-    let next_generation = state.generation().wrapping_add(1);
-    match register_observer(app.pid(), next_generation, sender.clone(), run_loop) {
+    match register_observer(app.pid(), sender.clone(), run_loop) {
         Ok(active) => {
             state.activate(app, ObserverRegistration::Registered);
             *observer = Some(active);
         }
         Err(_) => state.activate(app, ObserverRegistration::Unsupported),
     }
-    if let Some((pid, generation)) = state.active_identity() {
-        if state.enqueue(pid, generation) {
+    if let Some(pid) = state.active_app().map(PlatformAppId::pid) {
+        if state.enqueue(pid) {
             evaluate_pending(state, normal_plan, debug, sink);
         }
     }
@@ -324,7 +323,6 @@ fn activate(
 
 fn register_observer(
     pid: i32,
-    generation: u64,
     sender: Sender<MonitorCommand>,
     run_loop: &CFRunLoop,
 ) -> Result<ActiveObserver, AXError> {
@@ -344,11 +342,7 @@ fn register_observer(
     let observer_pointer = NonNull::new(observer_pointer).ok_or(AXError::Failure)?;
     // SAFETY: AXObserverCreate returned this create-rule reference successfully.
     let observer = unsafe { CFRetained::from_raw(observer_pointer) };
-    let mut context = Box::new(CallbackContext {
-        sender,
-        pid,
-        generation,
-    });
+    let mut context = Box::new(CallbackContext { sender, pid });
     let notification = CFString::from_static_str(FOCUSED_ELEMENT_CHANGED);
     // SAFETY: context remains boxed and alive until the observer is removed and released.
     let error = unsafe {
@@ -382,10 +376,9 @@ unsafe extern "C-unwind" fn observer_callback(
     let Some(context) = (unsafe { refcon.cast::<CallbackContext>().as_ref() }) else {
         return;
     };
-    let _ = context.sender.send(MonitorCommand::Evaluate {
-        pid: context.pid,
-        generation: context.generation,
-    });
+    let _ = context
+        .sender
+        .send(MonitorCommand::Evaluate { pid: context.pid });
 }
 
 fn evaluate_pending(
@@ -394,13 +387,13 @@ fn evaluate_pending(
     debug: bool,
     sink: &FocusEventSink,
 ) {
-    let Some((pid, generation)) = state.take_pending() else {
+    let Some(pid) = state.take_pending() else {
         return;
     };
     let Some(app) = state.active_app().cloned() else {
         return;
     };
-    if !state.accepts(pid, generation) {
+    if !state.accepts_pid(pid) {
         return;
     }
     let application = application_element(pid);
@@ -411,11 +404,12 @@ fn evaluate_pending(
     } else {
         normal_plan
     };
-    sink(FocusSnapshot::new(
-        app,
-        generation,
-        snapshot_elements(&application, plan),
-    ));
+    let elements = snapshot_elements(&application, plan);
+    let fingerprint = focus_fingerprint(&elements);
+    let Some(generation) = state.commit_focus_change(&fingerprint) else {
+        return;
+    };
+    sink(FocusSnapshot::new(app, generation, elements));
 }
 
 fn frontmost_application() -> Option<PlatformAppId> {

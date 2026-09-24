@@ -68,6 +68,7 @@ pub enum AxAttribute {
     Description,
     Identifier,
     DomIdentifier,
+    DomClassList,
     Help,
 }
 
@@ -80,6 +81,7 @@ pub struct AxElementSnapshot {
     description: String,
     identifier: String,
     dom_identifier: String,
+    dom_class_list: String,
     help: String,
 }
 
@@ -97,6 +99,7 @@ impl AxElementSnapshot {
             AxAttribute::Description => &mut self.description,
             AxAttribute::Identifier => &mut self.identifier,
             AxAttribute::DomIdentifier => &mut self.dom_identifier,
+            AxAttribute::DomClassList => &mut self.dom_class_list,
             AxAttribute::Help => &mut self.help,
         };
         *target = value.into();
@@ -112,6 +115,7 @@ impl AxElementSnapshot {
             AxAttribute::Description => &self.description,
             AxAttribute::Identifier => &self.identifier,
             AxAttribute::DomIdentifier => &self.dom_identifier,
+            AxAttribute::DomClassList => &self.dom_class_list,
             AxAttribute::Help => &self.help,
         }
     }

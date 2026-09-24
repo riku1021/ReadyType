@@ -6,7 +6,8 @@ export type SwitchDecision =
   | "snoozed"
   | "noRule"
   | "alreadySelected"
-  | "switched";
+  | "switched"
+  | "failed";
 
 export interface AppDto {
   platform: Platform;
@@ -45,6 +46,7 @@ export type AxAttribute =
   | "description"
   | "identifier"
   | "domIdentifier"
+  | "domClassList"
   | "help";
 export type MatchOperator = "equals" | "contains";
 export type SearchScope = "focusedOnly" | "focusedAndAncestors";
@@ -81,11 +83,16 @@ export interface InputSourceSettingsDto {
 export interface SwitchLogDto {
   timestampUnixMs: number;
   appId: string;
+  pid: number;
+  generation: number;
   ruleId: string;
+  decision: SwitchDecision;
   from: string;
   to: string;
   success: boolean;
+  attempted: boolean;
   reason: string;
+  detail: string;
   processingMicros: number;
 }
 
@@ -97,6 +104,7 @@ export interface AxElementDto {
   description: string;
   identifier: string;
   domIdentifier: string;
+  domClassList: string;
   help: string;
 }
 

@@ -86,9 +86,18 @@ pub fn run() {
             app.manage(controller);
             infrastructure::desktop::tray::install(app.handle(), &initial_state)?;
 
+            // Accessory だと Dock にも出ず、visible:false のウィンドウが
+            // show() しても前面に来ない。通常起動は Regular、ログイン起動だけ Accessory。
             #[cfg(target_os = "macos")]
-            app.handle()
-                .set_activation_policy(tauri::ActivationPolicy::Accessory)?;
+            {
+                let is_autostart = std::env::args().any(|argument| argument == "--autostart");
+                let policy = if is_autostart {
+                    tauri::ActivationPolicy::Accessory
+                } else {
+                    tauri::ActivationPolicy::Regular
+                };
+                app.handle().set_activation_policy(policy)?;
+            }
 
             #[cfg(target_os = "macos")]
             if let Some(window) = app.get_webview_window("main") {
@@ -98,6 +107,14 @@ pub fn run() {
                     .map(|theme| matches!(theme, tauri::Theme::Dark))
                     .unwrap_or(true);
                 infrastructure::platform::macos::set_window_background_main(&window, is_dark);
+            }
+
+            // ACL / フロント準備前でも通常起動では窓を出す（visible:false のフォールバック）
+            if infrastructure::desktop::tray::should_show_main_window_on_launch(std::env::args()) {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
             }
             Ok(())
         })

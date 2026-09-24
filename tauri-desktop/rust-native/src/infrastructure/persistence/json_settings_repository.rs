@@ -165,6 +165,7 @@ enum AttributeDto {
     Description,
     Identifier,
     DomIdentifier,
+    DomClassList,
     Help,
 }
 
@@ -322,6 +323,7 @@ impl From<AxAttribute> for AttributeDto {
             AxAttribute::Description => Self::Description,
             AxAttribute::Identifier => Self::Identifier,
             AxAttribute::DomIdentifier => Self::DomIdentifier,
+            AxAttribute::DomClassList => Self::DomClassList,
             AxAttribute::Help => Self::Help,
         }
     }
@@ -337,6 +339,7 @@ impl From<AttributeDto> for AxAttribute {
             AttributeDto::Description => Self::Description,
             AttributeDto::Identifier => Self::Identifier,
             AttributeDto::DomIdentifier => Self::DomIdentifier,
+            AttributeDto::DomClassList => Self::DomClassList,
             AttributeDto::Help => Self::Help,
         }
     }

@@ -15,7 +15,9 @@ use crate::domain::input_source::{
 };
 
 use super::{
-    input_source_switcher::{ApplicationError, InputSourceSwitcher},
+    input_source_switcher::{
+        switch_input_source, ApplicationError, InputSourceSwitcher, PreparedFocus,
+    },
     ports::{
         clock::Clock,
         focus_monitor::{AccessibilityPermission, FocusMonitor, FocusMonitorError},
@@ -224,7 +226,11 @@ impl SwitcherController {
         &self,
         refresh: bool,
     ) -> Result<Vec<AvailableInputSource>, ControllerError> {
-        Ok(self.lock_switcher()?.list_input_sources(refresh)?)
+        let gateway = self.lock_switcher()?.gateway_handle();
+        let mut gateway = gateway
+            .lock()
+            .map_err(|_| ControllerError::InvalidRequest("gateway lock poisoned".to_owned()))?;
+        Ok(gateway.list(refresh).map_err(ApplicationError::from)?)
     }
 
     pub fn rules(&self) -> Result<Vec<FocusRule>, ControllerError> {
@@ -389,8 +395,10 @@ impl Drop for SwitcherController {
     }
 }
 
-fn repository_gateway(gateway: Box<dyn InputSourceGateway>) -> Box<dyn InputSourceGateway> {
-    gateway
+fn repository_gateway(
+    gateway: Box<dyn InputSourceGateway>,
+) -> Arc<Mutex<Box<dyn InputSourceGateway>>> {
+    Arc::new(Mutex::new(gateway))
 }
 
 fn run_worker(
@@ -415,12 +423,60 @@ fn run_worker(
                     *latest = Some(snapshot.clone());
                 }
                 let key = (snapshot.app().clone(), snapshot.generation());
-                if let Ok(mut switcher) = switcher.lock() {
+                let prepared = {
+                    let Ok(mut switcher) = switcher.lock() else {
+                        continue;
+                    };
                     if active.as_ref() != Some(&key) {
                         let _ = switcher.activate(key.0.clone(), key.1);
                         active = Some(key);
                     }
-                    let _ = switcher.handle_focus(snapshot);
+                    let gateway = switcher.gateway_handle();
+                    let prepared = switcher.prepare_focus(snapshot);
+                    (gateway, prepared)
+                };
+                // TIS はメインキューへ sync するため、switcher ロックを握ったまま待たない。
+                let (gateway, prepared) = prepared;
+                let Ok(prepared) = prepared else {
+                    continue;
+                };
+                match prepared {
+                    PreparedFocus::Done(_) => {}
+                    PreparedFocus::NeedsSwitch {
+                        snapshot,
+                        rule,
+                        target,
+                    } => {
+                        let switch_result = match gateway.lock() {
+                            Ok(mut gateway) => switch_input_source(&mut *gateway, &target),
+                            Err(_) => Err(ApplicationError::InvalidSettings(
+                                "gateway lock poisoned".to_owned(),
+                            )),
+                        };
+                        match switch_result {
+                            Ok((current, select_result)) => {
+                                if let Ok(mut switcher) = switcher.lock() {
+                                    let _ = switcher.complete_focus(
+                                        snapshot,
+                                        *rule,
+                                        target,
+                                        current,
+                                        select_result,
+                                    );
+                                }
+                            }
+                            Err(error) => {
+                                if let Ok(mut switcher) = switcher.lock() {
+                                    switcher.record_switch_pipeline_error(
+                                        &snapshot,
+                                        rule.id(),
+                                        &target,
+                                        &error,
+                                    );
+                                }
+                            }
+                        }
+                    }
                 }
             }
             Ok(WorkerMessage::SettingsChanged) => {}

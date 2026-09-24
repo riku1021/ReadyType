@@ -4,7 +4,7 @@ use objc2_application_services::{
     kAXTrustedCheckOptionPrompt, AXError, AXIsProcessTrusted, AXIsProcessTrustedWithOptions,
     AXUIElement,
 };
-use objc2_core_foundation::{CFBoolean, CFDictionary, CFRetained, CFString, CFType};
+use objc2_core_foundation::{CFArray, CFBoolean, CFDictionary, CFRetained, CFString, CFType};
 
 use crate::domain::input_source::{AxAttribute, AxElementSnapshot};
 
@@ -44,7 +44,7 @@ pub fn snapshot_elements(
     for _ in 0..MAX_PARENT_DEPTH {
         let mut snapshot = AxElementSnapshot::new();
         for attribute in plan.attributes() {
-            if let Some(value) = copy_string(&current, attribute_name(*attribute)) {
+            if let Some(value) = copy_attribute_text(&current, attribute_name(*attribute)) {
                 snapshot = snapshot.with(*attribute, value);
             }
         }
@@ -66,6 +66,7 @@ fn attribute_name(attribute: AxAttribute) -> &'static str {
         AxAttribute::Description => "AXDescription",
         AxAttribute::Identifier => "AXIdentifier",
         AxAttribute::DomIdentifier => "AXDOMIdentifier",
+        AxAttribute::DomClassList => "AXDOMClassList",
         AxAttribute::Help => "AXHelp",
     }
 }
@@ -87,9 +88,23 @@ fn copy_element(element: &AXUIElement, name: &'static str) -> Option<CFRetained<
     copy_value(element, name)?.downcast().ok()
 }
 
-fn copy_string(element: &AXUIElement, name: &'static str) -> Option<String> {
-    copy_value(element, name)?
-        .downcast::<CFString>()
-        .ok()
-        .map(|value| value.to_string())
+fn copy_attribute_text(element: &AXUIElement, name: &'static str) -> Option<String> {
+    let value = copy_value(element, name)?;
+    if let Ok(string) = value.clone().downcast::<CFString>() {
+        return Some(string.to_string());
+    }
+    let opaque = value.downcast::<CFArray>().ok()?;
+    // SAFETY: AXDOMClassList is a CFArray of CFString values.
+    let array = unsafe { CFRetained::cast_unchecked::<CFArray<CFString>>(opaque) };
+    let mut parts = Vec::with_capacity(array.len());
+    for index in 0..array.len() {
+        if let Some(string) = array.get(index) {
+            parts.push(string.to_string());
+        }
+    }
+    if parts.is_empty() {
+        None
+    } else {
+        Some(parts.join(" "))
+    }
 }

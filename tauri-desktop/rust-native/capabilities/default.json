@@ -6,7 +6,10 @@
   "permissions": [
     "core:default",
     "core:window:allow-show",
+    "core:window:allow-set-focus",
     "opener:default",
-    "allow-sync-window-chrome-theme"
+    "autostart:default",
+    "allow-sync-window-chrome-theme",
+    "allow-input-source-switcher"
   ]
 }

@@ -89,9 +89,7 @@ impl<B: TisBackend> InputSourceGateway for MacOsInputSourceGateway<B> {
     }
 
     fn select(&mut self, id: &InputSourceId) -> Result<(), GatewayError> {
-        if self.current()? == *id {
-            return Ok(());
-        }
+        // 同ソースでも再選択する。Electron はメニューだけ合い実入力が古いことがある。
         let handle = match self.find_handle(id) {
             Some(handle) => handle,
             None => {
@@ -240,13 +238,13 @@ mod tests {
     }
 
     #[test]
-    fn selecting_current_source_does_not_call_native_select() {
+    fn selecting_current_source_still_calls_native_select() {
         let backend = FakeTis::with_lists(vec![vec![source("en", "ABC", true, true, 1)]]);
         let mut gateway = MacOsInputSourceGateway::with_backend(backend).expect("initial list");
 
         gateway.select(&input_id("en")).expect("already selected");
 
-        assert_eq!(gateway.backend().select_calls, 0);
+        assert_eq!(gateway.backend().select_calls, 1);
     }
 
     #[test]

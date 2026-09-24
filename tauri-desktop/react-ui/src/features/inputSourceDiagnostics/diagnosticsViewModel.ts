@@ -9,7 +9,10 @@ export type SnapshotAttribute = {
 export function toCondition(attribute: SnapshotAttribute): RuleConditionDto {
   return {
     attribute: attribute.attribute,
-    operator: attribute.attribute === "domIdentifier" ? "contains" : "equals",
+    operator:
+      attribute.attribute === "domIdentifier" || attribute.attribute === "domClassList"
+        ? "contains"
+        : "equals",
     scope: attribute.depth === 0 ? "focusedOnly" : "focusedAndAncestors",
     value: attribute.value,
   };
@@ -24,6 +27,7 @@ export function flattenSnapshotAttributes(
     description: string;
     identifier: string;
     domIdentifier: string;
+    domClassList: string;
     help: string;
   }[]
 ): SnapshotAttribute[] {
@@ -37,6 +41,7 @@ export function flattenSnapshotAttributes(
       ["description", element.description],
       ["identifier", element.identifier],
       ["domIdentifier", element.domIdentifier],
+      ["domClassList", element.domClassList],
       ["help", element.help],
     ];
     for (const [attribute, value] of entries) {
@@ -52,26 +57,58 @@ export function logsToTsv(logs: readonly SwitchLogDto[]): string {
   const header = [
     "timestampUnixMs",
     "appId",
+    "pid",
+    "generation",
     "ruleId",
+    "decision",
     "from",
     "to",
     "success",
+    "attempted",
     "reason",
+    "detail",
     "processingMicros",
   ].join("\t");
   const rows = logs.map((log) =>
     [
       log.timestampUnixMs,
       log.appId,
+      log.pid,
+      log.generation,
       log.ruleId,
+      log.decision,
       log.from,
       log.to,
       log.success ? "success" : "failure",
-      log.reason,
+      log.attempted ? "attempted" : "skipped",
+      log.reason.replace(/\t/g, " ").replace(/\n/g, " "),
+      log.detail.replace(/\t/g, " ").replace(/\n/g, " "),
       log.processingMicros,
     ].join("\t")
   );
   return [header, ...rows].join("\n");
+}
+
+export function formatSwitchLogLine(log: SwitchLogDto): string {
+  const route = log.from || log.to ? `${log.from || "—"} → ${log.to || "—"}` : "—";
+  const parts = [
+    log.success ? "成功" : "失敗",
+    log.decision,
+    log.attempted ? "実行" : "未実行",
+    log.appId,
+    `pid ${log.pid}`,
+    `gen ${log.generation}`,
+    log.ruleId || "rule —",
+    route,
+    `${log.processingMicros}µs`,
+  ];
+  if (log.reason) {
+    parts.push(log.reason);
+  }
+  if (log.detail) {
+    parts.push(log.detail);
+  }
+  return parts.join(" / ");
 }
 
 export function formatLatencyMicros(values: readonly number[]): {

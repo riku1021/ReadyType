@@ -11,6 +11,7 @@ import {
 import {
   flattenSnapshotAttributes,
   formatLatencyMicros,
+  formatSwitchLogLine,
   logsToTsv,
   type SnapshotAttribute,
   toCondition,
@@ -145,15 +146,17 @@ export function DiagnosticsPage() {
 
       <section className={styles.section}>
         <h2 className={styles.title}>切替ログ</h2>
+        <p className={styles.meta}>
+          未実行（disabled / snoozed / noRule /
+          alreadySelected）も記録します。無視（ignored）は設定のデバッグログ ON 時のみです。
+        </p>
         {logs.length === 0 ? <p className={styles.meta}>ログなし</p> : null}
         {logs.map((log) => (
           <p
-            key={`${log.timestampUnixMs}-${log.ruleId}-${log.processingMicros}`}
+            key={`${log.timestampUnixMs}-${log.generation}-${log.ruleId}-${log.decision}-${log.processingMicros}`}
             className={styles.meta}
           >
-            {log.success ? "成功" : "失敗"} / {log.appId} / {log.ruleId} / {log.from} → {log.to} /{" "}
-            {log.processingMicros}µs
-            {log.reason ? ` / ${log.reason}` : ""}
+            {formatSwitchLogLine(log)}
           </p>
         ))}
       </section>

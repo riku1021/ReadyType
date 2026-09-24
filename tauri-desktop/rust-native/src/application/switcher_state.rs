@@ -6,11 +6,16 @@ use super::input_source_switcher::SwitchDecision;
 pub struct SwitchLogEntry {
     pub timestamp_unix_ms: u64,
     pub app_id: String,
+    pub pid: i32,
+    pub generation: u64,
     pub rule_id: String,
-    pub from: InputSourceId,
-    pub to: InputSourceId,
+    pub decision: SwitchDecision,
+    pub from: String,
+    pub to: String,
     pub success: bool,
+    pub attempted: bool,
     pub reason: String,
+    pub detail: String,
     pub processing_micros: u64,
 }
 

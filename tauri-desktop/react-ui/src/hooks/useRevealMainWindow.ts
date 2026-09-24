@@ -37,7 +37,12 @@ export function useRevealMainWindow() {
         // ブラウザ単体起動など
       }
 
-      const shouldShow = await invoke<boolean>("should_show_main_window_on_launch");
+      let shouldShow = true;
+      try {
+        shouldShow = await invoke<boolean>("should_show_main_window_on_launch");
+      } catch (error) {
+        console.error("Failed to resolve launch visibility; showing window", error);
+      }
       if (!shouldShow || cancelled) {
         clearBootstrapBackground();
         return;
@@ -56,6 +61,12 @@ export function useRevealMainWindow() {
       } catch (error) {
         console.error("Failed to show main window", error);
         return;
+      }
+
+      try {
+        await getCurrentWindow().setFocus();
+      } catch (error) {
+        console.error("Failed to focus main window", error);
       }
 
       if (cancelled) {
