@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutIndexRouteImport } from './routes/about/index'
+import { Route as DiagnosticsIndexRouteImport } from './routes/diagnostics/index'
 import { Route as LabIndexRouteImport } from './routes/lab/index'
+import { Route as RulesIndexRouteImport } from './routes/rules/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as UpdateIndexRouteImport } from './routes/update/index'
 
@@ -25,9 +27,19 @@ const AboutIndexRoute = AboutIndexRouteImport.update({
   path: '/about/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DiagnosticsIndexRoute = DiagnosticsIndexRouteImport.update({
+  id: '/diagnostics/',
+  path: '/diagnostics/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LabIndexRoute = LabIndexRouteImport.update({
   id: '/lab/',
   path: '/lab/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RulesIndexRoute = RulesIndexRouteImport.update({
+  id: '/rules/',
+  path: '/rules/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
@@ -44,14 +56,18 @@ const UpdateIndexRoute = UpdateIndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about/': typeof AboutIndexRoute
+  '/diagnostics/': typeof DiagnosticsIndexRoute
   '/lab/': typeof LabIndexRoute
+  '/rules/': typeof RulesIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/update/': typeof UpdateIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutIndexRoute
+  '/diagnostics': typeof DiagnosticsIndexRoute
   '/lab': typeof LabIndexRoute
+  '/rules': typeof RulesIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/update': typeof UpdateIndexRoute
 }
@@ -59,22 +75,48 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about/': typeof AboutIndexRoute
+  '/diagnostics/': typeof DiagnosticsIndexRoute
   '/lab/': typeof LabIndexRoute
+  '/rules/': typeof RulesIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/update/': typeof UpdateIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about/' | '/lab/' | '/settings/' | '/update/'
+  fullPaths:
+    | '/'
+    | '/about/'
+    | '/diagnostics/'
+    | '/lab/'
+    | '/rules/'
+    | '/settings/'
+    | '/update/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/lab' | '/settings' | '/update'
-  id: '__root__' | '/' | '/about/' | '/lab/' | '/settings/' | '/update/'
+  to:
+    | '/'
+    | '/about'
+    | '/diagnostics'
+    | '/lab'
+    | '/rules'
+    | '/settings'
+    | '/update'
+  id:
+    | '__root__'
+    | '/'
+    | '/about/'
+    | '/diagnostics/'
+    | '/lab/'
+    | '/rules/'
+    | '/settings/'
+    | '/update/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutIndexRoute: typeof AboutIndexRoute
+  DiagnosticsIndexRoute: typeof DiagnosticsIndexRoute
   LabIndexRoute: typeof LabIndexRoute
+  RulesIndexRoute: typeof RulesIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
   UpdateIndexRoute: typeof UpdateIndexRoute
 }
@@ -95,11 +137,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/diagnostics/': {
+      id: '/diagnostics/'
+      path: '/diagnostics'
+      fullPath: '/diagnostics/'
+      preLoaderRoute: typeof DiagnosticsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lab/': {
       id: '/lab/'
       path: '/lab'
       fullPath: '/lab/'
       preLoaderRoute: typeof LabIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rules/': {
+      id: '/rules/'
+      path: '/rules'
+      fullPath: '/rules/'
+      preLoaderRoute: typeof RulesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/': {
@@ -122,7 +178,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutIndexRoute: AboutIndexRoute,
+  DiagnosticsIndexRoute: DiagnosticsIndexRoute,
   LabIndexRoute: LabIndexRoute,
+  RulesIndexRoute: RulesIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
   UpdateIndexRoute: UpdateIndexRoute,
 }

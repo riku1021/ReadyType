@@ -1,7 +1,9 @@
 import {
   IoInformationCircle as About,
+  IoPulse as Diagnostics,
   IoHome as Home,
   IoFlask as Lab,
+  IoList as Rules,
   IoSettingsSharp as Settings,
   IoSync as Update,
 } from "react-icons/io5";
@@ -16,6 +18,16 @@ export const navLinks: NavLink[] = [
     to: "/",
     label: "ホーム",
     icon: Home,
+  },
+  {
+    to: "/rules",
+    label: "ルール",
+    icon: Rules,
+  },
+  {
+    to: "/diagnostics",
+    label: "診断",
+    icon: Diagnostics,
   },
   {
     to: "/settings",

@@ -5,6 +5,8 @@ import { getNavLinkByPath, navLinks } from "./navLinks";
 describe("getNavLinkByPath", () => {
   it("完全一致のパスを返す", () => {
     expect(getNavLinkByPath("/")?.label).toBe("ホーム");
+    expect(getNavLinkByPath("/rules")?.label).toBe("ルール");
+    expect(getNavLinkByPath("/diagnostics")?.label).toBe("診断");
     expect(getNavLinkByPath("/settings")?.label).toBe("設定");
     expect(getNavLinkByPath("/about")?.label).toBe("アプリについて");
     expect(getNavLinkByPath("/update")?.label).toBe("アップデート");
@@ -19,9 +21,11 @@ describe("getNavLinkByPath", () => {
     expect(getNavLinkByPath("/unknown")).toBeUndefined();
   });
 
-  it("navLinks はホーム・設定・アプリについて・アップデート・開発確認を含む", () => {
+  it("navLinks はホーム・ルール・診断・設定・アプリについて・アップデート・開発確認を含む", () => {
     expect(navLinks.map((link) => link.to)).toEqual([
       "/",
+      "/rules",
+      "/diagnostics",
       "/settings",
       "/about",
       "/update",
