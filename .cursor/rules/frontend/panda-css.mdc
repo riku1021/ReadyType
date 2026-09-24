@@ -1,0 +1,48 @@
+---
+description: Panda CSS の原則・配置・使う API（tauri-desktop/react-ui の ts/tsx）
+globs: tauri-desktop/react-ui/**/*.{ts,tsx}
+alwaysApply: false
+---
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# Panda CSS
+
+出典: [Writing Styles](https://panda-css.com/docs/concepts/writing-styles)、[Recipes](https://panda-css.com/docs/concepts/recipes)、[Cascade Layers](https://panda-css.com/docs/concepts/cascade-layers)。
+
+ビルド時に静的抽出して atomic CSS を生成する。実行時にスタイルオブジェクトを評価しない。詳細は `panda-extraction.mdc` / `panda-tokens.mdc` / `panda-css-cva.mdc`。
+
+## 配置
+
+- 値（tokens / globalCss / conditions / keyframes）は `src/styles/`。`panda.config.ts` はエンジン設定と配線のみ
+- config から `@/styled-system` は import しない（codegen 循環）
+- `styled-system/` は手編集しない。生成は `pnpm exec panda codegen`
+- コンポーネントは `className={css(...)}`。`styled.div` や JSX style props は使わない
+- ページの見た目は `features/`（または `layouts/`）。`routes/` にスタイルを置かない
+
+## API
+
+| import | 用途 |
+|--------|------|
+| `css` / `cva` / `cx` / `sva` | `@/styled-system/css` |
+| `flex` / `stack` / `grid` など | `@/styled-system/patterns`（任意。レイアウトの繰り返し削減） |
+| `token` / `token.var` | `@/styled-system/tokens`（`style` 属性・実行時 CSS 変数のみ） |
+
+config recipe（`panda.config.ts` の `recipes`）は使わない。共通部品は `cva`。
+
+## レイヤー
+
+優先度は `reset < base < tokens < recipes < utilities`。`src/styles/index.css` の `@layer` はこの順に合わせる。開発・ビルド時の CSS は PostCSS プラグイン（`@pandacss/dev/postcss`）が注入する。
+
+- `globalCss` → `@layer base`（弱い）。html/body・CSS 変数・リセット相当のみ
+- `css()` / `cva` / `_hover` / `_focus` など → `@layer utilities`（強い）。コンポーネントの見た目はここ
+- **global から utilities のプロパティを勝たせるために `!` / `!important` を使わない**
+- **広すぎるセレクタ（`*` や `*:focus` など）に色・枠などの見た目を載せない**（意図しない挙動が起きやすい）
+- **レイヤー順の入れ替えや生成フックで base を utilities より強くしない**
+- 詳細: `.cursor/skills/panda-style-layers/SKILL.md`
+
+## 禁止
+
+- SCSS / CSS Modules / vanilla-extract の新規追加
+- `css({})` 内での JS `token()` 呼び出し（文字列 `token(colors.x)` や `{colors.x}` は可）
+- トークンがある色・余白のハードコード
+- 上書き目的の `!important`（先に `.raw()` + `css()` でマージ。globalCss で utilities を殴る用途も禁止）

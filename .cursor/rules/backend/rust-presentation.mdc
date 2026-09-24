@@ -1,0 +1,36 @@
+---
+description: Rust presentation 層（Tauri コマンド・IPC）
+globs: tauri-desktop/rust-native/src/presentation/**/*.rs
+alwaysApply: false
+---
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# Rust Presentation
+
+## 役割
+
+- `#[tauri::command]` の定義
+- 引数の受け取りと戻り値のシリアライズしやすい形への変換
+- DomainError → フロント向けエラー（現状は `String` など）のマップ
+
+## ルール
+
+- コマンド本体は薄く、`application::use_cases` を呼ぶ
+- ビジネスルールをコマンドに書かない
+- 新規コマンドは `commands/mod.rs` と `lib.rs` の `generate_handler!` に登録
+- フロントの `invoke("name", …)` とコマンド名を一致させる
+
+## 例
+
+```rust
+#[tauri::command]
+pub fn greet(name: String) -> Result<String, String> {
+    greet_use_case::execute(&name).map_err(|error| error.to_string())
+}
+```
+
+## 参照
+
+- `src/presentation/commands/greet.rs`
+- `src/presentation/commands/sync_window_chrome.rs`
+- `src/lib.rs`

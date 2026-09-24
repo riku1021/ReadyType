@@ -1,0 +1,88 @@
+---
+description: React フロントのディレクトリ責務（tauri-desktop/react-ui の ts/tsx）
+globs: tauri-desktop/react-ui/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# フロントエンド設計思想ドキュメント
+
+## 1. 技術スタック概要
+
+| 技術            | 用途                                                |
+| --------------- | --------------------------------------------------- |
+| React           | UI ライブラリ                                       |
+| Vite            | バンドラ + 開発サーバー（Tauri 連携・port 1420）    |
+| pnpm            | パッケージマネージャ（mise 固定）                   |
+| TanStack Router | ファイルベースルーティング                          |
+| Panda CSS       | ビルド時生成の型安全スタイリング                    |
+| Jotai           | クライアント UI 状態（テーマなど）                  |
+| Tauri API       | ネイティブ連携（`invoke` / プラグイン）             |
+| Vitest          | ユニットテスト                                      |
+| Bulletproof React | features モジュール化の指針                       |
+
+※ React Query / axios は現状未導入。非同期の共有読みが増えたら導入を検討する（承認必須）。
+
+## 2. ディレクトリ構成と役割
+
+```
+src/
+├── assets/               # Lottie など静的アセット
+├── atoms/                # グローバル共有の Jotai アトム
+├── animations/           # 共通 Lottie ラッパ
+├── components/           # 再利用 UI（ディレクトリは PascalCase）
+├── features/             # 機能単位（Bulletproof React）
+│   ├── home/
+│   ├── settings/
+│   ├── navigation/
+│   └── notFound/
+├── hooks/                # 共有カスタムフック
+├── layouts/              # RootLayout / Drawer / Header
+├── routes/               # TanStack Router（薄い）
+├── styles/               # Panda トークン・globalCss
+├── styled-system/        # Panda codegen（手編集禁止）
+├── utils/
+├── main.tsx
+└── routeTree.gen.ts      # 生成物
+```
+
+`public/pngs/` など Vite public 配下も静的アセットとして利用可。
+
+## 3. 機能モジュール（Bulletproof React）
+
+```
+features/機能名/
+├── components/   # ページ UI（隣接 *.styles.ts）
+├── hooks/        # 必要な場合
+├── atoms/        # 必要な場合
+├── types.ts      # 必要な場合
+└── index.ts      # 公開 API
+```
+
+- `routes/` は URL とページ組み立てのみ。`css()` / `*.styles.ts` は置かない
+- 外部からの import は必ず `index.ts` 経由
+- クライアント UI 状態は Jotai。Rust とのやりとりは `@tauri-apps/api` の `invoke`
+- コンポーネント dir は PascalCase。ケーシング手順は `.cursor/skills/component-path-casing/SKILL.md`
+
+## 4. ネイティブ連携
+
+- 読み書き・OS 操作は Rust コマンド（`tauri-desktop/rust-native`）へ `invoke`
+- フロントに秘密情報や重いロジックを置かない
+- HTTP が必要な場合は原則 Rust（`reqwest`）または `@tauri-apps/plugin-http`。axios 新規追加は承認必須
+
+## 5. スタイリング（Panda CSS）
+
+- トークン・globalCss・conditions は `src/styles/`、`panda.config.ts` は配線のみ
+- 汎用色は `styles/tokens/`、アプリ固有意味色は `styles/domains/<domain>/tokens/`
+- 詳細は `panda-css.mdc` / `panda-tokens.mdc` / `panda-extraction.mdc` / `panda-css-cva.mdc`
+- 生成は `pnpm install` または `pnpm exec panda codegen`
+- SCSS / CSS Modules / vanilla-extract は使わない
+
+## 6. 設計原則
+
+1. 機能モジュール化（高凝集・低結合）
+2. プレゼンテーションとロジックの分離
+3. 型安全性（`any` / `unknown` は使わない）
+4. UI 状態（Jotai）とネイティブ／永続データ（Rust）の責務分離
+5. アクセシビリティ（WAI-ARIA）

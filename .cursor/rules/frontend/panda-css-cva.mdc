@@ -1,0 +1,100 @@
+---
+description: Panda CSS の css() と cva() の使い分け（tauri-desktop/react-ui の ts/tsx）
+globs: tauri-desktop/react-ui/**/*.{ts,tsx}
+alwaysApply: false
+---
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# css() / cva() の使い分け
+
+出典: [Writing Styles](https://panda-css.com/docs/concepts/writing-styles)、[Recipes](https://panda-css.com/docs/concepts/recipes)、[Dynamic styling](https://panda-css.com/docs/guides/dynamic-styling)。
+
+`css` / `cva` は `@/styled-system/css` から import する。`token()` を `css({})` 内で呼ばない（静的抽出されない）。
+
+## 判断
+
+| 使う | いつ |
+|------|------|
+| `css()` | 1 パターンの見た目。ページ・レイアウト・その場限り。`_hover` / `_dark` / `mdDown` で足りる |
+| `cva()` | `variant` / `size` など公開 API がある部品。実行時のキーで見た目を切り替える |
+| `cx()` | **別プロパティ**のクラスを足す（`"group"`、開閉用の追加クラス） |
+| `sva()` | 同じ variant を複数スロット（root / icon / label）で共有するときだけ |
+
+このテンプレートでは **config recipe は使わない**。共通部品の `cva` の置き場所は下表。抽出ルールは `panda-extraction.mdc`。
+
+## 置き場所（cva / 共有 css.raw）
+
+| 種類 | 置き場所 | 例 |
+|------|----------|----|
+| **コンポーネント専用** | そのコンポーネント dir の隣接 `*.styles.ts` | `Button/Button.styles.ts`、`Card/Card.styles.ts`、`NativeSelect/NativeSelect.styles.ts` |
+| **横断（特定 UI の所有物でない）** | `src/styles/objects/` | `surface.ts`（面コンテキスト） |
+| feature / layout ローカル | 隣接 `*.styles.ts` | 各ページ・パネル |
+
+公開はコンポーネントの `index.ts` から re-export してよい（例: `@/components/Button` から `button`）。`routes/` には置かない。
+
+## css()
+
+```ts
+import { css } from "@/styled-system/css";
+
+export const header = css({
+  display: "flex",
+  height: "60px",
+  backgroundColor: "background.sub",
+  mdDown: { display: "none" },
+});
+```
+
+- 置き場所: `features/` または `layouts/` の隣接 `*.styles.ts`（同一ファイルでも可）。`routes/` には置かない
+- 子孫セレクタ（`& span`）は避け、対象要素に `css()` を付ける
+
+## cva()
+
+```ts
+import { cva } from "@/styled-system/css";
+
+export const button = cva({
+  base: { cursor: "pointer", fontWeight: "medium" },
+  variants: {
+    variant: {
+      primary: { backgroundColor: "brand.primary.main", color: "white" },
+      secondary: { backgroundColor: "background.sub", color: "brand.primary.main" },
+    },
+    size: { medium: { fontSize: "1rem" }, large: { fontSize: "1.125rem" } },
+  },
+  defaultVariants: { variant: "primary", size: "medium" },
+});
+```
+
+- 置き場所: 上表（コンポーネント専用は隣接、横断のみ `styles/objects/`）。`routes/` には置かない
+- `cva` は **全 variant の CSS を常に生成**する。variant が増えすぎないこと
+- 実行時マップは `css({ color: colorByType[type] })` にせず、`cva` の `variants` にする
+
+```ts
+// ❌ Panda が type の値を抽出できない
+css({ color: colorByType[type] });
+
+// ✅
+const tone = cva({
+  variants: { type: { primary: { color: "brand.primary.main" }, danger: { color: "status.error" } } },
+});
+tone({ type });
+```
+
+## 合成
+
+同じプロパティを上書きするときは `cx(cva(), css())` ではなく `css()` でマージする（`cx` はクラス文字列を繋ぐだけで、勝敗は生成 CSS の順序依存）。
+
+```ts
+import { css, cx } from "@/styled-system/css";
+
+css(button.raw({ variant: "secondary" }), { display: "inline-flex", gap: "xs" });
+
+cx(styles.drawer, isOpen ? styles.drawerOpen : styles.drawerClosed);
+```
+
+## 使わない
+
+- variant のない単一スタイルに `cva`
+- `css({ [runtimeKey]: ... })` や別ファイルの変数をスタイル値にする
+- 上書き目的の `!important`（まず `.raw()` + `css()` でマージする）

@@ -1,0 +1,46 @@
+---
+description: Panda CSS のトークン・テーマ・conditions（tauri-desktop/react-ui の ts/tsx）
+globs: tauri-desktop/react-ui/**/*.{ts,tsx}
+alwaysApply: false
+---
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# トークンとテーマ
+
+出典: [Tokens](https://panda-css.com/docs/theming/tokens)、[Using Tokens](https://panda-css.com/docs/theming/usage)、[Conditional Styles](https://panda-css.com/docs/concepts/conditional-styles)。
+
+## 定義
+
+トークンは必ず `{ value }`。生の文字列を `theme.tokens` に直接置かない。
+
+- **tokens**: 変化しない基礎値（spacing、fonts、fontSizes、zIndex）
+- **semanticTokens**: 意味とテーマで変わる値（colors）。`_dark` / `_light` は at-rule か親セレクタ条件のみ
+- フォントは `fonts`（`fontFamilies` は無効カテゴリ）
+- 単一ソースは `src/styles/tokens/`。`src/styles/panda.ts` 経由で config に載せる
+
+## 消費（推奨順）
+
+```ts
+css({ color: "brand.primary.main", padding: "sm" });
+css({ boxShadow: "0 2px 4px {colors.shadow.primary}" });
+```
+
+1. `css` / `cva` のプロパティにトークン名を書く
+2. 複合値は `{path.to.token}` または文字列 `token(colors.x)`
+3. JS の `token()` / `token.var()` は `style={{}}` や実行時 CSS 変数だけ
+
+## テーマ
+
+アプリテーマは `data-theme="light" | "dark"`。conditions で `_dark` / `_light` を上書きしている。`_osDark` は OS 設定用で、アプリテーマ切替には使わない。
+
+```ts
+css({ color: "text.main", _hover: { color: "brand.primary.main" } });
+```
+
+レスポンシブは `md` / `mdDown`。論理プロパティ（`paddingInline` など）を物理プロパティより優先する。
+
+## globalCss
+
+`src/styles/bases/global.ts` はプレーンオブジェクト。リセットは `preflight: true`。`bases/reset.ts` は登録しない。
+
+コンポーネント向けの見た目はここに書かない（html/body・変数・リセット相当のみ）。詳細は `panda-css.mdc` と `.cursor/skills/panda-style-layers/SKILL.md`。

@@ -1,0 +1,31 @@
+---
+description: Rust domain 層（Entity / VO / DomainError）。オニオンの最内層
+globs: tauri-desktop/rust-native/src/domain/**/*.rs
+alwaysApply: false
+---
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# Rust Domain
+
+## 置いてよいもの
+
+- Entity / Value Object（例: `GuestName`）
+- DomainError と変換
+- Repository など **純粋な trait**（永続化の抽象。実装は infrastructure）
+
+## 置いてはいけないもの
+
+- `tauri` / `serde` のコマンド属性・IPC 専用 DTO
+- OS API・ファイル・ネットワーク・DB ドライバ
+- UI 文言の組み立て（必要なら application か presentation）
+
+## ルール
+
+- 不変条件はコンストラクタ / `parse` で守る（貧血症にしない）
+- 外部クレート依存は最小（標準とドメインに必要なものだけ）
+- `pub` は意図した API のみ
+
+## 参照
+
+- `src/domain/entities/guest_name.rs`
+- `src/domain/errors.rs`

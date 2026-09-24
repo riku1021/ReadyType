@@ -1,0 +1,28 @@
+---
+description: Rust ネイティブ層のテスト方針
+globs: tauri-desktop/rust-native/**/*.{rs}
+alwaysApply: false
+---
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# Rust Testing
+
+## 方針
+
+- domain / use case の純粋ロジックをユニットテストで優先する
+- port はモックまたはテストダブルで差し替え可能にする
+- Tauri コマンドの薄いラッパは、必要なら結合寄りで最小限
+- フロントの Vitest（`mockIPC`）と責務を分ける
+
+## コマンド
+
+```sh
+cd tauri-desktop/rust-native
+cargo test
+cargo clippy --all-targets -- -D warnings
+```
+
+## 配置の目安
+
+- モジュール隣接: `#[cfg(test)] mod tests { … }`
+- 大きくなったら `tests/` 統合テストを検討

@@ -1,0 +1,19 @@
+# Project-scoped Codex config (loaded only when the project is trusted).
+# Docs: https://developers.openai.com/codex/config-reference
+#       https://developers.openai.com/codex/guides/agents-md
+#       https://developers.openai.com/codex/skills
+#
+# Root keys must appear before tables in TOML.
+
+# Instruction discovery: prefer AGENTS.md; fall back to CLAUDE.md when absent
+# at a directory level. Raise byte budget so root AGENTS.md + nested overrides fit.
+project_doc_max_bytes = 65536
+project_doc_fallback_filenames = ["CLAUDE.md"]
+
+# Optional: treat .git as project root (default). Uncomment to customize.
+# project_root_markers = [".git"]
+
+# Subagent concurrency
+[agents]
+max_threads = 4
+max_depth = 1

@@ -1,0 +1,9 @@
+{
+  "plansDirectory": ".claude/plans",
+  "deny": [
+    "Read(/coverage/)",
+    "Read(**/.env)",
+    "Read(**/.env.*)",
+    "Read(**/envs/.env.keys)"
+  ]
+}

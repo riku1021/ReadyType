@@ -1,0 +1,28 @@
+---
+description: フロント features と Rust オニオン層の境界・公開 API 規約
+globs: tauri-desktop/react-ui/src/features/**/index.ts,tauri-desktop/rust-native/src/**/*.rs
+alwaysApply: false
+---
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# Module Sharing
+
+## Frontend（Bulletproof React）
+
+- 外部からの import は必ず `features/<name>/index.ts` 経由
+- feature 同士の深いパス互相参照を避ける
+- 共有したい UI / hook は `components/` / `hooks/` / `atoms/` へ昇格
+
+## Backend（Onion Architecture）
+
+- クレート: `tauri-desktop/rust-native/`
+- 層: `domain` → `application` → `presentation` / `infrastructure`（外側ほど技術詳細）
+- 依存は **外側 → 内側のみ**。domain が Tauri / OS / DB を知ってはいけない
+- フロントが直接触ってよいのは **presentation の Tauri コマンド**（`invoke`）のみ
+- application の port / use case、domain の内部型をフロントから参照しない
+
+## IPC 契約
+
+- コマンド名と引数・戻り型はフロントの呼び出しと揃える
+- ドメインエラーは presentation でユーザー向けメッセージ（例: `String`）にマップする
+- 詳細は `backend/rust-backend.mdc` / `rust-presentation.mdc`

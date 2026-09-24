@@ -1,0 +1,32 @@
+---
+description: React フロントの機能モジュール・状態管理の実装規約
+globs: tauri-desktop/react-ui/src/features/**/*.{ts,tsx},tauri-desktop/react-ui/src/routes/**/*.{ts,tsx},tauri-desktop/react-ui/src/layouts/**/*.{ts,tsx}
+alwaysApply: false
+---
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# React Frontend
+
+詳細なディレクトリ責務は `frontend/structure.mdc`、スタイルは `frontend/uiux.mdc` ほかを優先。
+
+## 配置
+
+- ページ UI: `features/<name>/`（または `components/`、隣接 `*.styles.ts`）
+- 公開 API: `features/<name>/index.ts` 経由のみ
+- ルーティング: `routes/` は組み立て専用。`css()` を置かない
+- クライアント UI 状態: Jotai（`atoms/` または feature 内）
+- ネイティブ連携: `@tauri-apps/api` の `invoke`（必要な画面・hook に閉じる）
+
+## ルール
+
+- 関数コンポーネント + named export
+- `any` / `unknown` 禁止
+- UI/UX（色・余白・レイアウト）の無断変更禁止
+- React Query / axios / 新バリデーションライブラリの導入は承認必須
+
+## 参照
+
+- `tauri-desktop/react-ui/src/features/home/`
+- `tauri-desktop/react-ui/src/features/settings/`
+- `tauri-desktop/react-ui/src/routes/__root.tsx`
+- `tauri-desktop/react-ui/src/layouts/RootLayout.tsx`

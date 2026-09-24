@@ -1,0 +1,25 @@
+---
+description: Rust infrastructure 層（OS / 永続化など port 実装）
+globs: tauri-desktop/rust-native/src/infrastructure/**/*.rs
+alwaysApply: false
+---
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# Rust Infrastructure
+
+## 役割
+
+- `application::ports`（および domain の repository trait）の **具象実装**
+- OS 差分（`platform/{macos,windows,linux}`）
+- 将来の DB / ファイル / HTTP クライアント実装
+
+## ルール
+
+- ドメインルールをここに書かない（validation は domain / use case）
+- cfg で OS 分岐してよいが、application から具象型を直接配らない
+- Tauri Window 操作など UI シェル寄りの処理はここに閉じ、コマンドから呼ぶ
+
+## 参照
+
+- `src/infrastructure/platform/`
+- `src/application/ports/platform.rs`

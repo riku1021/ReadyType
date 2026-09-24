@@ -1,0 +1,30 @@
+---
+description: Panda の配置と禁止事項（tauri-desktop/react-ui の ts/tsx）
+globs: tauri-desktop/react-ui/**/*.{ts,tsx}
+alwaysApply: false
+---
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# Panda CSS スタイリングガイド
+
+## ディレクトリ構成
+
+```
+src/styles/
+├── panda.ts             # panda.config へ渡す theme / globalCss / conditions
+├── index.css            # Panda 生成 CSS の読み込み
+├── bases/               # globalCss（html/body）。reset は preflight 参照用
+├── tokens/              # カラー / タイポグラフィ / spacing / keyframes など
+├── layouts/             # flex / grid のヘルパー（pattern.raw + cva）
+├── objects/             # 横断の再利用スタイルのみ（surface など。コンポーネント専用 cva は components/ 隣接）
+├── utils/               # 色や fluid 計算
+└── examples/            # トークン・レイアウト利用例
+```
+
+スタイリングの詳細は `panda-css.mdc`（原則）/ `panda-tokens.mdc`（トークン）/ `panda-extraction.mdc`（静的抽出）/ `panda-css-cva.mdc`（css / cva）。
+
+## 禁止事項
+
+- SCSS / CSS Modules / vanilla-extract の新規追加
+- ハードコードした色や余白（トークンがある場合）
+- `styled-system/` の手編集（codegen で上書きされる）

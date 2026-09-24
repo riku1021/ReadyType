@@ -1,0 +1,26 @@
+---
+description: クライアント側のテスト・型チェック方針
+globs: tauri-desktop/react-ui/**/*.{test,spec}.{ts,tsx},tauri-desktop/react-ui/**/__tests__/**/*
+alwaysApply: false
+---
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# TypeScript Testing
+
+Vitest を使う。Tauri IPC をモックする場合は `@tauri-apps/api/mocks` の `mockIPC`（公式ドキュメント参照）。
+
+## 方針
+
+- 純粋ロジック・ユーティリティを優先してユニットテストする
+- コンポーネントは振る舞い（表示・操作結果）を検証する
+- スナップショット乱用や実装詳細への結合を避ける
+- 型安全性は `pnpm typecheck` で担保する
+
+```sh
+cd tauri-desktop/react-ui
+pnpm test
+pnpm typecheck
+pnpm lint
+```
+
+Rust 側のテスト規約は `backend/rust-testing.mdc` を参照。

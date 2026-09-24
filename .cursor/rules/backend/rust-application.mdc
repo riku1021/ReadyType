@@ -1,0 +1,28 @@
+---
+description: Rust application 層（use case と outbound port）
+globs: tauri-desktop/rust-native/src/application/**/*.rs
+alwaysApply: false
+---
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# Rust Application
+
+## 構成
+
+```
+application/
+├── ports/        # 外側へ向かう抽象（PlatformGateway など）
+└── use_cases/    # ユースケース関数 / 構造体
+```
+
+## ルール
+
+- domain のみに依存する（presentation / infrastructure を import しない）
+- ユースケースは「やりたいこと」を表現し、OS 詳細は port 経由
+- port は trait。実装は `infrastructure` に置く
+- Tauri の `AppHandle` / `Window` を application に持ち込まない
+
+## 参照
+
+- `src/application/use_cases/greet.rs`
+- `src/application/ports/platform.rs`

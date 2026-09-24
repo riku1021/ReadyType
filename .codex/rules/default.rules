@@ -1,0 +1,102 @@
+# Project-local Codex command approval rules (NOT coding style).
+# Starlark prefix_rule — https://developers.openai.com/codex/rules
+# Architecture / coding policy: AGENTS.md + .claude/rules + .agents/skills
+
+prefix_rule(
+    pattern = ["mise", "install"],
+    decision = "prompt",
+    justification = "Installing toolchains can modify local mise state and download binaries.",
+    match = [
+        "mise install",
+    ],
+)
+
+prefix_rule(
+    pattern = ["mise", "run", "install"],
+    decision = "prompt",
+    justification = "Project install runs pnpm and may change lockfiles / node_modules.",
+    match = [
+        "mise run install",
+    ],
+)
+
+prefix_rule(
+    pattern = ["mise", "run", "dev"],
+    decision = "prompt",
+    justification = "Starts the Tauri + Vite development session.",
+    match = [
+        "mise run dev",
+    ],
+)
+
+prefix_rule(
+    pattern = ["pnpm", "install"],
+    decision = "prompt",
+    justification = "Installing dependencies can modify lockfiles and access the network.",
+    match = [
+        "pnpm install",
+    ],
+)
+
+prefix_rule(
+    pattern = ["pnpm", "dev"],
+    decision = "prompt",
+    justification = "Starting the Vite development server should be approved per session.",
+    match = [
+        "pnpm dev",
+    ],
+)
+
+prefix_rule(
+    pattern = ["pnpm", "build"],
+    decision = "prompt",
+    justification = "Production builds may run project scripts and write build output.",
+    match = [
+        "pnpm build",
+    ],
+)
+
+prefix_rule(
+    pattern = ["pnpm", "test"],
+    decision = "prompt",
+    justification = "Runs the Vitest suite for react-ui.",
+    match = [
+        "pnpm test",
+    ],
+)
+
+prefix_rule(
+    pattern = ["pnpm", "fix"],
+    decision = "prompt",
+    justification = "Biome --write modifies source files.",
+    match = [
+        "pnpm fix",
+    ],
+)
+
+prefix_rule(
+    pattern = ["cargo", "test"],
+    decision = "prompt",
+    justification = "Runs the Rust test suite for rust-native.",
+    match = [
+        "cargo test",
+    ],
+)
+
+prefix_rule(
+    pattern = ["cargo", "clippy"],
+    decision = "prompt",
+    justification = "Clippy may compile all targets and take time.",
+    match = [
+        "cargo clippy",
+    ],
+)
+
+prefix_rule(
+    pattern = ["lefthook", "install"],
+    decision = "prompt",
+    justification = "Installs git hooks into the local repository.",
+    match = [
+        "lefthook install",
+    ],
+)

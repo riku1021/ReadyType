@@ -1,0 +1,25 @@
+---
+description: React フォーム実装のアクセシビリティと状態パターン
+globs: tauri-desktop/react-ui/src/features/**/*Form*.tsx,tauri-desktop/react-ui/src/components/FormModal/**/*.{ts,tsx},tauri-desktop/react-ui/src/features/settings/**/*.{ts,tsx}
+alwaysApply: false
+---
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# React Forms
+
+FormModal / Dialog 周りや設定画面のフォームは、既存トーン（ネイティブ要素 + Panda）に合わせる。
+
+## ルール
+
+- `label` と入力は `htmlFor` / `id` で紐付ける
+- 送信成功・エラーは `role="status"` や Dialog（Success / Error）で伝える
+- `autoComplete` を適切に付与する
+- 送信ハンドラで `preventDefault()` する
+- スタイルは隣接 `*.styles.ts` + Panda。見た目変更は事前承認
+- バリデーションライブラリ（zod 等）を新たに入れる場合は必ず承認を取る
+
+## 参照
+
+- `tauri-desktop/react-ui/src/components/FormModal/`
+- `tauri-desktop/react-ui/src/components/Dialog/`
+- `tauri-desktop/react-ui/src/features/settings/SettingsPage.tsx`

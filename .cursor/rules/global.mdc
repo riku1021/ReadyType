@@ -1,0 +1,48 @@
+---
+description: 常時適用。日本語、スタック固定、UI無断変更禁止、ルール参照表（ReadyType / Tauri）
+alwaysApply: true
+---
+まず、このファイルを参照したら、参照ファイル名を発言すること
+
+日本語で回答する。実装の振る舞い（前提の明示、最小 diff、依頼外の追加禁止）は `agent-behavior.mdc` に従う。
+
+## 制約
+
+- 重要な判断・予期せぬ問題は報告し、承認を得てから進める
+- **UI/UX（レイアウト、色、フォント、間隔）の無断変更は禁止。** 必要な場合は理由を示して承認を取る
+- **技術スタックのバージョン（API / フレームワーク / ライブラリ）を勝手に変えない。** 変更時は理由を示して承認を取る
+- フロントの Lint は `cd tauri-desktop/react-ui && pnpm fix`
+- Rust の整形・Lint は `cd tauri-desktop/rust-native && cargo fmt` / `cargo clippy --all-targets -- -D warnings`
+
+## プロジェクト構成
+
+- フロント: `tauri-desktop/react-ui`（React + Vite + Panda + TanStack Router）
+- ネイティブ: `tauri-desktop/rust-native`（**オニオンアーキテクチャ**。Clean Architecture 用語でレイヤを増やさない）
+- ツール: mise / pnpm / lefthook（`lefthook.yml`）
+
+## ルールの置き場所
+
+- `.cursor/rules/**/*.mdc`（`frontend/` / `backend/` / `react/` / `typescript/` / `shared/`）
+- Claude Code 用: ルート `CLAUDE.md`、`.claude/rules/` / `.claude/agents/` / `.claude/skills/`（go-ts-template 相当）
+- 実装・レビュー時の行動指針: `shared/agent-behavior.mdc`（スキル版は `.cursor/skills/agent-behavior/SKILL.md`）
+- Cursor のルールは `.mdc`（YAML frontmatter 付き）。プレーン `.md` は Project Rules として無視される
+
+常時適用は本ファイルと `agent-behavior.mdc` のみ。ほかは対象ファイルの glob で付く。
+
+## ルール参照表
+
+- frontend: **structure.mdc**（構成・責務）、**uiux.mdc** / **panda-*.mdc**（スタイル・トークン・静的抽出・`css`/`cva`）
+  - コンポーネント dir の PascalCase / macOS ケーシング: `.cursor/skills/component-path-casing/SKILL.md`
+  - スタイル置き場 / レイヤー: `.cursor/skills/panda-style-layers/SKILL.md`
+  - 静的抽出: `.cursor/skills/panda-static-extraction/SKILL.md`
+- backend（Rust: `tauri-desktop/rust-native/`）— **Onion Architecture**
+  - **rust-backend.mdc**: 層・依存方向・composition
+  - **rust-domain.mdc**: Entity / VO / DomainError
+  - **rust-application.mdc**: use case / outbound port
+  - **rust-presentation.mdc**: Tauri コマンド
+  - **rust-infrastructure.mdc**: OS / 永続化実装
+  - **rust-testing.mdc**: `cargo test` 方針
+- react: **react-frontend.mdc**、**react-forms.mdc**
+- typescript: **typescript-general.mdc**、**typescript-testing.mdc**（Vitest）
+  - 排他ユニオン props: `.cursor/skills/exclusive-union-props/SKILL.md`
+- shared: **agent-behavior.mdc**、**module-sharing.mdc**（features / Rust 層境界）

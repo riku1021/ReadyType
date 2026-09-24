@@ -1,0 +1,60 @@
+---
+description: Rust ネイティブ（オニオンアーキテクチャ）の全体方針・層構成
+globs: tauri-desktop/rust-native/**/*.rs
+alwaysApply: false
+---
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# Rust Backend（Onion Architecture）
+
+クレート: `tauri-desktop/rust-native/`。クリーンアーキテクチャの用語ではなく **オニオン** として層を守る。
+
+## 層と依存方向
+
+```
+presentation / infrastructure  （外側）
+        ↓ 依存してよい
+    application
+        ↓
+      domain                   （内側・核心）
+```
+
+| 層 | 役割 | 配置 |
+|----|------|------|
+| `domain` | Entity / VO / DomainError / Repository trait（必要な場合） | `src/domain/` |
+| `application` | Use case + outbound port（trait） | `src/application/` |
+| `presentation` | Tauri コマンド・IPC DTO・エラーマップ | `src/presentation/` |
+| `infrastructure` | OS / DB / 外部 API 実装（port の実装） | `src/infrastructure/` |
+| composition | `lib.rs` / `main.rs` で配線 | クレートルート |
+
+**依存ルール:** 外側 → 内側のみ。domain / application が `tauri`・OS API・具象 DB を import しない。
+
+## 入口
+
+- フロントからの入口は `#[tauri::command]`（`presentation::commands`）
+- コマンドは薄く、処理は `application::use_cases` に委譲する
+- 登録は `lib.rs` の `invoke_handler` / `generate_handler!`
+
+## コマンド
+
+```sh
+cd tauri-desktop/rust-native
+cargo fmt
+cargo clippy --all-targets -- -D warnings
+cargo test
+```
+
+## 詳細ルール
+
+- ドメイン: `rust-domain.mdc`
+- アプリケーション: `rust-application.mdc`
+- プレゼンテーション: `rust-presentation.mdc`
+- インフラ: `rust-infrastructure.mdc`
+- テスト: `rust-testing.mdc`
+
+## 参照
+
+- `src/lib.rs`（層の説明と composition）
+- `src/presentation/commands/greet.rs`
+- `src/application/use_cases/greet.rs`
+- `src/domain/entities/guest_name.rs`

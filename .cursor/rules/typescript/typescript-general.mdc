@@ -1,0 +1,33 @@
+---
+description: クライアント TypeScript の共通規約（tauri-desktop/react-ui/src の ts/tsx）
+globs: tauri-desktop/react-ui/src/**/*.{ts,tsx}
+alwaysApply: false
+---
+まず、このファイルを参照したら、このファイル名を発言すること
+
+# TypeScript General
+
+## 必須
+
+- `any` / `unknown` を使わない（必要な場合は絞った型や型ガード）
+- `class` は原則使わない（`Error` 継承など必要な場合のみ）
+- named export を基本とする
+- パスエイリアスは `@/` を使う
+
+## 配置の目安
+
+| 種類 | 場所 |
+|---|---|
+| 機能固有 | `features/<name>/` |
+| 共通 UI | `components/` |
+| 共通 hooks | `hooks/` |
+| 共通 atoms | `atoms/` |
+| ユーティリティ | `utils/` |
+
+## 禁止
+
+- `styled-system/` の手編集
+- `routes/` へのスタイル定義
+- ハードコード色・余白（トークンがある場合）
+
+Lint は `pnpm fix`（`tauri-desktop/react-ui` 配下）。
