@@ -3,6 +3,7 @@ import "@/styles/index.css";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { useInputSourceBootstrap } from "@/features/inputSource";
 import { useRevealMainWindow } from "@/hooks/useRevealMainWindow";
 import { useThemeManager } from "@/hooks/useThemeManager";
 import { routeTree } from "@/routeTree.gen";
@@ -22,6 +23,7 @@ declare module "@tanstack/react-router" {
 function App() {
   useThemeManager();
   useRevealMainWindow();
+  useInputSourceBootstrap();
   return <RouterProvider router={router} />;
 }
 
