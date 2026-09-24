@@ -90,9 +90,7 @@ export function SettingItem(props: SettingItemProps) {
   );
 
   if (type === "toggle") {
-    return (
-      <div className={styles.row({ density: "compact", interactive: false })}>{content}</div>
-    );
+    return <div className={styles.row({ density: "compact", interactive: false })}>{content}</div>;
   }
 
   if (type === "selection") {

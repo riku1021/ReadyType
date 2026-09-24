@@ -1,0 +1,30 @@
+# 公式ドキュメントのベストプラクティスに沿った設定
+# 対象: tauri-desktop/react-ui（Biome）+ tauri-desktop/rust-native（rustfmt / Clippy）
+pre-commit:
+  parallel: true
+  jobs:
+    - name: react-ui-format-lint
+      root: tauri-desktop/react-ui/
+      glob: "tauri-desktop/react-ui/**/*.{ts,tsx,js,jsx,mjs,cjs,json,css,yml,yaml}"
+      run: pnpm fix
+      stage_fixed: true
+      description: "Format and lint react-ui (Biome)"
+
+    - name: react-ui-typecheck
+      root: tauri-desktop/react-ui/
+      glob: "tauri-desktop/react-ui/**/*.{ts,tsx,js,jsx,mjs,cjs}"
+      run: pnpm run typecheck
+      description: "Type check react-ui using pnpm"
+
+    - name: rust-native-fmt
+      root: tauri-desktop/rust-native/
+      glob: "tauri-desktop/rust-native/**/*.rs"
+      run: cargo fmt
+      stage_fixed: true
+      description: "Format rust-native code using rustfmt"
+
+    - name: rust-native-clippy
+      root: tauri-desktop/rust-native/
+      glob: "tauri-desktop/rust-native/**/*.rs"
+      run: cargo clippy --all-targets -- -D warnings
+      description: "Lint rust-native with Clippy"

@@ -1,10 +1,10 @@
 import {
+  type CSSProperties,
+  type RefObject,
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
-  type CSSProperties,
-  type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
 
@@ -37,7 +37,7 @@ function computePosition(anchor: HTMLElement, menu: HTMLElement): MenuPosition {
   const maxTop = window.innerHeight - menuRect.height - VIEWPORT_MARGIN;
 
   // トリガー右端にメニュー右端を揃える
-  let left = Math.min(Math.max(VIEWPORT_MARGIN, anchorRect.right - menuRect.width), maxLeft);
+  const left = Math.min(Math.max(VIEWPORT_MARGIN, anchorRect.right - menuRect.width), maxLeft);
   let top = anchorRect.bottom + GAP;
 
   if (top + menuRect.height > window.innerHeight - VIEWPORT_MARGIN) {
@@ -84,7 +84,7 @@ export function SelectionMenu({
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
     };
-  }, [isOpen, anchorRef, options]);
+  }, [isOpen, anchorRef]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -157,6 +157,6 @@ export function SelectionMenu({
         })}
       </ul>
     </div>,
-    document.body,
+    document.body
   );
 }

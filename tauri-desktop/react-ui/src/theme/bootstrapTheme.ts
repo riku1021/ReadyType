@@ -20,9 +20,7 @@ export function resolveStoredTheme(): ResolvedTheme {
     // localStorage / JSON 不正時は system 扱い
   }
 
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 /** `index.html` のインライン背景を外し、Panda の token に任せる */

@@ -7,19 +7,26 @@
     <title>ReadyType</title>
     <!-- モジュール評価前に data-theme を当て、表示直後の色ちらつきを防ぐ -->
     <script>
-      (function () {
+      (() => {
+        var raw;
+        var stored;
+        var dark;
+        var resolved;
+        var bg;
         try {
-          var raw = localStorage.getItem("theme");
-          var stored = raw == null ? "system" : JSON.parse(raw);
-          var dark =
+          raw = localStorage.getItem("theme");
+          stored = raw == null ? "system" : JSON.parse(raw);
+          dark =
             stored === "dark" ||
             (stored !== "light" &&
               window.matchMedia("(prefers-color-scheme: dark)").matches);
-          var resolved = dark ? "dark" : "light";
-          var bg = dark ? "#222222" : "#EAEAEA";
+          resolved = dark ? "dark" : "light";
+          bg = dark ? "#222222" : "#EAEAEA";
           document.documentElement.setAttribute("data-theme", resolved);
           document.documentElement.style.backgroundColor = bg;
-        } catch (e) {}
+        } catch {
+          /* localStorage / JSON が使えない環境ではシステム既定のまま */
+        }
       })();
     </script>
   </head>

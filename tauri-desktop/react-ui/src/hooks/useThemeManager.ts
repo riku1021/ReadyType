@@ -1,6 +1,6 @@
+import { invoke } from "@tauri-apps/api/core";
 import { useAtomValue } from "jotai";
 import { useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { themeAtom } from "@/atoms/theme";
 
 async function syncNativeWindowChrome(resolved: "light" | "dark") {

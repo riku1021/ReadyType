@@ -1,10 +1,7 @@
-import { useEffect } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import {
-  clearBootstrapBackground,
-  resolveStoredTheme,
-} from "@/theme/bootstrapTheme";
+import { useEffect } from "react";
+import { clearBootstrapBackground, resolveStoredTheme } from "@/theme/bootstrapTheme";
 
 /** CSS / ネイティブ背景が落ち着くまで待つ（非表示時は rAF が使えない） */
 const SETTLE_MS = 50;
