@@ -6,6 +6,7 @@ describe("getNavLinkByPath", () => {
   it("完全一致のパスを返す", () => {
     expect(getNavLinkByPath("/")?.label).toBe("ホーム");
     expect(getNavLinkByPath("/accessibility")?.label).toBe("アクセシビリティ");
+    expect(getNavLinkByPath("/apps")?.label).toBe("アプリごとの設定");
     expect(getNavLinkByPath("/rules")?.label).toBe("ルール");
     expect(getNavLinkByPath("/diagnostics")?.label).toBe("診断");
     expect(getNavLinkByPath("/settings")?.label).toBe("設定");
@@ -22,10 +23,11 @@ describe("getNavLinkByPath", () => {
     expect(getNavLinkByPath("/unknown")).toBeUndefined();
   });
 
-  it("navLinks はホーム・アクセシビリティ・ルール・診断・設定・アプリについて・アップデート・開発確認を含む", () => {
+  it("navLinks はホーム・アクセシビリティ・アプリごとの設定・ルール・診断・設定・アプリについて・アップデート・開発確認を含む", () => {
     expect(navLinks.map((link) => link.to)).toEqual([
       "/",
       "/accessibility",
+      "/apps",
       "/rules",
       "/diagnostics",
       "/settings",

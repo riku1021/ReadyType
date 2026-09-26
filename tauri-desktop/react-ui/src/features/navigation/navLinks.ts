@@ -1,6 +1,7 @@
 import {
   IoInformationCircle as About,
   IoShieldCheckmark as Accessibility,
+  IoApps as Apps,
   IoPulse as Diagnostics,
   IoHome as Home,
   IoFlask as Lab,
@@ -24,6 +25,11 @@ export const navLinks: NavLink[] = [
     to: "/accessibility",
     label: "アクセシビリティ",
     icon: Accessibility,
+  },
+  {
+    to: "/apps",
+    label: "アプリごとの設定",
+    icon: Apps,
   },
   {
     to: "/rules",
