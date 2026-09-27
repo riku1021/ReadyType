@@ -57,6 +57,29 @@ export const playPause = css({
   },
 });
 
+export const playPauseDisabled = css({
+  opacity: 0.4,
+  cursor: "not-allowed",
+});
+
+/** アイコン見た目の上に重ねる透明ヒット領域（select / resume button 共用） */
+export const hitTarget = css({
+  position: "absolute",
+  inset: "0",
+  width: "100%",
+  height: "100%",
+  opacity: "0",
+  cursor: "pointer",
+  appearance: "none",
+  border: "none",
+  background: "transparent",
+  padding: "0",
+  fontSize: "1rem",
+  _disabled: {
+    cursor: "not-allowed",
+  },
+});
+
 /** HamzaHerbou / YouTube 風。Md アイコンの視覚サイズに合わせて縮小 */
 export const playPauseGlyph = cva({
   base: {
