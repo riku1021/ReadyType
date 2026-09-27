@@ -38,8 +38,8 @@ describe("appRulesViewModel", () => {
       },
     ];
     expect(
-      displayRuleLabel(rule({ id: "preset-cursor-composer", appId: "x", conditions: ax })).title
-    ).toBe("Chat（AIチャット欄）");
+      displayRuleLabel(rule({ id: "preset-cursor-composer", appId: "x", conditions: ax }))
+    ).toMatchObject({ title: "Chat（AIチャット欄）", kind: "chat" });
     expect(
       displayRuleLabel(rule({ id: "preset-cursor-editor", appId: "x", conditions: ax })).title
     ).toBe("Editor（コードエディタ）");

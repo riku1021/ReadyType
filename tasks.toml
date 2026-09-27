@@ -28,6 +28,16 @@ description = "Run frontend unit tests with Vitest"
 dir = "tauri-desktop/react-ui"
 run = "pnpm test"
 
+["test:e2e"]
+description = "Run Playwright E2E (Vite UI + invoke mocks)"
+dir = "tauri-desktop/react-ui"
+run = "pnpm test:e2e"
+
+[screenshots]
+description = "Capture diagnostic screenshots via Playwright"
+dir = "tauri-desktop/react-ui"
+run = "pnpm screenshots"
+
 [lint]
 description = "Lint & format-check the frontend with Biome"
 dir = "tauri-desktop/react-ui"

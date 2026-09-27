@@ -16,7 +16,11 @@
     "lint:fix": "biome check --write .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "screenshots": "playwright test e2e/screenshots --project=chromium"
   },
   "dependencies": {
     "@lottiefiles/dotlottie-react": "^0.13.5",
@@ -31,6 +35,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.4.9",
     "@pandacss/dev": "^1.12.1",
+    "@playwright/test": "^1.63.0",
     "@tanstack/react-router-devtools": "^1.167.2",
     "@tanstack/router-plugin": "^1.168.40",
     "@tauri-apps/cli": "^2",

@@ -7,10 +7,13 @@ const APP_LABELS: Record<string, string> = {
   "com.apple.Terminal": "Terminal",
 };
 
+export type RuleKind = "chat" | "editor" | "terminal" | "rename" | "default" | "other";
+
 export type RuleDisplay = {
   rule: RuleDto;
   title: string;
   subtitle: string;
+  kind: RuleKind;
 };
 
 export type AppRuleGroup = {
@@ -32,35 +35,41 @@ export function displayRuleLabel(rule: RuleDto): Omit<RuleDisplay, "rule"> {
     return {
       title: "デフォルト",
       subtitle: "このアプリのすべての入力欄で使う既定の言語",
+      kind: "default",
     };
   }
   if (id.includes("chat") || id.includes("composer") || id.includes("ai-input")) {
     return {
       title: "Chat（AIチャット欄）",
       subtitle: "右サイドバーのチャット入力欄",
+      kind: "chat",
     };
   }
   if (id.includes("editor")) {
     return {
       title: "Editor（コードエディタ）",
       subtitle: "メインのエディタ入力欄",
+      kind: "editor",
     };
   }
   if (id.includes("terminal")) {
     return {
       title: "Terminal（内蔵ターミナル）",
       subtitle: "ターミナルのコマンド入力欄",
+      kind: "terminal",
     };
   }
   if (id.includes("rename")) {
     return {
       title: "Rename（ファイル名変更）",
       subtitle: "ファイル名の入力欄",
+      kind: "rename",
     };
   }
   return {
     title: rule.name,
     subtitle: summarizeConditions(rule.conditions),
+    kind: "other",
   };
 }
 

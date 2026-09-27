@@ -6,6 +6,7 @@ import {
   createRule,
   deleteRule,
   getAccessibilityPermission,
+  getAppIcons,
   getAutostartEnabled,
   getFocusSnapshot,
   getInputSourceSettings,
@@ -99,6 +100,9 @@ describe("input source IPC", () => {
       if (command === "get_focus_snapshot" || command === "open_accessibility_settings") {
         return null;
       }
+      if (command === "get_app_icons") {
+        return { "com.apple.Terminal": "data:image/png;base64,AA==" };
+      }
       return stateAtVersion(1);
     });
 
@@ -125,6 +129,7 @@ describe("input source IPC", () => {
     await clearSwitchLogs();
     await getAutostartEnabled();
     await setAutostartEnabled(true);
+    await getAppIcons(["com.apple.Terminal"]);
 
     expect(calls.map((call) => call.command)).toEqual([
       "get_input_source_switcher_state",
@@ -150,7 +155,9 @@ describe("input source IPC", () => {
       "clear_switch_logs",
       "get_autostart_enabled",
       "set_autostart_enabled",
+      "get_app_icons",
     ]);
+    expect(calls[calls.length - 1]?.args).toEqual({ bundleIds: ["com.apple.Terminal"] });
     expect(calls[1]?.args).toEqual({ enabled: false });
     expect(calls[8]?.args).toEqual({ ids: ["a", "b"] });
     expect(calls[10]?.args).toEqual({

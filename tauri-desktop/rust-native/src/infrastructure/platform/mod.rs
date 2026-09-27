@@ -10,6 +10,8 @@ pub mod windows;
 #[cfg(target_os = "windows")]
 pub use windows::WindowsPlatform as CurrentPlatform;
 
+pub mod app_icon;
+pub mod app_icon_cache;
 pub mod focus_monitor;
 pub mod input_source;
 

@@ -28,4 +28,5 @@ commands.allow = [
   "get_focus_snapshot",
   "list_switch_logs",
   "clear_switch_logs",
+  "get_app_icons",
 ]

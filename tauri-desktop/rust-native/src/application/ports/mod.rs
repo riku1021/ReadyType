@@ -1,5 +1,6 @@
 //! Outbound ports (traits). Implementations live in infrastructure.
 
+pub mod app_icon;
 pub mod clock;
 pub mod focus_monitor;
 pub mod input_source;

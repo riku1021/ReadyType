@@ -1,2 +1,6 @@
 .worktrees/
 .DS_Store
+tauri-desktop/react-ui/tmp/
+tauri-desktop/react-ui/test-results/
+tauri-desktop/react-ui/playwright-report/
+tauri-desktop/react-ui/blob-report/

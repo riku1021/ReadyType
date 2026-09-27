@@ -18,6 +18,10 @@ declare module "@tanstack/react-router" {
 
   interface StaticDataRouteOption {
     title?: string;
+    headerBack?: {
+      to: string;
+      label: string;
+    };
   }
 
   interface HistoryState {

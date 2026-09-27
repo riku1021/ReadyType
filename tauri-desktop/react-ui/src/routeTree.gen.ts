@@ -18,6 +18,7 @@ import { Route as LabIndexRouteImport } from './routes/lab/index'
 import { Route as RulesIndexRouteImport } from './routes/rules/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as UpdateIndexRouteImport } from './routes/update/index'
+import { Route as AppsAppIdIndexRouteImport } from './routes/apps/$appId/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -64,6 +65,11 @@ const UpdateIndexRoute = UpdateIndexRouteImport.update({
   path: '/update/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppsAppIdIndexRoute = AppsAppIdIndexRouteImport.update({
+  id: '/apps/$appId/',
+  path: '/apps/$appId/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/rules/': typeof RulesIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/update/': typeof UpdateIndexRoute
+  '/apps/$appId/': typeof AppsAppIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByTo {
   '/rules': typeof RulesIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/update': typeof UpdateIndexRoute
+  '/apps/$appId': typeof AppsAppIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -98,6 +106,7 @@ export interface FileRoutesById {
   '/rules/': typeof RulesIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/update/': typeof UpdateIndexRoute
+  '/apps/$appId/': typeof AppsAppIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,6 +120,7 @@ export interface FileRouteTypes {
     | '/rules/'
     | '/settings/'
     | '/update/'
+    | '/apps/$appId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +132,7 @@ export interface FileRouteTypes {
     | '/rules'
     | '/settings'
     | '/update'
+    | '/apps/$appId'
   id:
     | '__root__'
     | '/'
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/rules/'
     | '/settings/'
     | '/update/'
+    | '/apps/$appId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -145,6 +157,7 @@ export interface RootRouteChildren {
   RulesIndexRoute: typeof RulesIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
   UpdateIndexRoute: typeof UpdateIndexRoute
+  AppsAppIdIndexRoute: typeof AppsAppIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -212,6 +225,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UpdateIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/apps/$appId/': {
+      id: '/apps/$appId/'
+      path: '/apps/$appId'
+      fullPath: '/apps/$appId/'
+      preLoaderRoute: typeof AppsAppIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -225,6 +245,7 @@ const rootRouteChildren: RootRouteChildren = {
   RulesIndexRoute: RulesIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
   UpdateIndexRoute: UpdateIndexRoute,
+  AppsAppIdIndexRoute: AppsAppIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

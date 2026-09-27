@@ -27,10 +27,10 @@ serde_json = "1"
 [target."cfg(target_os = \"macos\")".dependencies]
 block2 = "0.6.2"
 objc2 = "0.6.4"
-objc2-app-kit = { version = "0.3.2", features = ["NSColor", "NSRunningApplication", "NSWindow", "NSWorkspace", "block2", "objc2-core-foundation"] }
+objc2-app-kit = { version = "0.3.2", features = ["NSBitmapImageRep", "NSColor", "NSGraphics", "NSImage", "NSImageRep", "NSRunningApplication", "NSWindow", "NSWorkspace", "block2", "objc2-core-foundation"] }
 objc2-application-services = { version = "0.3.2", features = ["AXError", "AXUIElement", "HIServices", "libc"] }
 objc2-core-foundation = { version = "0.3.2", features = ["CFArray", "CFDate", "CFDictionary", "CFNumber", "CFRunLoop", "CFString"] }
-objc2-foundation = { version = "0.3.2", features = ["NSNotification", "NSOperation", "NSString"] }
+objc2-foundation = { version = "0.3.2", features = ["NSData", "NSDictionary", "NSNotification", "NSOperation", "NSString", "NSURL"] }
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

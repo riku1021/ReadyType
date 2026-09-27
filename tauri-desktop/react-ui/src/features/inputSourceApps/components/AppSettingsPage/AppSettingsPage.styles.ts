@@ -1,4 +1,4 @@
-import { css } from "@/styled-system/css";
+import { css, cva } from "@/styled-system/css";
 import { surfaceSub } from "@/styles/objects/surface";
 
 export const page = css({
@@ -9,79 +9,71 @@ export const page = css({
   flex: "1",
 });
 
+export const toolbar = css({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "sm",
+  flexWrap: "wrap",
+});
+
 export const intro = css({
   margin: "0",
   fontSize: "sm",
   color: "text.secondary",
 });
 
-export const layout = css({
-  display: "grid",
-  gridTemplateColumns: "minmax(220px, 280px) minmax(0, 1fr)",
-  gap: "sm",
-  minHeight: "0",
-  flex: "1",
-  mdDown: {
-    gridTemplateColumns: "1fr",
-  },
-});
-
-export const appList = css(surfaceSub, {
-  display: "flex",
-  flexDirection: "column",
-  gap: "xs",
-  padding: "sm",
-  borderRadius: "12px",
-  boxShadow: "inset 0 0 0 1px {colors.border.primary}, 0 2px 8px {colors.shadow.primary}",
-  minHeight: "0",
-  overflowY: "auto",
-});
-
-export const appListHeader = css({
-  display: "flex",
-  flexDirection: "column",
-  gap: "xs",
-  marginBottom: "xs",
-});
-
-export const sectionTitle = css({
-  margin: "0",
-  fontSize: "md",
-  fontWeight: "semibold",
-  color: "text.main",
-});
-
-export const appRow = css({
+export const toolbarActions = css({
   display: "flex",
   alignItems: "center",
-  justifyContent: "space-between",
-  gap: "sm",
-  width: "100%",
-  padding: "xs sm",
-  borderRadius: "10px",
-  backgroundColor: "transparent",
-  _hover: {
-    backgroundColor: "background.main",
+  gap: "xs",
+  flexWrap: "wrap",
+});
+
+export const searchBox = css({
+  display: "flex",
+  alignItems: "center",
+  gap: "xs",
+  paddingInline: "sm",
+  paddingBlock: "xs",
+  borderRadius: "8px",
+  borderWidth: "1px",
+  borderStyle: "solid",
+  borderColor: "border.primary",
+  backgroundColor: "background.sub",
+  color: "text.secondary",
+});
+
+export const searchIcon = css({
+  fontSize: "md",
+  flexShrink: "0",
+});
+
+export const searchInput = css({
+  border: "none",
+  background: "transparent",
+  color: "text.main",
+  fontSize: "sm",
+  width: "160px",
+  maxWidth: "40vw",
+  outline: "none",
+  _placeholder: {
+    color: "text.secondary",
   },
 });
 
-export const appRowSelected = css({
-  backgroundColor: "background.main",
-  boxShadow: "inset 0 0 0 1px {colors.border.primary}",
+export const appCell = css({
+  display: "flex",
+  alignItems: "center",
+  gap: "sm",
+  minWidth: "0",
 });
 
-export const appRowMain = css({
+export const appCellText = css({
   display: "flex",
   flexDirection: "column",
-  gap: "xs",
+  gap: "4px",
   minWidth: "0",
-  flex: "1",
-  padding: "0",
-  border: "none",
-  backgroundColor: "transparent",
-  color: "text.main",
-  cursor: "pointer",
-  textAlign: "left",
 });
 
 export const appName = css({
@@ -89,118 +81,127 @@ export const appName = css({
   fontSize: "sm",
   fontWeight: "semibold",
   color: "text.main",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 });
 
 export const appMeta = css({
   margin: "0",
   fontSize: "xs",
   color: "text.secondary",
-  wordBreak: "break-all",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 });
 
-export const detail = css(surfaceSub, {
-  display: "flex",
-  flexDirection: "column",
-  gap: "sm",
-  padding: "sm",
-  borderRadius: "12px",
-  boxShadow: "inset 0 0 0 1px {colors.border.primary}, 0 2px 8px {colors.shadow.primary}",
-  minHeight: "0",
-  overflowY: "auto",
-});
-
-export const detailHeader = css({
-  display: "flex",
-  alignItems: "flex-start",
-  justifyContent: "space-between",
-  gap: "sm",
-});
-
-export const detailTitleBlock = css({
-  display: "flex",
-  flexDirection: "column",
-  gap: "xs",
-  minWidth: "0",
-});
-
-export const fieldBlock = css({
-  display: "flex",
-  flexDirection: "column",
-  gap: "xs",
-});
-
-export const fieldLabel = css({
-  margin: "0",
+export const ruleCount = css({
   fontSize: "sm",
-  fontWeight: "semibold",
   color: "text.main",
 });
 
-export const fieldHelp = css({
-  margin: "0",
+export const th = css(surfaceSub, {
+  paddingBlock: "sm",
+  paddingInline: "xs",
   fontSize: "xs",
-  color: "text.secondary",
+  fontWeight: "semibold",
+  color: "text.sub",
+  textAlign: "left",
+  borderBottomWidth: "1px",
+  borderBottomStyle: "solid",
+  borderBottomColor: "border.primary",
+  whiteSpace: "nowrap",
 });
 
-export const select = css({
-  width: "100%",
-  maxWidth: "280px",
-  paddingInline: "sm",
-  paddingBlock: "xs",
-  borderRadius: "8px",
-  borderWidth: "1px",
-  borderStyle: "solid",
-  borderColor: "border.primary",
-  backgroundColor: "background.main",
-  color: "text.main",
-  fontSize: "sm",
+export const thApp = css(surfaceSub, {
+  paddingBlock: "sm",
+  paddingInline: "xs",
+  paddingInlineStart: "sm",
+  fontSize: "xs",
+  fontWeight: "semibold",
+  color: "text.sub",
+  textAlign: "left",
+  borderBottomWidth: "1px",
+  borderBottomStyle: "solid",
+  borderBottomColor: "border.primary",
+  whiteSpace: "nowrap",
 });
 
-export const ruleList = css({
-  display: "flex",
-  flexDirection: "column",
-  gap: "xs",
+export const thEnabled = css(surfaceSub, {
+  paddingBlock: "sm",
+  paddingInline: "xs",
+  paddingInlineEnd: "sm",
+  fontSize: "xs",
+  fontWeight: "semibold",
+  color: "text.sub",
+  textAlign: "right",
+  borderBottomWidth: "1px",
+  borderBottomStyle: "solid",
+  borderBottomColor: "border.primary",
+  whiteSpace: "nowrap",
 });
 
-export const ruleRow = css({
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1fr) auto auto",
-  alignItems: "center",
-  gap: "sm",
-  padding: "xs sm",
-  borderRadius: "10px",
-  backgroundColor: "background.main",
-  boxShadow: "inset 0 0 0 1px {colors.border.primary}",
-  mdDown: {
-    gridTemplateColumns: "1fr",
+export const row = css({
+  borderBottomWidth: "1px",
+  borderBottomStyle: "solid",
+  borderBottomColor: "border.primary",
+  cursor: "pointer",
+});
+
+export const td = cva({
+  base: {
+    paddingBlock: "sm",
+    paddingInline: "xs",
+    verticalAlign: "middle",
+    minWidth: "0",
+    backgroundColor: "transparent",
+  },
+  variants: {
+    selected: {
+      true: {
+        backgroundColor: "background.hover",
+      },
+    },
   },
 });
 
-export const ruleText = css({
-  display: "flex",
-  flexDirection: "column",
-  gap: "xs",
-  minWidth: "0",
+export const tdApp = cva({
+  base: {
+    paddingBlock: "sm",
+    paddingInline: "xs",
+    paddingInlineStart: "sm",
+    verticalAlign: "middle",
+    minWidth: "0",
+    backgroundColor: "transparent",
+    borderLeftWidth: "3px",
+    borderLeftStyle: "solid",
+    borderLeftColor: "transparent",
+  },
+  variants: {
+    selected: {
+      true: {
+        backgroundColor: "background.hover",
+        borderLeftColor: "brand.main",
+      },
+    },
+  },
 });
 
-export const hint = css({
-  margin: "0",
-  padding: "sm",
-  borderRadius: "10px",
-  backgroundColor: "background.main",
-  color: "text.secondary",
-  fontSize: "xs",
-  lineHeight: "1.5",
-});
-
-export const empty = css({
-  margin: "0",
-  fontSize: "sm",
-  color: "text.secondary",
-});
-
-export const toolbar = css({
-  display: "flex",
-  flexWrap: "wrap",
-  gap: "xs",
+export const tdEnabled = cva({
+  base: {
+    paddingBlock: "sm",
+    paddingInline: "xs",
+    paddingInlineEnd: "sm",
+    verticalAlign: "middle",
+    minWidth: "0",
+    backgroundColor: "transparent",
+    textAlign: "right",
+  },
+  variants: {
+    selected: {
+      true: {
+        backgroundColor: "background.hover",
+      },
+    },
+  },
 });

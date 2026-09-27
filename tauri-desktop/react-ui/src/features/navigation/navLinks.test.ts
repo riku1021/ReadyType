@@ -17,6 +17,7 @@ describe("getNavLinkByPath", () => {
 
   it("ネストされたパスは最長プレフィックスでマッチする", () => {
     expect(getNavLinkByPath("/settings/theme")?.to).toBe("/settings");
+    expect(getNavLinkByPath("/apps/com.apple.Terminal")?.to).toBe("/apps");
   });
 
   it("未知のパスは undefined", () => {

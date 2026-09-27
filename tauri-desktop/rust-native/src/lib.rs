@@ -84,6 +84,31 @@ pub fn run() {
             controller.refresh_permission()?;
             let initial_state = controller.state()?;
             app.manage(controller);
+
+            let icon_cache_dir = app.path().app_cache_dir()?.join("app-icons");
+            std::fs::create_dir_all(&icon_cache_dir)?;
+            let app_icon_resolver: Arc<dyn application::ports::app_icon::AppIconResolver> = {
+                #[cfg(target_os = "macos")]
+                {
+                    Arc::new(
+                        infrastructure::platform::app_icon_cache::CachedAppIconResolver::new(
+                            infrastructure::platform::macos::MacOsAppIconSource,
+                            icon_cache_dir,
+                        ),
+                    )
+                }
+                #[cfg(not(target_os = "macos"))]
+                {
+                    Arc::new(
+                        infrastructure::platform::app_icon_cache::CachedAppIconResolver::new(
+                            infrastructure::platform::app_icon::UnsupportedAppIconSource,
+                            icon_cache_dir,
+                        ),
+                    )
+                }
+            };
+            app.manage(app_icon_resolver);
+
             infrastructure::desktop::tray::install(app.handle(), &initial_state)?;
 
             // Accessory だと Dock にも出ず、visible:false のウィンドウが
@@ -131,6 +156,7 @@ pub fn run() {
             _ => {}
         })
         .invoke_handler(tauri::generate_handler![
+            presentation::commands::app_icons::get_app_icons,
             presentation::commands::autostart::get_autostart_enabled,
             presentation::commands::autostart::set_autostart_enabled,
             presentation::commands::autostart::should_show_main_window_on_launch,
