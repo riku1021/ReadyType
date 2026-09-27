@@ -107,74 +107,72 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
   }
 
   return (
-    <div className={styles.page}>
-      <section className={styles.detail} aria-label="アプリ詳細">
-        <div className={styles.detailHeader}>
-          <div className={styles.detailIdentity}>
-            <AppIconView src={icons[selected.appId]} label={selected.label} large />
-            <div className={styles.detailTitleBlock}>
-              <h2 className={styles.detailName}>{selected.label}</h2>
-              <p className={styles.detailPath}>{selected.appId}</p>
-            </div>
+    <section className={styles.page} aria-label="アプリ詳細">
+      <div className={styles.detailHeader}>
+        <div className={styles.detailIdentity}>
+          <AppIconView src={icons[selected.appId]} label={selected.label} large />
+          <div className={styles.detailTitleBlock}>
+            <h2 className={styles.detailName}>{selected.label}</h2>
+            <p className={styles.detailPath}>{selected.appId}</p>
           </div>
-          <Toggle
-            checked={selected.enabled}
-            aria-label={`${selected.label} を有効化`}
-            onChange={(enabled) => {
-              void setAppEnabled(selected, enabled);
+        </div>
+        <Toggle
+          checked={selected.enabled}
+          aria-label={`${selected.label} を有効化`}
+          onChange={(enabled) => {
+            void setAppEnabled(selected, enabled);
+          }}
+        />
+      </div>
+
+      {selected.defaultRule ? (
+        <div className={styles.fieldBlock}>
+          <p className={styles.fieldLabel}>デフォルトの入力言語</p>
+          <p className={styles.fieldHelp}>
+            このアプリで、特にルールが設定されていない入力欄に使用する言語です。
+          </p>
+          <LanguageSelect
+            value={languageSelectValue(selected.defaultRule.target)}
+            label="デフォルトの入力言語"
+            wide
+            onChange={(value) => {
+              if (selected.defaultRule) {
+                void setRuleTarget(selected.defaultRule, value);
+              }
             }}
           />
-        </div>
-
-        {selected.defaultRule ? (
-          <div className={styles.fieldBlock}>
-            <p className={styles.fieldLabel}>デフォルトの入力言語</p>
-            <p className={styles.fieldHelp}>
-              このアプリで、特にルールが設定されていない入力欄に使用する言語です。
-            </p>
-            <LanguageSelect
-              value={languageSelectValue(selected.defaultRule.target)}
-              label="デフォルトの入力言語"
-              wide
-              onChange={(value) => {
-                if (selected.defaultRule) {
-                  void setRuleTarget(selected.defaultRule, value);
-                }
-              }}
-            />
-            <div className={styles.infoBox}>
-              <IoInformationCircle className={styles.infoIcon} aria-hidden="true" />
-              <span>個別のルールで指定がある入力欄は、そちらの設定が優先されます。</span>
-            </div>
+          <div className={styles.infoBox}>
+            <IoInformationCircle className={styles.infoIcon} aria-hidden="true" />
+            <span>個別のルールで指定がある入力欄は、そちらの設定が優先されます。</span>
           </div>
-        ) : null}
-
-        <div className={styles.fieldBlock}>
-          <div className={styles.sectionHeader}>
-            <p className={styles.fieldLabel}>個別のルール</p>
-            <Button variant="secondary" iconLeft={<IoAdd />} onClick={() => undefined} disabled>
-              ルールを追加
-            </Button>
-          </div>
-          <p className={styles.fieldHelp}>特定の入力欄に対して、異なる言語を設定できます。</p>
-          <DataTable
-            className={styles.rulesTable}
-            columns={ruleColumns}
-            rows={selected.contextualRules}
-            getRowId={(item) => item.rule.id}
-            rowClassName={() => styles.row}
-            emptyMessage="個別ルールはありません。"
-          />
         </div>
+      ) : null}
 
-        <div className={styles.infoBox}>
-          <IoInformationCircle className={styles.infoIcon} aria-hidden="true" />
-          <span>
-            Chat / Editor / Terminal
-            は分かりやすさのための表示で、実際の判定は各ルールの条件（AX）で行います。
-          </span>
+      <div className={styles.fieldBlock}>
+        <div className={styles.sectionHeader}>
+          <p className={styles.fieldLabel}>個別のルール</p>
+          <Button variant="secondary" iconLeft={<IoAdd />} onClick={() => undefined} disabled>
+            ルールを追加
+          </Button>
         </div>
-      </section>
-    </div>
+        <p className={styles.fieldHelp}>特定の入力欄に対して、異なる言語を設定できます。</p>
+      </div>
+
+      <DataTable
+        columns={ruleColumns}
+        rows={selected.contextualRules}
+        getRowId={(item) => item.rule.id}
+        rowClassName={() => styles.row}
+        emptyMessage="個別ルールはありません。"
+      />
+
+      <div className={styles.infoBox}>
+        <IoInformationCircle className={styles.infoIcon} aria-hidden="true" />
+        <span>
+          Chat / Editor / Terminal
+          は分かりやすさのための表示で、実際の判定は各ルールの条件（AX）で行います。
+        </span>
+      </div>
+    </section>
   );
 }

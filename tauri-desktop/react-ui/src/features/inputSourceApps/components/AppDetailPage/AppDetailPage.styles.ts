@@ -9,22 +9,12 @@ export const page = css({
   flex: "1",
 });
 
-export const detail = css(surfaceSub, {
-  display: "flex",
-  flexDirection: "column",
-  gap: "md",
-  padding: "md",
-  borderRadius: "12px",
-  boxShadow: "inset 0 0 0 1px {colors.border.primary}, 0 2px 8px {colors.shadow.primary}",
-  minHeight: "0",
-  overflowY: "auto",
-});
-
 export const detailHeader = css({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
   gap: "sm",
+  flexShrink: "0",
 });
 
 export const detailIdentity = css({
@@ -66,6 +56,7 @@ export const fieldBlock = css({
   display: "flex",
   flexDirection: "column",
   gap: "xs",
+  flexShrink: "0",
 });
 
 export const fieldLabel = css({
@@ -87,11 +78,12 @@ export const infoBox = css({
   gap: "xs",
   padding: "sm",
   borderRadius: "10px",
-  backgroundColor: "background.main",
+  backgroundColor: "background.sub",
   boxShadow: "inset 0 0 0 1px {colors.border.primary}",
   color: "text.secondary",
   fontSize: "xs",
   lineHeight: "1.5",
+  flexShrink: "0",
 });
 
 export const infoIcon = css({
@@ -99,11 +91,6 @@ export const infoIcon = css({
   flexShrink: "0",
   color: "text.secondary",
   marginTop: "0.1em",
-});
-
-export const rulesTable = css({
-  height: "auto",
-  flex: "none",
 });
 
 export const th = css(surfaceSub, {
