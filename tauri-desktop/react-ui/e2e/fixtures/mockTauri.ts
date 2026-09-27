@@ -42,6 +42,7 @@ export async function installTauriMocks(page: Page): Promise<void> {
         case "get_input_source_switcher_state":
         case "set_input_source_switcher_enabled":
         case "set_snooze":
+        case "snooze_input_source_switcher_indefinitely":
         case "resume_input_source_switcher":
         case "create_rule":
         case "update_rule":

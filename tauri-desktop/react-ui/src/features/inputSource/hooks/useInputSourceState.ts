@@ -25,6 +25,7 @@ import {
   setDebugLogging as setDebugLoggingApi,
   setInputSourceSwitcherEnabled,
   setSnooze as setSnoozeApi,
+  snoozeInputSourceSwitcherIndefinitely as snoozeIndefinitelyApi,
   startDebugCapture as startDebugCaptureApi,
   stopDebugCapture as stopDebugCaptureApi,
   updateInputSourcePreferences as updateInputSourcePreferencesApi,
@@ -161,6 +162,12 @@ export function useInputSourceState() {
     },
     [setFeature]
   );
+
+  const snoozeIndefinitely = useCallback(async () => {
+    const switcher = await snoozeIndefinitelyApi();
+    applySwitcher(setFeature, switcher);
+    return switcher;
+  }, [setFeature]);
 
   const resume = useCallback(async () => {
     const switcher = await resumeInputSourceSwitcher();
@@ -320,6 +327,7 @@ export function useInputSourceState() {
     state,
     setEnabled,
     setSnooze,
+    snoozeIndefinitely,
     resume,
     requestPermission,
     openAccessibilitySettings,

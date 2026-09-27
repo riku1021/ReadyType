@@ -17,6 +17,8 @@ export const getInputSourceSwitcherState = () =>
 export const setInputSourceSwitcherEnabled = (enabled: boolean) =>
   invoke<SwitcherStateDto>("set_input_source_switcher_enabled", { enabled });
 export const setSnooze = (minutes: number) => invoke<SwitcherStateDto>("set_snooze", { minutes });
+export const snoozeInputSourceSwitcherIndefinitely = () =>
+  invoke<SwitcherStateDto>("snooze_input_source_switcher_indefinitely");
 export const resumeInputSourceSwitcher = () =>
   invoke<SwitcherStateDto>("resume_input_source_switcher");
 export const listInputSources = (refresh = false) =>

@@ -9,6 +9,7 @@ commands.allow = [
   "get_input_source_switcher_state",
   "set_input_source_switcher_enabled",
   "set_snooze",
+  "snooze_input_source_switcher_indefinitely",
   "resume_input_source_switcher",
   "list_input_sources",
   "list_rules",

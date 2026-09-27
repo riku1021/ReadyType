@@ -54,6 +54,11 @@ impl From<&SwitcherState> for TrayMenuModel {
                 item("snooze-5", "5分間一時停止", state.enabled && !snoozed),
                 item("snooze-15", "15分間一時停止", state.enabled && !snoozed),
                 item("snooze-60", "1時間一時停止", state.enabled && !snoozed),
+                item(
+                    "snooze-indefinite",
+                    "無期限で一時停止",
+                    state.enabled && !snoozed,
+                ),
                 item("resume", "今すぐ再開", snoozed),
                 item("show", "ReadyTypeを開く", true),
                 item("settings", "設定を開く", true),
@@ -130,11 +135,12 @@ fn build_menu(app: &AppHandle, state: &SwitcherState) -> tauri::Result<Menu<taur
             &items[2],
             &items[3],
             &items[4],
-            &separator_two,
             &items[5],
+            &separator_two,
             &items[6],
-            &separator_three,
             &items[7],
+            &separator_three,
+            &items[8],
         ],
     )
 }
@@ -161,6 +167,7 @@ fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
         "snooze-5" => controller.set_snooze_minutes(5),
         "snooze-15" => controller.set_snooze_minutes(15),
         "snooze-60" => controller.set_snooze_minutes(60),
+        "snooze-indefinite" => controller.set_snooze_indefinitely(),
         "resume" => controller.resume(),
         _ => return,
     };

@@ -86,6 +86,16 @@ pub fn set_snooze(
 }
 
 #[tauri::command]
+pub fn snooze_input_source_switcher_indefinitely(
+    controller: State<'_, Arc<SwitcherController>>,
+) -> Result<StateDto, IpcError> {
+    controller
+        .set_snooze_indefinitely()
+        .map(|state| StateDto::from(&state))
+        .map_err(IpcError::from)
+}
+
+#[tauri::command]
 pub fn resume_input_source_switcher(
     controller: State<'_, Arc<SwitcherController>>,
 ) -> Result<StateDto, IpcError> {

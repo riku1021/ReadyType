@@ -216,6 +216,12 @@ impl SwitcherController {
         self.state()
     }
 
+    pub fn set_snooze_indefinitely(&self) -> Result<SwitcherState, ControllerError> {
+        self.lock_switcher()?.snooze_indefinitely()?;
+        self.wake_worker()?;
+        self.state()
+    }
+
     pub fn resume(&self) -> Result<SwitcherState, ControllerError> {
         self.lock_switcher()?.set_snoozed_until(None)?;
         self.wake_worker()?;

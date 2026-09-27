@@ -136,11 +136,11 @@ export const navText = css({
   fontSize: "base",
 });
 
-export const themeToggleContainer = css({
-  width: "60px",
-  height: "60px",
+export const controlsRow = css({
   display: "flex",
   alignItems: "center",
-  justifyContent: "center",
+  gap: "sm",
+  height: "60px",
+  paddingInline: "sm",
   flexShrink: 0,
 });

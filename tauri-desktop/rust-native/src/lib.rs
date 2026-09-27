@@ -164,6 +164,7 @@ pub fn run() {
             presentation::commands::input_source_switcher::get_input_source_switcher_state,
             presentation::commands::input_source_switcher::set_input_source_switcher_enabled,
             presentation::commands::input_source_switcher::set_snooze,
+            presentation::commands::input_source_switcher::snooze_input_source_switcher_indefinitely,
             presentation::commands::input_source_switcher::resume_input_source_switcher,
             presentation::commands::input_source_switcher::list_input_sources,
             presentation::commands::input_source_switcher::list_rules,

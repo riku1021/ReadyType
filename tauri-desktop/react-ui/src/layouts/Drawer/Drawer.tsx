@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { SwitcherControls } from "@/features/inputSource";
 import { navLinks } from "@/features/navigation";
 
 import * as styles from "./Drawer.styles";
@@ -33,8 +34,9 @@ export function Drawer() {
             );
           })}
         </nav>
-        <div className={styles.themeToggleContainer}>
+        <div className={styles.controlsRow}>
           <ThemeToggle />
+          <SwitcherControls />
         </div>
       </div>
     </aside>

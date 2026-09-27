@@ -23,6 +23,7 @@ import {
   setDebugLogging,
   setInputSourceSwitcherEnabled,
   setSnooze,
+  snoozeInputSourceSwitcherIndefinitely,
   startDebugCapture,
   stopDebugCapture,
   updateInputSourcePreferences,
@@ -109,6 +110,7 @@ describe("input source IPC", () => {
     await getInputSourceSwitcherState();
     await setInputSourceSwitcherEnabled(false);
     await setSnooze(15);
+    await snoozeInputSourceSwitcherIndefinitely();
     await resumeInputSourceSwitcher();
     await listInputSources(true);
     await listRules();
@@ -135,6 +137,7 @@ describe("input source IPC", () => {
       "get_input_source_switcher_state",
       "set_input_source_switcher_enabled",
       "set_snooze",
+      "snooze_input_source_switcher_indefinitely",
       "resume_input_source_switcher",
       "list_input_sources",
       "list_rules",
@@ -159,8 +162,8 @@ describe("input source IPC", () => {
     ]);
     expect(calls[calls.length - 1]?.args).toEqual({ bundleIds: ["com.apple.Terminal"] });
     expect(calls[1]?.args).toEqual({ enabled: false });
-    expect(calls[8]?.args).toEqual({ ids: ["a", "b"] });
-    expect(calls[10]?.args).toEqual({
+    expect(calls[9]?.args).toEqual({ ids: ["a", "b"] });
+    expect(calls[11]?.args).toEqual({
       preferredEnglish: "en",
       preferredJapanese: "ja",
     });

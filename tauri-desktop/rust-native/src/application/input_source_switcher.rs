@@ -21,6 +21,9 @@ use super::{
 
 const MAX_LOGS: usize = 200;
 
+/// Far-future deadline for "pause until resume". Kept within JS `Number.MAX_SAFE_INTEGER`.
+pub const INDEFINITE_SNOOZE_UNTIL_UNIX_MS: u64 = 253_402_300_799_000;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SwitchDecision {
     Ignored,
@@ -168,6 +171,11 @@ where
             .now_unix_ms()
             .saturating_add(minutes.saturating_mul(60_000));
         self.set_snoozed_until(Some(deadline))
+    }
+
+    /// Pause until the user explicitly resumes (JS-safe far-future deadline).
+    pub fn snooze_indefinitely(&mut self) -> Result<(), ApplicationError> {
+        self.set_snoozed_until(Some(INDEFINITE_SNOOZE_UNTIL_UNIX_MS))
     }
 
     pub fn resume_if_due(&mut self) -> Result<bool, ApplicationError> {
@@ -866,6 +874,34 @@ mod tests {
                 .switcher
                 .handle_focus(snapshot(42, 2))
                 .expect("expired"),
+            SwitchDecision::Switched
+        );
+    }
+
+    #[test]
+    fn indefinite_snooze_blocks_until_resume() {
+        let mut fixture = Fixture::active();
+        fixture
+            .switcher
+            .snooze_indefinitely()
+            .expect("snooze indefinitely");
+        // Still well below INDEFINITE_SNOOZE_UNTIL_UNIX_MS
+        fixture.now.store(2_000_000_000_000, Ordering::Relaxed);
+
+        assert_eq!(
+            fixture
+                .switcher
+                .handle_focus(snapshot(42, 1))
+                .expect("still snoozed"),
+            SwitchDecision::Snoozed
+        );
+
+        fixture.switcher.set_snoozed_until(None).expect("resume");
+        assert_eq!(
+            fixture
+                .switcher
+                .handle_focus(snapshot(42, 2))
+                .expect("resumed"),
             SwitchDecision::Switched
         );
     }
