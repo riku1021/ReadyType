@@ -64,8 +64,18 @@ export async function installTauriMocks(page: Page): Promise<void> {
           return data.rules.map((rule) => ({ ...rule, conditions: [...rule.conditions] }));
         case "list_input_sources":
           return [
-            { id: data.settings.preferredEnglish, name: "ABC", available: true },
-            { id: data.settings.preferredJapanese, name: "日本語", available: true },
+            {
+              id: data.settings.preferredEnglish,
+              name: "ABC",
+              languageCode: "en",
+              available: true,
+            },
+            {
+              id: data.settings.preferredJapanese,
+              name: "日本語",
+              languageCode: "ja",
+              available: true,
+            },
           ];
         case "list_switch_logs":
           return [];

@@ -187,11 +187,12 @@ describe("state helpers", () => {
   });
 
   it("marks a configured but absent source unavailable", () => {
-    const available = [{ id: "present", name: "Present", available: true }];
+    const available = [{ id: "present", name: "Present", languageCode: "en", available: true }];
     const merged = withConfiguredSource(available, "removed.id");
     expect(merged[merged.length - 1]).toEqual({
       id: "removed.id",
       name: "removed.id",
+      languageCode: null,
       available: false,
     });
   });

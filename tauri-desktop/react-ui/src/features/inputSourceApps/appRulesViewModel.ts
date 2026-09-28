@@ -137,14 +137,31 @@ export function summarizeLanguageTarget(target: RuleTarget): string {
   }
 }
 
-export function languageTargetFromLabel(label: string): RuleTarget | null {
-  if (label === "English（英語）" || label === "preferredEnglish") {
-    return { kind: "preferredEnglish" };
+export function resolvedInputSourceId(
+  target: RuleTarget,
+  preferredEnglish: string | null | undefined,
+  preferredJapanese: string | null | undefined
+): string {
+  switch (target.kind) {
+    case "preferredEnglish":
+      return preferredEnglish ?? "";
+    case "preferredJapanese":
+      return preferredJapanese ?? "";
+    case "exact":
+      return target.inputSourceId;
   }
-  if (label === "日本語" || label === "preferredJapanese") {
-    return { kind: "preferredJapanese" };
-  }
-  return null;
 }
 
-export const LANGUAGE_TARGET_OPTIONS = ["English（英語）", "日本語"] as const;
+export function ruleTargetFromInputSourceId(
+  inputSourceId: string,
+  preferredEnglish: string | null | undefined,
+  preferredJapanese: string | null | undefined
+): RuleTarget {
+  if (preferredEnglish && inputSourceId === preferredEnglish) {
+    return { kind: "preferredEnglish" };
+  }
+  if (preferredJapanese && inputSourceId === preferredJapanese) {
+    return { kind: "preferredJapanese" };
+  }
+  return { kind: "exact", inputSourceId };
+}

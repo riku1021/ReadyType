@@ -6,6 +6,7 @@ use crate::{
 pub struct NativeInputSource<H> {
     pub id: InputSourceId,
     pub name: String,
+    pub language_code: Option<String>,
     pub enabled: bool,
     pub selectable: bool,
     pub handle: H,
@@ -16,6 +17,7 @@ impl<H: Clone> Clone for NativeInputSource<H> {
         Self {
             id: self.id.clone(),
             name: self.name.clone(),
+            language_code: self.language_code.clone(),
             enabled: self.enabled,
             selectable: self.selectable,
             handle: self.handle.clone(),
@@ -79,6 +81,7 @@ impl<B: TisBackend> InputSourceGateway for MacOsInputSourceGateway<B> {
             .map(|source| AvailableInputSource {
                 id: source.id.clone(),
                 name: source.name.clone(),
+                language_code: source.language_code.clone(),
                 available: true,
             })
             .collect())
@@ -195,6 +198,7 @@ mod tests {
         NativeInputSource {
             id: input_id(id),
             name: name.to_owned(),
+            language_code: None,
             enabled,
             selectable,
             handle: FakeHandle(handle),

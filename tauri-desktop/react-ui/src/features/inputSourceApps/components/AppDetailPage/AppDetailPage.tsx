@@ -1,46 +1,78 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { IoAdd, IoEllipsisHorizontal, IoInformationCircle } from "react-icons/io5";
 
 import { Button } from "@/components/Button";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { Toggle } from "@/components/Toggle";
-import { type RuleDto, useInputSourceState } from "@/features/inputSource";
+import {
+  buildInputSourceOptions,
+  type InputSourceDto,
+  type RuleDto,
+  useInputSourceState,
+} from "@/features/inputSource";
 
 import {
   type AppRuleGroup,
   groupRulesByApp,
-  languageTargetFromLabel,
   type RuleDisplay,
-  summarizeLanguageTarget,
+  resolvedInputSourceId,
+  ruleTargetFromInputSourceId,
 } from "../../appRulesViewModel";
 import { AppIconView, LanguageSelect, RuleKindIcon, useAppIcons } from "../appSettingsShared";
 import * as styles from "./AppDetailPage.styles";
-
-function languageSelectValue(target: RuleDto["target"]): string {
-  return summarizeLanguageTarget(target);
-}
 
 type AppDetailPageProps = {
   appId: string;
 };
 
 export function AppDetailPage({ appId }: AppDetailPageProps) {
-  const { state, updateRule } = useInputSourceState();
+  const { state, updateRule, fetchInputSources } = useInputSourceState();
   const rules = state?.rules ?? [];
   const groups = useMemo(() => groupRulesByApp(rules), [rules]);
   const selected = groups.find((group) => group.appId === appId) ?? null;
   const icons = useAppIcons(selected ? [selected.appId] : []);
+  const [sources, setSources] = useState<InputSourceDto[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchInputSources(true)
+      .then((next) => {
+        if (!cancelled) {
+          setSources(next);
+        }
+      })
+      .catch(() => {
+        // ネイティブ未接続時は空のまま（セレクトは無効）
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchInputSources]);
+
+  const preferredEnglish = state?.settingsPreferredEnglish ?? null;
+  const preferredJapanese = state?.settingsPreferredJapanese ?? null;
+
+  const languageOptions = useMemo(() => {
+    const configuredIds = [
+      preferredEnglish ?? "",
+      preferredJapanese ?? "",
+      ...(selected?.defaultRule
+        ? [resolvedInputSourceId(selected.defaultRule.target, preferredEnglish, preferredJapanese)]
+        : []),
+      ...(selected?.contextualRules.map((item) =>
+        resolvedInputSourceId(item.rule.target, preferredEnglish, preferredJapanese)
+      ) ?? []),
+    ];
+    return buildInputSourceOptions(sources, configuredIds);
+  }, [preferredEnglish, preferredJapanese, selected, sources]);
 
   const setAppEnabled = async (group: AppRuleGroup, enabled: boolean) => {
     const targets = rules.filter((rule) => rule.appId === group.appId);
     await Promise.all(targets.map((rule) => updateRule({ ...rule, enabled })));
   };
 
-  const setRuleTarget = async (rule: RuleDto, label: string) => {
-    const target = languageTargetFromLabel(label);
-    if (!target) {
-      return;
-    }
+  const setRuleTarget = async (rule: RuleDto, inputSourceId: string) => {
+    const target = ruleTargetFromInputSourceId(inputSourceId, preferredEnglish, preferredJapanese);
     await updateRule({ ...rule, target });
   };
 
@@ -70,8 +102,9 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
       stopPropagation: true,
       cell: (item) => (
         <LanguageSelect
-          value={languageSelectValue(item.rule.target)}
+          value={resolvedInputSourceId(item.rule.target, preferredEnglish, preferredJapanese)}
           label={`${item.title} の入力言語`}
+          options={languageOptions}
           onChange={(value) => {
             void setRuleTarget(item.rule, value);
           }}
@@ -132,8 +165,13 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
             このアプリで、特にルールが設定されていない入力欄に使用する言語です。
           </p>
           <LanguageSelect
-            value={languageSelectValue(selected.defaultRule.target)}
+            value={resolvedInputSourceId(
+              selected.defaultRule.target,
+              preferredEnglish,
+              preferredJapanese
+            )}
             label="デフォルトの入力言語"
+            options={languageOptions}
             wide
             onChange={(value) => {
               if (selected.defaultRule) {

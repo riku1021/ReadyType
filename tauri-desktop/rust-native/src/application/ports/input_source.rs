@@ -6,6 +6,8 @@ use crate::domain::input_source::InputSourceId;
 pub struct AvailableInputSource {
     pub id: InputSourceId,
     pub name: String,
+    /// BCP 47 language code from TIS (`kTISPropertyInputSourceLanguages` の先頭)。無い場合は `None`。
+    pub language_code: Option<String>,
     pub available: bool,
 }
 

@@ -7,9 +7,12 @@ import { themeAtom } from "@/atoms/theme";
 import { AlertDialog } from "@/components/Dialog";
 import { SettingItem } from "@/components/SettingItem";
 import { SettingsSection } from "@/components/SettingsSection";
-import { type InputSourceDto, useInputSourceState } from "@/features/inputSource";
+import {
+  buildInputSourceOptions,
+  type InputSourceDto,
+  useInputSourceState,
+} from "@/features/inputSource";
 
-import { buildInputSourceOptions } from "./inputSourceOptions";
 import * as styles from "./SettingsPage.styles";
 import { getThemeLabel, THEME_OPTIONS, themeFromLabel } from "./themeLabels";
 

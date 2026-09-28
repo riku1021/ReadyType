@@ -160,6 +160,7 @@ impl From<AccessibilityPermission> for PermissionDto {
 pub struct InputSourceDto {
     pub id: String,
     pub name: String,
+    pub language_code: Option<String>,
     pub available: bool,
 }
 
@@ -168,6 +169,7 @@ impl From<AvailableInputSource> for InputSourceDto {
         Self {
             id: source.id.as_str().to_owned(),
             name: source.name,
+            language_code: source.language_code,
             available: source.available,
         }
     }
@@ -300,7 +302,10 @@ wire_enum!(SearchScopeDto, SearchScope, {
 pub enum RuleTargetDto {
     PreferredEnglish,
     PreferredJapanese,
-    Exact { input_source_id: String },
+    Exact {
+        #[serde(rename = "inputSourceId")]
+        input_source_id: String,
+    },
 }
 
 impl TryFrom<RuleTargetDto> for RuleTarget {
@@ -472,5 +477,32 @@ mod tests {
         });
         let dto: RuleDto = serde_json::from_value(json).expect("wire shape");
         assert!(crate::domain::input_source::FocusRule::try_from(dto).is_err());
+    }
+
+    #[test]
+    fn exact_target_accepts_camel_case_input_source_id() {
+        let input_source_id = "com.example.inputsource.any-language";
+        let json = serde_json::json!({
+            "id": "rule",
+            "name": "Rule",
+            "enabled": true,
+            "platform": "macOs",
+            "appId": "com.example",
+            "priority": 0,
+            "conditions": [],
+            "target": {
+                "kind": "exact",
+                "inputSourceId": input_source_id
+            }
+        });
+        let dto: RuleDto = serde_json::from_value(json).expect("wire shape");
+        let rule = crate::domain::input_source::FocusRule::try_from(dto).expect("valid rule");
+        assert_eq!(
+            rule.target(),
+            &crate::domain::input_source::RuleTarget::Exact(
+                crate::domain::input_source::InputSourceId::parse(input_source_id)
+                    .expect("valid id")
+            )
+        );
     }
 }

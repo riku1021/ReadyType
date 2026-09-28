@@ -35,6 +35,7 @@ export interface StateEventDto {
 export interface InputSourceDto {
   id: string;
   name: string;
+  languageCode: string | null;
   available: boolean;
 }
 

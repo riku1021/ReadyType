@@ -6,7 +6,8 @@ import {
   appDisplayName,
   displayRuleLabel,
   groupRulesByApp,
-  languageTargetFromLabel,
+  resolvedInputSourceId,
+  ruleTargetFromInputSourceId,
   summarizeLanguageTarget,
 } from "./appRulesViewModel";
 
@@ -98,8 +99,26 @@ describe("appRulesViewModel", () => {
     expect(groups[1]?.contextualRules).toEqual([]);
   });
 
-  it("summarizes preferred language targets for the UI", () => {
+  it("resolves preferred and exact targets to input source ids", () => {
     expect(summarizeLanguageTarget({ kind: "preferredJapanese" })).toBe("日本語");
-    expect(languageTargetFromLabel("English（英語）")).toEqual({ kind: "preferredEnglish" });
+    expect(
+      resolvedInputSourceId({ kind: "preferredEnglish" }, "com.apple.keylayout.ABC", "ja.id")
+    ).toBe("com.apple.keylayout.ABC");
+    expect(resolvedInputSourceId({ kind: "exact", inputSourceId: "zh.id" }, "en.id", "ja.id")).toBe(
+      "zh.id"
+    );
+  });
+
+  it("maps selected input source ids back to preferred aliases when possible", () => {
+    expect(ruleTargetFromInputSourceId("en.id", "en.id", "ja.id")).toEqual({
+      kind: "preferredEnglish",
+    });
+    expect(ruleTargetFromInputSourceId("ja.id", "en.id", "ja.id")).toEqual({
+      kind: "preferredJapanese",
+    });
+    expect(ruleTargetFromInputSourceId("zh.id", "en.id", "ja.id")).toEqual({
+      kind: "exact",
+      inputSourceId: "zh.id",
+    });
   });
 });

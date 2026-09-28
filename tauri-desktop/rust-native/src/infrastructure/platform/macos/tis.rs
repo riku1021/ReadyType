@@ -26,6 +26,7 @@ static FOLLOWUP_EPOCH: AtomicU64 = AtomicU64::new(0);
 unsafe extern "C" {
     static kTISPropertyInputSourceID: *const c_void;
     static kTISPropertyLocalizedName: *const c_void;
+    static kTISPropertyInputSourceLanguages: *const c_void;
     static kTISPropertyInputSourceIsEnabled: *const c_void;
     static kTISPropertyInputSourceIsSelectCapable: *const c_void;
     static kTISPropertyInputSourceCategory: *const c_void;
@@ -181,6 +182,7 @@ fn list_on_main() -> Result<Vec<NativeInputSource<OwnedTisInputSource>>, Gateway
         };
         let name = property_string(raw, unsafe { kTISPropertyLocalizedName })
             .unwrap_or_else(|| id.clone());
+        let language_code = primary_language_code(raw);
         let enabled =
             property_bool(raw, unsafe { kTISPropertyInputSourceIsEnabled }).unwrap_or(false);
         let selectable =
@@ -189,6 +191,7 @@ fn list_on_main() -> Result<Vec<NativeInputSource<OwnedTisInputSource>>, Gateway
             id: InputSourceId::parse(&id)
                 .map_err(|error| GatewayError::Operation(error.to_string()))?,
             name,
+            language_code,
             enabled,
             selectable,
             handle,
@@ -330,7 +333,35 @@ fn property_string(source: *const c_void, key: *const c_void) -> Option<String> 
     if value.is_null() {
         return None;
     }
-    // SAFETY: the requested properties are documented CFString values.
+    cfstring_to_string(value)
+}
+
+fn primary_language_code(source: *const c_void) -> Option<String> {
+    // SAFETY: source is a live TISInputSource; languages key is a process-lifetime constant.
+    let languages = unsafe { TISGetInputSourceProperty(source, kTISPropertyInputSourceLanguages) };
+    if languages.is_null() {
+        return None;
+    }
+    // SAFETY: property is documented as CFArray of CFString language codes.
+    let count = unsafe { CFArrayGetCount(languages) };
+    if count <= 0 {
+        return None;
+    }
+    // SAFETY: index 0 is within the array length just checked.
+    let first = unsafe { CFArrayGetValueAtIndex(languages, 0) };
+    let code = cfstring_to_string(first)?;
+    if code.is_empty() {
+        None
+    } else {
+        Some(code)
+    }
+}
+
+fn cfstring_to_string(value: *const c_void) -> Option<String> {
+    if value.is_null() {
+        return None;
+    }
+    // SAFETY: value is a CFString from TIS / CFArray.
     let length = unsafe { CFStringGetLength(value) };
     // SAFETY: length came from the same valid CFString.
     let capacity = unsafe { CFStringGetMaximumSizeForEncoding(length, UTF8_ENCODING) } + 1;

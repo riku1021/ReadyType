@@ -6,4 +6,9 @@ export {
   useInputSourceBootstrap,
   useInputSourceState,
 } from "./hooks/useInputSourceState";
+export {
+  buildInputSourceOptions,
+  type InputSourceOption,
+  languageDisplayName,
+} from "./inputSourceOptions";
 export type * from "./types";

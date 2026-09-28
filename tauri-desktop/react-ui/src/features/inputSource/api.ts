@@ -70,5 +70,8 @@ export function withConfiguredSource(
   if (sources.some((source) => source.id === configuredId)) {
     return [...sources];
   }
-  return [...sources, { id: configuredId, name: configuredId, available: false }];
+  return [
+    ...sources,
+    { id: configuredId, name: configuredId, languageCode: null, available: false },
+  ];
 }

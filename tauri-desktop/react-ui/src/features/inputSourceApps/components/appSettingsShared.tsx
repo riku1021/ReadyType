@@ -8,10 +8,10 @@ import {
   IoTerminal,
 } from "react-icons/io5";
 
-import { getAppIcons } from "@/features/inputSource";
+import { getAppIcons, type InputSourceOption } from "@/features/inputSource";
 import { cx } from "@/styled-system/css";
 
-import { LANGUAGE_TARGET_OPTIONS, type RuleKind } from "../appRulesViewModel";
+import type { RuleKind } from "../appRulesViewModel";
 import * as styles from "./appSettingsShared.styles";
 
 const RULE_ICONS: Record<RuleKind, typeof IoChatbubbleEllipses> = {
@@ -84,28 +84,31 @@ export function useAppIcons(appIds: readonly string[]): Record<string, string | 
 export function LanguageSelect({
   value,
   label,
+  options,
   onChange,
   wide = false,
 }: {
   value: string;
   label: string;
+  options: readonly InputSourceOption[];
   onChange: (value: string) => void;
   wide?: boolean;
 }) {
-  const hasPreset = (LANGUAGE_TARGET_OPTIONS as readonly string[]).includes(value);
+  const hasOption = options.some((option) => option.value === value);
   return (
     <select
       className={cx(styles.select, wide ? styles.selectWide : undefined)}
       aria-label={label}
       value={value}
       onChange={(event) => onChange(event.target.value)}
+      disabled={options.length === 0}
     >
-      {LANGUAGE_TARGET_OPTIONS.map((option) => (
-        <option key={option} value={option}>
-          {option}
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
         </option>
       ))}
-      {hasPreset ? null : <option value={value}>{value}</option>}
+      {hasOption || value.length === 0 ? null : <option value={value}>{value}</option>}
     </select>
   );
 }
