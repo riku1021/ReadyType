@@ -28,6 +28,11 @@ unsafe extern "C" {
     static kTISPropertyLocalizedName: *const c_void;
     static kTISPropertyInputSourceIsEnabled: *const c_void;
     static kTISPropertyInputSourceIsSelectCapable: *const c_void;
+    static kTISPropertyInputSourceCategory: *const c_void;
+    static kTISPropertyInputSourceType: *const c_void;
+    static kTISCategoryKeyboardInputSource: *const c_void;
+    static kTISTypeKeyboardLayout: *const c_void;
+    static kTISTypeKeyboardInputMode: *const c_void;
 
     fn TISCopyCurrentKeyboardInputSource() -> *const c_void;
     fn TISCreateInputSourceList(
@@ -48,6 +53,7 @@ unsafe extern "C" {
     fn CFArrayGetCount(array: *const c_void) -> CFIndex;
     fn CFArrayGetValueAtIndex(array: *const c_void, index: CFIndex) -> *const c_void;
     fn CFBooleanGetValue(value: *const c_void) -> u8;
+    fn CFEqual(a: *const c_void, b: *const c_void) -> u8;
     fn CFStringGetLength(string: *const c_void) -> CFIndex;
     fn CFStringGetMaximumSizeForEncoding(length: CFIndex, encoding: u32) -> CFIndex;
     fn CFStringGetCString(
@@ -164,6 +170,10 @@ fn list_on_main() -> Result<Vec<NativeInputSource<OwnedTisInputSource>>, Gateway
     for index in 0..count {
         // SAFETY: index is within the count returned for this valid CFArray.
         let raw = unsafe { CFArrayGetValueAtIndex(array.0.as_ptr(), index) };
+        // メニューバーの入力ソース一覧に合わせ、キーボードレイアウト／入力モード以外は除外する。
+        if !is_menu_bar_keyboard_source(raw) {
+            continue;
+        }
         // SAFETY: values in the TIS array are TISInputSource CF objects.
         let handle = unsafe { OwnedTisInputSource::retain(raw)? };
         let Some(id) = property_string(raw, unsafe { kTISPropertyInputSourceID }) else {
@@ -185,6 +195,25 @@ fn list_on_main() -> Result<Vec<NativeInputSource<OwnedTisInputSource>>, Gateway
         });
     }
     Ok(sources)
+}
+
+/// メニューバー「入力ソース」相当: キーボードカテゴリかつ Layout / InputMode のみ。
+/// Dictation・絵文字パレット・PressAndHold などは除外する。
+fn is_menu_bar_keyboard_source(source: *const c_void) -> bool {
+    // SAFETY: TIS category/type constants and properties are process-lifetime CFStrings.
+    let category = unsafe { TISGetInputSourceProperty(source, kTISPropertyInputSourceCategory) };
+    let source_type = unsafe { TISGetInputSourceProperty(source, kTISPropertyInputSourceType) };
+    if category.is_null() || source_type.is_null() {
+        return false;
+    }
+    let is_keyboard = unsafe { CFEqual(category, kTISCategoryKeyboardInputSource) != 0 };
+    if !is_keyboard {
+        return false;
+    }
+    unsafe {
+        CFEqual(source_type, kTISTypeKeyboardLayout) != 0
+            || CFEqual(source_type, kTISTypeKeyboardInputMode) != 0
+    }
 }
 
 fn current_on_main() -> Result<InputSourceId, GatewayError> {
