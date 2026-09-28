@@ -3,7 +3,9 @@ import { css } from "@/styled-system/css";
 export const drawer = css({
   gridArea: "drawer",
   boxSizing: "border-box",
-  padding: "sm",
+  paddingInline: "sm",
+  paddingBottom: "sm",
+  paddingTop: "0",
   height: "100%",
   minHeight: "0",
 });
