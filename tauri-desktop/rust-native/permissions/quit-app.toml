@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-quit-app"
+description = "Allows quitting the ReadyType process (full shutdown, not window hide)"
+commands.allow = ["quit_app"]

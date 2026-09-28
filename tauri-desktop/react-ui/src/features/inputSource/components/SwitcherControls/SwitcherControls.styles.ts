@@ -21,13 +21,6 @@ export const iconButton = css({
   },
 });
 
-export const powerOn = css({
-  color: "brand.main",
-  _hover: {
-    color: "brand.main",
-  },
-});
-
 export const icon = css({
   width: "1.75rem",
   height: "1.75rem",

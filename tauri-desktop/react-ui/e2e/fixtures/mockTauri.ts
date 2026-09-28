@@ -73,6 +73,7 @@ export async function installTauriMocks(page: Page): Promise<void> {
           return null;
         case "open_accessibility_settings":
         case "sync_window_chrome_theme":
+        case "quit_app":
           return null;
         case "should_show_main_window_on_launch":
           return true;

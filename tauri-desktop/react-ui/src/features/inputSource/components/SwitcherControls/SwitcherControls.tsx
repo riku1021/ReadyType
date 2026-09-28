@@ -1,6 +1,8 @@
-import type { ChangeEvent } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { type ChangeEvent, useState } from "react";
 import { MdPowerSettingsNew } from "react-icons/md";
 
+import { AlertDialog } from "@/components/Dialog";
 import { useInputSourceState } from "@/features/inputSource";
 import { cx } from "@/styled-system/css";
 
@@ -13,8 +15,13 @@ const SNOOZE_OPTIONS = [
   { value: "indefinite", label: "無期限" },
 ] as const;
 
+async function quitApp() {
+  await invoke("quit_app");
+}
+
 export function SwitcherControls() {
-  const { state, setEnabled, setSnooze, snoozeIndefinitely, resume } = useInputSourceState();
+  const { state, setSnooze, snoozeIndefinitely, resume } = useInputSourceState();
+  const [quitOpen, setQuitOpen] = useState(false);
 
   const unsupported = state?.permission === "unsupported";
   const ready = Boolean(state?.ready);
@@ -84,16 +91,22 @@ export function SwitcherControls() {
       </span>
       <button
         type="button"
-        className={cx(styles.iconButton, enabled ? styles.powerOn : undefined)}
-        aria-label="自動切替の電源"
-        aria-pressed={enabled}
-        disabled={controlsDisabled}
-        onClick={() => {
-          void setEnabled(!enabled);
-        }}
+        className={styles.iconButton}
+        aria-label="ReadyTypeを終了"
+        onClick={() => setQuitOpen(true)}
       >
         <MdPowerSettingsNew className={styles.icon} aria-hidden="true" />
       </button>
+      <AlertDialog
+        isOpen={quitOpen}
+        onClose={() => setQuitOpen(false)}
+        title="ReadyTypeを終了しますか？"
+        text="自動切替も含め、アプリを完全に終了します。ウィンドウを閉じるだけの場合は、ウィンドウの閉じるボタンを使ってください。"
+        confirmButtonText="終了"
+        onConfirm={() => {
+          void quitApp();
+        }}
+      />
     </>
   );
 }

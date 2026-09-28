@@ -161,6 +161,7 @@ pub fn run() {
             presentation::commands::autostart::set_autostart_enabled,
             presentation::commands::autostart::should_show_main_window_on_launch,
             presentation::commands::greet::greet,
+            presentation::commands::quit_app::quit_app,
             presentation::commands::input_source_switcher::get_input_source_switcher_state,
             presentation::commands::input_source_switcher::set_input_source_switcher_enabled,
             presentation::commands::input_source_switcher::set_snooze,
