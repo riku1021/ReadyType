@@ -3,7 +3,6 @@ import "@/styles/index.css";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import type { RuleConditionDto } from "@/features/inputSource";
 import { useInputSourceBootstrap } from "@/features/inputSource";
 import { useRevealMainWindow } from "@/hooks/useRevealMainWindow";
 import { useThemeManager } from "@/hooks/useThemeManager";
@@ -22,10 +21,6 @@ declare module "@tanstack/react-router" {
       to: string;
       label: string;
     };
-  }
-
-  interface HistoryState {
-    conditionPrefill?: RuleConditionDto;
   }
 }
 

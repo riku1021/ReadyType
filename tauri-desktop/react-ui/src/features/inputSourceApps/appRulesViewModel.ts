@@ -1,5 +1,4 @@
-import type { RuleDto, RuleTarget } from "@/features/inputSource";
-import { summarizeConditions } from "@/features/inputSourceRules/ruleForm";
+import type { RuleConditionDto, RuleDto, RuleTarget } from "@/features/inputSource";
 
 const APP_LABELS: Record<string, string> = {
   "com.todesktop.230313mzl4w4u92": "Cursor",
@@ -27,6 +26,15 @@ export type AppRuleGroup = {
 
 export function appDisplayName(appId: string): string {
   return APP_LABELS[appId] ?? appId;
+}
+
+export function summarizeConditions(conditions: readonly RuleConditionDto[]): string {
+  if (conditions.length === 0) {
+    return "条件なし（アプリ一致）";
+  }
+  return conditions
+    .map((condition) => `${condition.attribute} ${condition.operator} ${condition.value}`)
+    .join(" / ");
 }
 
 export function displayRuleLabel(rule: RuleDto): Omit<RuleDisplay, "rule"> {

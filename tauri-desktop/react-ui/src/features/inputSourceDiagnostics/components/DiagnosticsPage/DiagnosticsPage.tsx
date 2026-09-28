@@ -1,4 +1,3 @@
-import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/Button";
@@ -13,13 +12,10 @@ import {
   formatLatencyMicros,
   formatSwitchLogLine,
   logsToTsv,
-  type SnapshotAttribute,
-  toCondition,
 } from "../../diagnosticsViewModel";
 import * as styles from "./DiagnosticsPage.styles";
 
 export function DiagnosticsPage() {
-  const navigate = useNavigate();
   const {
     startDebugCapture,
     stopDebugCapture,
@@ -67,13 +63,6 @@ export function DiagnosticsPage() {
     } catch {
       setCopyError("クリップボードへのコピーに失敗しました");
     }
-  };
-
-  const applyAsCondition = (attribute: SnapshotAttribute) => {
-    void navigate({
-      to: "/rules",
-      state: { conditionPrefill: toCondition(attribute) },
-    });
   };
 
   return (
@@ -130,14 +119,6 @@ export function DiagnosticsPage() {
                 }}
               >
                 コピー
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  applyAsCondition(attribute);
-                }}
-              >
-                条件に使用
               </Button>
             </div>
           </div>
