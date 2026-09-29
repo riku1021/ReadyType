@@ -1,11 +1,19 @@
 import type { Page } from "@playwright/test";
 
+import {
+  DEFAULT_RESOLVED_LANGUAGE,
+  LANGUAGE_PREFERENCES,
+  SUPPORTED_LANGUAGES,
+} from "../../src/locales/i18n";
 import { mockRules, mockSettings, mockSwitcherState } from "./mockData";
 
 type MockPayload = {
   switcher: typeof mockSwitcherState;
   settings: typeof mockSettings;
   rules: typeof mockRules;
+  languagePreferences: readonly string[];
+  supportedLanguages: readonly string[];
+  defaultResolved: string;
 };
 
 /**
@@ -17,6 +25,9 @@ export async function installTauriMocks(page: Page): Promise<void> {
     switcher: mockSwitcherState,
     settings: mockSettings,
     rules: mockRules,
+    languagePreferences: [...LANGUAGE_PREFERENCES],
+    supportedLanguages: [...SUPPORTED_LANGUAGES],
+    defaultResolved: DEFAULT_RESOLVED_LANGUAGE,
   };
 
   await page.addInitScript((data: MockPayload) => {
@@ -61,11 +72,12 @@ export async function installTauriMocks(page: Page): Promise<void> {
           return { ...data.settings };
         case "set_ui_locale": {
           const locale =
-            typeof args?.locale === "string" &&
-            (args.locale === "en" || args.locale === "ja" || args.locale === "system")
+            typeof args?.locale === "string" && data.languagePreferences.includes(args.locale)
               ? args.locale
               : "system";
-          const resolvedUiLocale = locale === "en" || locale === "ja" ? locale : "ja";
+          const resolvedUiLocale = data.supportedLanguages.includes(locale)
+            ? locale
+            : data.defaultResolved;
           data.settings = { ...data.settings, uiLocale: locale, resolvedUiLocale };
           return { ...data.settings };
         }

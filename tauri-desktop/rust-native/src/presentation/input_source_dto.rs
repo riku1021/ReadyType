@@ -347,9 +347,9 @@ impl From<&RuleTarget> for RuleTargetDto {
 pub struct SettingsDto {
     pub language_preferences: std::collections::BTreeMap<String, Option<String>>,
     pub debug_logging: bool,
-    /// Preference: `system` | `ja` | `en`.
+    /// Preference: `system` | packs from shared i18n registry.
     pub ui_locale: String,
-    /// Resolved display language: `ja` | `en`.
+    /// Resolved display language from shared i18n registry.
     pub resolved_ui_locale: String,
 }
 

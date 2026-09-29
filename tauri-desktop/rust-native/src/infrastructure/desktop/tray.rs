@@ -10,6 +10,7 @@ use tauri::{
 use crate::application::{
     settings::{SwitcherSettings, DEFAULT_RESOLVED_UI_LOCALE},
     switcher_controller::SwitcherController,
+    tray_strings::tray_strings,
 };
 
 pub const SNOOZE_MINUTES: [u64; 3] = [5, 15, 60];
@@ -28,70 +29,12 @@ pub struct TrayMenuModel {
     pub items: Vec<TrayMenuItemModel>,
 }
 
-struct TrayStrings {
-    status_snoozed: &'static str,
-    status_watching: &'static str,
-    status_watching_app: &'static str,
-    status_watching_app_rule: &'static str,
-    status_off: &'static str,
-    toggle_off: &'static str,
-    toggle_on: &'static str,
-    snooze_5m: &'static str,
-    snooze_15m: &'static str,
-    snooze_1h: &'static str,
-    snooze_indefinite: &'static str,
-    resume: &'static str,
-    open_app: &'static str,
-    open_settings: &'static str,
-    quit: &'static str,
-}
-
-fn tray_strings(locale: &str) -> TrayStrings {
-    if locale == "en" {
-        TrayStrings {
-            status_snoozed: "Paused",
-            status_watching: "Watching",
-            status_watching_app: "Watching: {app}",
-            status_watching_app_rule: "Watching: {app} / {rule}",
-            status_off: "Auto switch: OFF",
-            toggle_off: "Turn auto switch OFF",
-            toggle_on: "Turn auto switch ON",
-            snooze_5m: "Pause for 5 minutes",
-            snooze_15m: "Pause for 15 minutes",
-            snooze_1h: "Pause for 1 hour",
-            snooze_indefinite: "Pause indefinitely",
-            resume: "Resume now",
-            open_app: "Open ReadyType",
-            open_settings: "Open Settings",
-            quit: "Quit",
-        }
-    } else {
-        TrayStrings {
-            status_snoozed: "一時停止中",
-            status_watching: "監視中",
-            status_watching_app: "監視中: {app}",
-            status_watching_app_rule: "監視中: {app} / {rule}",
-            status_off: "自動切替: OFF",
-            toggle_off: "自動切替をOFF",
-            toggle_on: "自動切替をON",
-            snooze_5m: "5分間一時停止",
-            snooze_15m: "15分間一時停止",
-            snooze_1h: "1時間一時停止",
-            snooze_indefinite: "無期限で一時停止",
-            resume: "今すぐ再開",
-            open_app: "ReadyTypeを開く",
-            open_settings: "設定を開く",
-            quit: "終了",
-        }
-    }
-}
-
 impl TrayMenuModel {
     pub fn from_state(state: &SwitcherState, locale: &str) -> Self {
         let strings = tray_strings(locale);
         let snoozed = state.snoozed_until_unix_ms.is_some();
         let status = if snoozed {
-            strings.status_snoozed.to_owned()
+            strings.status_snoozed.clone()
         } else if state.enabled {
             match (&state.current_app, &state.matched_rule_id) {
                 (Some(app), Some(rule)) => strings
@@ -99,10 +42,10 @@ impl TrayMenuModel {
                     .replace("{app}", app.app_id())
                     .replace("{rule}", rule),
                 (Some(app), None) => strings.status_watching_app.replace("{app}", app.app_id()),
-                (None, _) => strings.status_watching.to_owned(),
+                (None, _) => strings.status_watching.clone(),
             }
         } else {
-            strings.status_off.to_owned()
+            strings.status_off.clone()
         };
         Self {
             status,
@@ -110,24 +53,24 @@ impl TrayMenuModel {
                 item(
                     "toggle",
                     if state.enabled {
-                        strings.toggle_off
+                        &strings.toggle_off
                     } else {
-                        strings.toggle_on
+                        &strings.toggle_on
                     },
                     true,
                 ),
-                item("snooze-5", strings.snooze_5m, state.enabled && !snoozed),
-                item("snooze-15", strings.snooze_15m, state.enabled && !snoozed),
-                item("snooze-60", strings.snooze_1h, state.enabled && !snoozed),
+                item("snooze-5", &strings.snooze_5m, state.enabled && !snoozed),
+                item("snooze-15", &strings.snooze_15m, state.enabled && !snoozed),
+                item("snooze-60", &strings.snooze_1h, state.enabled && !snoozed),
                 item(
                     "snooze-indefinite",
-                    strings.snooze_indefinite,
+                    &strings.snooze_indefinite,
                     state.enabled && !snoozed,
                 ),
-                item("resume", strings.resume, snoozed),
-                item("show", strings.open_app, true),
-                item("settings", strings.open_settings, true),
-                item("quit", strings.quit, true),
+                item("resume", &strings.resume, snoozed),
+                item("show", &strings.open_app, true),
+                item("settings", &strings.open_settings, true),
+                item("quit", &strings.quit, true),
             ],
         }
     }
@@ -307,6 +250,17 @@ mod tests {
             .items
             .iter()
             .any(|item| item.id == "quit" && item.label == "Quit"));
+    }
+
+    #[test]
+    fn tray_model_uses_chinese_labels() {
+        let state = SwitcherState::new(true, Some(15));
+        let model = TrayMenuModel::from_state(&state, "zh");
+        assert_eq!(model.status, "已暂停");
+        assert!(model
+            .items
+            .iter()
+            .any(|item| item.id == "quit" && item.label == "退出"));
     }
 
     #[test]

@@ -1,15 +1,16 @@
 use std::collections::BTreeMap;
 
+use crate::application::tray_strings::{self, map_language_tag};
 use crate::domain::{
     errors::DomainError,
     input_source::{default_rules, FocusRule, InputSourceId, LanguageTag, RuleSet},
 };
 
+pub use crate::application::tray_strings::{
+    DEFAULT_RESOLVED_UI_LOCALE, DEFAULT_UI_LOCALE_PREFERENCE,
+};
+
 pub const CURRENT_SCHEMA_VERSION: u32 = 1;
-/// Stored preference when unset / invalid.
-pub const DEFAULT_UI_LOCALE_PREFERENCE: &str = "system";
-/// Fallback when OS language is unsupported or unavailable.
-pub const DEFAULT_RESOLVED_UI_LOCALE: &str = "ja";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SwitcherSettings {
@@ -21,7 +22,7 @@ pub struct SwitcherSettings {
     pub rules: Vec<FocusRule>,
     pub debug_logging: bool,
     pub snoozed_until_unix_ms: Option<u64>,
-    /// UI language preference (`system` | `ja` | `en`).
+    /// UI language preference (`system` | tray.json pack code).
     pub ui_locale: String,
 }
 
@@ -44,23 +45,21 @@ impl SwitcherSettings {
             .and_then(|value| value.as_ref())
     }
 
-    /// Normalize a stored preference to `system` | `ja` | `en`.
+    /// Normalize a stored preference to `system` or a tray-supported UI pack.
     pub fn normalize_ui_locale(locale: &str) -> String {
-        match locale {
-            "en" => "en".to_owned(),
-            "ja" => "ja".to_owned(),
-            "system" => "system".to_owned(),
-            _ => DEFAULT_UI_LOCALE_PREFERENCE.to_owned(),
+        if locale == "system" || tray_strings::is_supported_ui_locale(locale) {
+            return locale.to_owned();
         }
+        DEFAULT_UI_LOCALE_PREFERENCE.to_owned()
     }
 
-    /// Resolve preference to a concrete UI language (`ja` | `en`).
+    /// Resolve preference to a concrete UI language pack.
     pub fn resolve_ui_locale(preference: &str) -> String {
-        match Self::normalize_ui_locale(preference).as_str() {
-            "en" => "en".to_owned(),
-            "ja" => "ja".to_owned(),
-            _ => resolve_os_ui_locale(),
+        let normalized = Self::normalize_ui_locale(preference);
+        if tray_strings::is_supported_ui_locale(&normalized) {
+            return normalized;
         }
+        resolve_os_ui_locale()
     }
 
     pub fn validate(&self) -> Result<(), DomainError> {
@@ -139,24 +138,11 @@ fn resolve_os_ui_locale() -> String {
     DEFAULT_RESOLVED_UI_LOCALE.to_owned()
 }
 
-fn map_language_tag(tag: &str) -> Option<&'static str> {
-    let primary = tag
-        .split(['-', '_'])
-        .next()
-        .unwrap_or(tag)
-        .to_ascii_lowercase();
-    match primary.as_str() {
-        "en" => Some("en"),
-        "ja" => Some("ja"),
-        _ => None,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::{
-        map_language_tag, seed_language_preferences_from_sources, SwitcherSettings,
-        CURRENT_SCHEMA_VERSION, DEFAULT_RESOLVED_UI_LOCALE, DEFAULT_UI_LOCALE_PREFERENCE,
+        seed_language_preferences_from_sources, SwitcherSettings, CURRENT_SCHEMA_VERSION,
+        DEFAULT_UI_LOCALE_PREFERENCE,
     };
     use crate::{
         application::ports::input_source::AvailableInputSource,
@@ -245,9 +231,10 @@ mod tests {
     }
 
     #[test]
-    fn normalize_ui_locale_accepts_system_ja_en() {
+    fn normalize_ui_locale_accepts_system_and_tray_packs() {
         assert_eq!(SwitcherSettings::normalize_ui_locale("en"), "en");
         assert_eq!(SwitcherSettings::normalize_ui_locale("ja"), "ja");
+        assert_eq!(SwitcherSettings::normalize_ui_locale("zh"), "zh");
         assert_eq!(SwitcherSettings::normalize_ui_locale("system"), "system");
         assert_eq!(
             SwitcherSettings::normalize_ui_locale("fr"),
@@ -259,18 +246,7 @@ mod tests {
     fn resolve_explicit_locales_without_os() {
         assert_eq!(SwitcherSettings::resolve_ui_locale("en"), "en");
         assert_eq!(SwitcherSettings::resolve_ui_locale("ja"), "ja");
-    }
-
-    #[test]
-    fn map_language_tag_extracts_primary_subtag() {
-        assert_eq!(map_language_tag("ja-JP"), Some("ja"));
-        assert_eq!(map_language_tag("en_US"), Some("en"));
-        assert_eq!(map_language_tag("fr-FR"), None);
-        assert_eq!(
-            SwitcherSettings::resolve_ui_locale("system"),
-            SwitcherSettings::resolve_ui_locale("system")
-        );
-        let _ = DEFAULT_RESOLVED_UI_LOCALE;
+        assert_eq!(SwitcherSettings::resolve_ui_locale("zh"), "zh");
     }
 
     #[test]

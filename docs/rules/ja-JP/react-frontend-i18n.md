@@ -1,46 +1,55 @@
 # 国際化 (i18n) — ReadyType
 
-AI エージェントおよび開発者向けの i18n ガイド。**コーディング規約の正本は** `.claude/rules/react-frontend.md` の「国際化 (i18n)」節。本ドキュメントは同内容を独立して参照しやすくしたもので、ReadyType 固有（`system` preference・トレイ・ACL）を含む。
+AI エージェントおよび開発者向けの i18n ガイド。**コーディング規約の正本は** `.claude/rules/react-frontend.md` の「国際化 (i18n)」節。
 
-構成・禁止事項の詳細度は go-ts-template の React フロントエンド規約の i18n 章に揃えている。
+## 責務の分離
 
-## スタック
+| 成果物 | 場所 | 誰が読むか |
+|--------|------|------------|
+| UI 言語レジストリ（セレクト・既定・nativeName） | `react-ui/src/locales/registry.json` | **FE のみ** |
+| UI 文言 | `react-ui/src/locales/{code}/translation.json` | **FE のみ** |
+| トレイ文言＋ネイティブ対応コード | `rust-native/i18n/tray.json` | **Rust のみ** |
 
-- **フロント**: i18next + react-i18next（`tauri-desktop/react-ui`）
-- **ネイティブ**: トレイ文言は Rust で resolved 言語により分岐（`sys-locale` で OS 解決）
+React はトレイを直接更新しない。`set_ui_locale` の結果として Rust が `tray::update` する。  
+Rust の「対応パック」は **`tray.json` のキー**が SoT（FE の registry は読まない）。
+
+## 言語を追加する手順
+
+1. `react-ui/src/locales/registry.json` に `{ "code", "nativeName" }` を追加
+2. `rust-native/i18n/tray.json` に同じ `code` のトレイ文言を追加
+3. `react-ui/src/locales/{code}/` に `translation.json` + `index.ts` を追加
+4. ビルド / テスト
 
 ## ディレクトリ
 
 ```
 tauri-desktop/react-ui/src/locales/
+├── registry.json           # FE SoT: 対応パック・既定・nativeName
+├── registry.ts
 ├── i18n.ts
-├── ja/
-│   ├── index.ts            # CustomTypeOptions
-│   └── translation.json
-└── en/
+└── ja|en|zh/
     ├── index.ts
     └── translation.json
+
+tauri-desktop/rust-native/i18n/
+└── tray.json               # Rust SoT: トレイ文言 = 対応コード一覧
 ```
 
 ## preference と resolved
 
-テーマ（`light` / `dark` / `system`）と同じ分離:
-
 | | preference | resolved |
 |--|------------|----------|
-| 値 | `system` \| `ja` \| `en` | `ja` \| `en` |
-| 保存先 | localStorage + `SwitcherSettings.ui_locale` | 保存しない（都度解決） |
-| 用途 | 設定 UI の選択 | `i18n.changeLanguage`・トレイ・`UiLocaleCache` |
+| 値 | `system` \| 各側の対応パック | 各側の対応パック |
+| 保存先 | localStorage + `SwitcherSettings.ui_locale` | 保存しない |
+| FE | `registry.json` | `i18n.changeLanguage` |
+| Rust | 同上 preference 文字列 | `tray.json` キーで検証・OS 解決・トレイ |
 
-- `system` → OS 表示言語（Rust: `sys-locale`）。フロント起動直後のみ `navigator.languages` をフォールバックに使う
-- 非対応 OS 言語 → `ja`
+- `system` → OS（Rust: `sys-locale` / FE 起動時: `navigator.languages`）
+- 非対応 → 各側の defaultResolved（現状どちらも `ja`。FE は registry、Rust は定数＋tray に必須）
 
-**UiLocale ≠ LanguageTag（入力）**: UI 表示言語は同梱翻訳パックの集合。入力ソース切替の `LanguageTag` / `languagePreferences` とは別レイヤ（詳細は [input-source-model.md](./input-source-model.md)）。
+設定セレクトの言語名は **nativeName**（FE registry）。`system` だけ `settings.languageSystem` を翻訳。
 
-ヘルパ:
-
-- `features/settings/languageLabels.ts`（設定セレクト）
-- `features/settings/themeLabels.ts`（テーマ。同パターン）
+**UiLocale ≠ LanguageTag（入力）**: 詳細は [input-source-model.md](./input-source-model.md)。
 
 ## コンポーネント
 
@@ -51,61 +60,33 @@ const { t } = useTranslation();
 return <h1>{t("nav.settings")}</h1>;
 ```
 
-補間:
-
-```tsx
-t("common.ruleCount", { count: 3 });
-```
-
 ## ハードコード禁止
 
-ユーザー向け文字列（ラベル、ボタン、メッセージ、プレースホルダー、ツールチップ、aria-label、ダイアログ）は **すべて `t()`**。JSX に日本語・英語を直書きしない。
-
-```tsx
-// ❌
-<span>設定</span>
-
-// ✅
-<span>{t("nav.settings")}</span>
-```
+- ウィンドウ内: `t()` + `locales/{code}/translation.json`
+- トレイ: `rust-native/i18n/tray.json`（React から触らない）
 
 ## キー追加手順
 
-1. `ja/translation.json` に追加
-2. **同じキー**を `en/translation.json` に追加
-3. UI で `t('...')` を使う
-4. `pnpm typecheck` で型を確認
+1. 各 `locales/{code}/translation.json` に同じキーを追加
+2. UI で `t('...')` を使う
+3. `pnpm typecheck`
 
 ## ネイティブ / トレイ
 
-- トレイは **resolved** のみ使用（`tray.rs`）
-- 設定 DTO: `uiLocale`（preference）+ `resolvedUiLocale`
-- state publish → トレイ更新は **switcher mutex の外**で行う（再入デッドロック防止）
-- フォーカス時、preference が `system` なら OS を再解決
+- トレイは resolved + `tray.json`（`application/tray_strings.rs`）
+- publish → トレイ更新は switcher mutex の外（React 非関与）
 
-## IPC / ACL
+## ベストプラクティス
 
-`set_ui_locale` など新規コマンドは:
-
-1. `#[tauri::command]` + `generate_handler!`
-2. フロント `invoke` 名一致
-3. `rust-native/permissions/input-source-switcher.toml` の `commands.allow` に追加
-
-## ベストプラクティス（要約）
-
-1. 常に翻訳キー（ハードコード禁止）
-2. ja / en 同時更新
-3. ドット記法のネストキーでドメイン分割（`nav`, `common`, `settings`, …）
-4. 動的選択肢も i18n（`languageLabels` 等）
-5. preference を永続化し、resolved だけを保存しない
-6. トレイ・キャッシュは resolved
-7. ACL を忘れない
+1. FE 一覧は `registry.json`、Rust 一覧は `tray.json`（共有 JSON に無理にまとめない）
+2. 言語追加時は両方に同じ `code` を足す
+3. preference を永続化し、resolved だけを保存しない
+4. トレイ更新は Rust のみ
 
 ## 参照実装
 
-- `src/locales/i18n.ts`
-- `src/features/settings/SettingsPage.tsx`
-- `src/features/settings/languageLabels.ts`
-- `rust-native/src/application/settings.rs`（`normalize_ui_locale` / `resolve_ui_locale`）
+- `react-ui/src/locales/registry.json` / `registry.ts` / `i18n.ts`
+- `react-ui/src/features/settings/languageLabels.ts`
+- `rust-native/i18n/tray.json`
+- `rust-native/src/application/tray_strings.rs`
 - `rust-native/src/infrastructure/desktop/tray.rs`
-- `rust-native/permissions/input-source-switcher.toml`

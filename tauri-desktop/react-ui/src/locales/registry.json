@@ -1,0 +1,9 @@
+{
+  "defaultPreference": "system",
+  "defaultResolved": "ja",
+  "locales": [
+    { "code": "ja", "nativeName": "日本語" },
+    { "code": "en", "nativeName": "English" },
+    { "code": "zh", "nativeName": "中文" }
+  ]
+}

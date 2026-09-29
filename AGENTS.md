@@ -65,7 +65,7 @@ lefthook install          # 初回のみ
 ## 必須の制約
 
 - `any` / `unknown` 禁止。TypeScript で `class` は必要最小限
-- ユーザー向け文言は i18n（ハードコード禁止）。`ja`/`en` を同時更新。locale preference は `system`|`ja`|`en`
+- ユーザー向け文言は i18n（ハードコード禁止）。FE 対応言語は `react-ui/src/locales/registry.json`、トレイは `rust-native/i18n/tray.json`。UI 文言は全パック同時更新
 - UI/UX・依存追加（React Query / axios / 別 CSS スタック）は承認必須
 - 依頼範囲外のリファクタをしない（`agent-behavior`）
 - 秘密情報をハードコードしない

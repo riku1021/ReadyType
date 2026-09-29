@@ -1,34 +1,38 @@
-import type { UiLocalePreference } from "@/locales/i18n";
+import {
+  LANGUAGE_PREFERENCES,
+  nativeNameForLocale,
+  SYSTEM_LANGUAGE_PREFERENCE,
+  UI_LOCALE_REGISTRY,
+  type UiLocalePreference,
+} from "@/locales/registry";
 
-export const LANGUAGE_OPTIONS = [
-  "settings.languageSystem",
-  "settings.languageJa",
-  "settings.languageEn",
-] as const;
+/** i18n key for the "System" preference label. */
+export const SYSTEM_LANGUAGE_LABEL_KEY = "settings.languageSystem" as const;
 
-export type LanguageOptionLabel = (typeof LANGUAGE_OPTIONS)[number];
+type SystemLabelTranslator = (key: typeof SYSTEM_LANGUAGE_LABEL_KEY) => string;
 
-const preferenceToLabel: Record<UiLocalePreference, LanguageOptionLabel> = {
-  system: "settings.languageSystem",
-  ja: "settings.languageJa",
-  en: "settings.languageEn",
-};
-
-const labelToPreference: Record<LanguageOptionLabel, UiLocalePreference> = {
-  "settings.languageSystem": "system",
-  "settings.languageJa": "ja",
-  "settings.languageEn": "en",
-};
-
-export function getLanguageLabel(preference: UiLocalePreference): LanguageOptionLabel {
-  return preferenceToLabel[preference];
+export function getLanguageOptionLabel(
+  preference: UiLocalePreference,
+  translate: SystemLabelTranslator
+): string {
+  if (preference === SYSTEM_LANGUAGE_PREFERENCE) {
+    return translate(SYSTEM_LANGUAGE_LABEL_KEY);
+  }
+  return nativeNameForLocale(preference) ?? preference;
 }
 
-/** 表示ラベル（翻訳済み）から preference を解決する */
-export function languageFromTranslatedLabel(
+export function languageOptionLabels(translate: SystemLabelTranslator): string[] {
+  return LANGUAGE_PREFERENCES.map((preference) => getLanguageOptionLabel(preference, translate));
+}
+
+/** Resolve a displayed option label back to a preference. */
+export function languageFromOptionLabel(
   label: string,
-  translate: (key: LanguageOptionLabel) => string
+  translate: SystemLabelTranslator
 ): UiLocalePreference | undefined {
-  const key = LANGUAGE_OPTIONS.find((option) => translate(option) === label);
-  return key ? labelToPreference[key] : undefined;
+  if (label === translate(SYSTEM_LANGUAGE_LABEL_KEY)) {
+    return SYSTEM_LANGUAGE_PREFERENCE;
+  }
+  const matched = UI_LOCALE_REGISTRY.locales.find((locale) => locale.nativeName === label);
+  return matched ? (matched.code as UiLocalePreference) : undefined;
 }

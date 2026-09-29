@@ -1,28 +1,34 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
-import en from "@/locales/en";
-import ja from "@/locales/ja";
+import {
+  isResolvedUiLocale,
+  isUiLocalePreference,
+  LANGUAGE_PREFERENCES,
+  SUPPORTED_LANGUAGES,
+  SYSTEM_LANGUAGE_PREFERENCE,
+  UI_LOCALE_REGISTRY,
+  type ResolvedUiLocale,
+  type UiLocalePreference,
+} from "@/locales/registry";
 
-export const DEFAULT_LANGUAGE_PREFERENCE = "system";
-export const DEFAULT_RESOLVED_LANGUAGE = "ja";
+export {
+  isResolvedUiLocale,
+  isUiLocalePreference,
+  LANGUAGE_PREFERENCES,
+  SUPPORTED_LANGUAGES,
+  SYSTEM_LANGUAGE_PREFERENCE,
+  UI_LOCALE_REGISTRY,
+  type ResolvedUiLocale,
+  type UiLocalePreference,
+};
+
+export const DEFAULT_LANGUAGE_PREFERENCE = UI_LOCALE_REGISTRY.defaultPreference;
+export const DEFAULT_RESOLVED_LANGUAGE = UI_LOCALE_REGISTRY.defaultResolved;
 export const LANGUAGE_STORE_KEY = "readytype_ui_locale";
-export const SUPPORTED_LANGUAGES = ["ja", "en"] as const;
-export const LANGUAGE_PREFERENCES = ["system", "ja", "en"] as const;
-
-export type ResolvedUiLocale = (typeof SUPPORTED_LANGUAGES)[number];
-export type UiLocalePreference = (typeof LANGUAGE_PREFERENCES)[number];
 
 /** @deprecated Prefer UiLocalePreference; kept for call sites that mean preference. */
 export type UiLocale = UiLocalePreference;
-
-export function isResolvedUiLocale(value: string): value is ResolvedUiLocale {
-  return (SUPPORTED_LANGUAGES as readonly string[]).includes(value);
-}
-
-export function isUiLocalePreference(value: string): value is UiLocalePreference {
-  return (LANGUAGE_PREFERENCES as readonly string[]).includes(value);
-}
 
 /** @deprecated Use isUiLocalePreference */
 export function isUiLocale(value: string): value is UiLocalePreference {
@@ -30,13 +36,13 @@ export function isUiLocale(value: string): value is UiLocalePreference {
 }
 
 export function resolveUiLocale(preference: string): ResolvedUiLocale {
-  if (preference === "en" || preference === "ja") {
+  if (isResolvedUiLocale(preference)) {
     return preference;
   }
   if (typeof navigator !== "undefined") {
     for (const tag of navigator.languages ?? [navigator.language]) {
       const primary = tag.split(/[-_]/)[0]?.toLowerCase();
-      if (primary === "en" || primary === "ja") {
+      if (primary && isResolvedUiLocale(primary)) {
         return primary;
       }
     }
@@ -70,10 +76,29 @@ export function persistLanguage(locale: UiLocalePreference): void {
   }
 }
 
+type LocalePack = { translation: Record<string, unknown> };
+
+const localePackModules = import.meta.glob<{ default: LocalePack }>("./*/index.ts", {
+  eager: true,
+});
+
+function buildResources(): Record<string, LocalePack> {
+  const resources: Record<string, LocalePack> = {};
+  for (const code of SUPPORTED_LANGUAGES) {
+    const modulePath = `./${code}/index.ts`;
+    const pack = localePackModules[modulePath]?.default;
+    if (!pack) {
+      throw new Error(`Missing UI locale pack for registry code "${code}" at ${modulePath}`);
+    }
+    resources[code] = pack;
+  }
+  return resources;
+}
+
 const preference = readStoredLanguage();
 
 void i18n.use(initReactI18next).init({
-  resources: { ja, en },
+  resources: buildResources(),
   lng: resolveUiLocale(preference),
   fallbackLng: DEFAULT_RESOLVED_LANGUAGE,
   defaultNS: "translation",

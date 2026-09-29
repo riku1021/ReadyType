@@ -43,8 +43,6 @@
     "theme": "Theme",
     "displayLanguage": "Display language",
     "languageSystem": "System",
-    "languageJa": "日本語",
-    "languageEn": "English",
     "sectionOther": "Other",
     "aboutApp": "About",
     "resetToDefaults": "Reset to defaults",

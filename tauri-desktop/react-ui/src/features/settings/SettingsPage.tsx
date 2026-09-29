@@ -11,7 +11,7 @@ import { SettingsSection } from "@/components/SettingsSection";
 import { useInputSourceState } from "@/features/inputSource";
 import { isUiLocalePreference, type UiLocalePreference } from "@/locales/i18n";
 
-import { getLanguageLabel, LANGUAGE_OPTIONS, languageFromTranslatedLabel } from "./languageLabels";
+import { getLanguageOptionLabel, languageFromOptionLabel, languageOptionLabels } from "./languageLabels";
 import * as styles from "./SettingsPage.styles";
 import { getThemeLabel, THEME_OPTIONS, themeFromTranslatedLabel } from "./themeLabels";
 
@@ -54,7 +54,7 @@ export function SettingsPage() {
   }, [fetchAutostartEnabled, t]);
 
   const themeOptions = THEME_OPTIONS.map((key) => t(key));
-  const languageOptions = LANGUAGE_OPTIONS.map((key) => t(key));
+  const languageOptions = languageOptionLabels(t);
   const preferenceRaw = state?.uiLocale ?? "";
   const currentPreference: UiLocalePreference = isUiLocalePreference(preferenceRaw)
     ? preferenceRaw
@@ -100,10 +100,10 @@ export function SettingsPage() {
           icon={MdLanguage}
           title={t("settings.displayLanguage")}
           type="selection"
-          value={t(getLanguageLabel(currentPreference))}
+          value={getLanguageOptionLabel(currentPreference, t)}
           options={languageOptions}
           onSelectionChanged={(label) => {
-            const nextLocale = languageFromTranslatedLabel(label, t);
+            const nextLocale = languageFromOptionLabel(label, t);
             if (!nextLocale || nextLocale === currentPreference) {
               return;
             }

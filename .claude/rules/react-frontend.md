@@ -19,7 +19,7 @@ alwaysApply: false
 | TanStack Router   | ファイルベースルーティング                       |
 | Panda CSS         | ビルド時生成の型安全スタイリング                 |
 | Jotai             | クライアント UI 状態（テーマなど）               |
-| i18next / react-i18next | UI 文言（`ja` / `en`、preference `system`） |
+| i18next / react-i18next | UI 文言（`ja` / `en` / `zh`、preference `system`） |
 | Tauri API         | ネイティブ連携（`invoke` / プラグイン）          |
 | Vitest            | ユニットテスト                                   |
 | Biome             | lint / format                                    |
@@ -43,7 +43,7 @@ src/
 │   └── notFound/
 ├── hooks/                # 共有カスタムフック
 ├── layouts/              # RootLayout / Drawer / Header
-├── locales/              # i18next（ja / en、i18n.ts）
+├── locales/              # i18next（ja / en / zh、i18n.ts）
 ├── routes/               # TanStack Router（薄い）
 ├── styles/               # Panda トークン・globalCss
 ├── styled-system/        # Panda codegen（手編集禁止）
@@ -215,20 +215,35 @@ ReadyType の UI 文言は **i18next + react-i18next** で管理する。テー�
 ```
 src/locales/
 ├── i18n.ts                 # 初期化・preference / resolve・localStorage
+├── registry.ts             # locales/registry.json の FE ラッパ
+├── registry.json           # FE SoT: 対応パック・既定・nativeName
 ├── ja/
 │   ├── index.ts            # 型付け（CustomTypeOptions）+ export
 │   └── translation.json    # メイン翻訳
-└── en/
+├── en/
+│   ├── index.ts
+│   └── translation.json
+└── zh/
     ├── index.ts
     └── translation.json
 ```
 
-- 対応言語（resolved）: `ja` | `en`
-- preference: `system` | `ja` | `en`（デフォルト `system`）
-- 永続キー（フロント）: `readytype_ui_locale`（`LANGUAGE_STORE_KEY`）
-- ネイティブ永続: `SwitcherSettings.ui_locale`（同じ preference 文字列）
+トレイ文言（Rust 専用。対応コード一覧の SoT も兼ねる）:
 
-`ja/index.ts` / `en/index.ts` で `i18next` の `CustomTypeOptions` を拡張し、`t()` のキーを型安全にする。
+```
+tauri-desktop/rust-native/i18n/
+└── tray.json
+```
+
+- FE 対応言語: `registry.json` の `locales[].code`
+- Rust 対応言語: `tray.json` のキー（registry は読まない）
+- preference: `system` | 各側の対応パック
+- 永続キー（フロント）: `readytype_ui_locale`（`LANGUAGE_STORE_KEY`）
+- ネイティブ永続: `SwitcherSettings.ui_locale`
+
+言語追加は **FE registry.json → rust-native/i18n/tray.json → locales/{code}/** の順。
+
+`ja/index.ts` / `en/index.ts` / `zh/index.ts` で `i18next` の `CustomTypeOptions` を拡張し、`t()` のキーを型安全にする。
 
 ### 翻訳 JSON 構造
 
@@ -251,27 +266,28 @@ src/locales/
     "displayLanguage": "表示言語",
     "languageSystem": "システム",
     "languageJa": "日本語",
-    "languageEn": "English"
+    "languageEn": "English",
+    "languageZh": "中文"
   }
 }
 ```
 
 **キー追加時の必須手順**
 
-1. `ja/translation.json` にキーを追加する
-2. **同じキー**を `en/translation.json` にも追加する（片方だけは禁止）
-3. コンポーネントでは `t('...')` のみを使う
+1. 各 `locales/{code}/translation.json` に同じキーを追加する（片方だけは禁止）
+2. コンポーネントでは `t('...')` のみを使う
+3. **新しい言語パック**を足す場合は `locales/registry.json` と `rust-native/i18n/tray.json` も更新する
 
 ### preference と resolved
 
 | 概念 | 値 | 用途 |
 |------|-----|------|
-| preference | `system` \| `ja` \| `en` | 設定 UI・localStorage・Rust 設定ファイルに保存 |
-| resolved | `ja` \| `en` | `i18n.changeLanguage`・トレイ文言・`UiLocaleCache` |
+| preference | `system` \| FE registry / Rust tray の packs | 設定 UI・localStorage・Rust 設定ファイルに保存 |
+| resolved | 各側の packs | `i18n.changeLanguage`・トレイ文言・`UiLocaleCache` |
 
-- preference が `ja` / `en` → resolved はそのまま
+- preference が対応パック → resolved はそのまま
 - preference が `system` → OS 表示言語を解決（Rust: `sys-locale`、フロント起動直後のフォールバック: `navigator.languages`）
-- 対応外の OS 言語 → resolved は `ja`（`DEFAULT_RESOLVED_LANGUAGE`）
+- 対応外の OS 言語 → 各側の defaultResolved（FE: registry、Rust: `DEFAULT_RESOLVED_UI_LOCALE` + tray 必須キー）
 - **UiLocale ≠ 入力の LanguageTag**: 入力ソース preference（`languagePreferences`）は別モデル。詳細は `docs/rules/ja-JP/input-source-model.md`
 
 テーマ（`light` / `dark` / `system`）と同じ分離なので、設定ラベル用ヘルパも同様に置く:
@@ -308,10 +324,10 @@ export function MyComponent() {
 **設定の表示言語切替:**
 
 ```tsx
-import { getLanguageLabel, LANGUAGE_OPTIONS, languageFromTranslatedLabel } from "./languageLabels";
+import { getLanguageOptionLabel, languageFromOptionLabel, languageOptionLabels } from "./languageLabels";
 
-// options は翻訳済みラベル配列
-// 保存は preference（"system" | "ja" | "en"）を setUiLocale → invoke("set_ui_locale")
+// options は languageOptionLabels(t)（system は翻訳、各言語は registry.nativeName）
+// 保存は preference（"system" | registry packs）を setUiLocale → invoke("set_ui_locale")
 // 反映は settings.resolvedUiLocale で i18n.changeLanguage
 ```
 
@@ -335,11 +351,11 @@ import { getLanguageLabel, LANGUAGE_OPTIONS, languageFromTranslatedLabel } from 
 ### i18n ベストプラクティス
 
 1. **常に翻訳キーを使う**: ユーザー向けテキストをハードコードしない。ラベル、メニュー、メッセージ、プレースホルダー、ツールチップ、aria-label、確認ダイアログはすべて `t()`。
-2. **ja / en を同時更新**: 片方の JSON だけ変更しない。
+2. **ja / en / zh を同時更新**: 片方の JSON だけ変更しない。
 3. **名前空間の整理**: 関連キーをトップレベルでグループ化する（`nav`, `common`, `settings`, …）。
 4. **一貫した命名**: ネストはドット記法（例: `settings.displayLanguage`）。
 5. **動的ラベルも i18n**: セレクト選択肢・ステータス文言もキー化する（`languageLabels` / `themeLabels` パターン）。
-6. **preference を保存する**: `system` 選択時に解決後の `ja`/`en` だけを永続化しない（「システム」の意味が消える）。
+6. **preference を保存する**: `system` 選択時に解決後の `ja`/`en`/`zh` だけを永続化しない（「システム」の意味が消える）。
 7. **トレイは resolved**: preference 文字列をそのままトレイに渡さない。
 8. **型**: `isUiLocalePreference` / `resolveUiLocale` / `CustomTypeOptions` を使い、生文字列比較を避ける。
 

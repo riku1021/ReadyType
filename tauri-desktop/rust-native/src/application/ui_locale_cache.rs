@@ -1,14 +1,12 @@
-//! Lock-free cache for the **resolved** UI / tray locale (`ja` | `en`).
+//! Lock-free cache for the **resolved** UI / tray locale.
 //!
 //! Preference (`system`) is stored in settings; this cache only holds the
 //! concrete language used for tray labels and never re-enters the switcher lock.
+//! Locale codes are indexed from `tray.json` keys (sorted).
 
 use std::sync::atomic::{AtomicU8, Ordering};
 
-use super::settings::DEFAULT_RESOLVED_UI_LOCALE;
-
-const LOCALE_JA: u8 = 0;
-const LOCALE_EN: u8 = 1;
+use super::tray_strings::{self, DEFAULT_RESOLVED_UI_LOCALE};
 
 #[derive(Debug)]
 pub struct UiLocaleCache {
@@ -32,19 +30,13 @@ impl UiLocaleCache {
 }
 
 fn encode(locale: &str) -> u8 {
-    if locale == "en" {
-        LOCALE_EN
-    } else {
-        LOCALE_JA
-    }
+    let index = tray_strings::index_of(locale)
+        .unwrap_or_else(tray_strings::default_resolved_index);
+    u8::try_from(index).expect("ui locale count fits in u8")
 }
 
 fn decode(code: u8) -> &'static str {
-    if code == LOCALE_EN {
-        "en"
-    } else {
-        DEFAULT_RESOLVED_UI_LOCALE
-    }
+    tray_strings::code_at(usize::from(code)).unwrap_or(DEFAULT_RESOLVED_UI_LOCALE)
 }
 
 #[cfg(test)]
@@ -57,6 +49,8 @@ mod tests {
         assert_eq!(cache.load(), "ja");
         cache.store("en");
         assert_eq!(cache.load(), "en");
+        cache.store("zh");
+        assert_eq!(cache.load(), "zh");
         cache.store("system");
         assert_eq!(cache.load(), "ja");
     }

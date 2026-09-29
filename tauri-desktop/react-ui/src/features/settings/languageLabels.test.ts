@@ -1,28 +1,34 @@
 import { describe, expect, it } from "vitest";
 
-import { getLanguageLabel, languageFromTranslatedLabel } from "./languageLabels";
+import {
+  getLanguageOptionLabel,
+  languageFromOptionLabel,
+  languageOptionLabels,
+  SYSTEM_LANGUAGE_LABEL_KEY,
+} from "./languageLabels";
 
 describe("languageLabels", () => {
-  it("maps preference to i18n keys", () => {
-    expect(getLanguageLabel("system")).toBe("settings.languageSystem");
-    expect(getLanguageLabel("ja")).toBe("settings.languageJa");
-    expect(getLanguageLabel("en")).toBe("settings.languageEn");
+  const translate = (key: typeof SYSTEM_LANGUAGE_LABEL_KEY) => {
+    if (key === "settings.languageSystem") {
+      return "システム";
+    }
+    return key;
+  };
+
+  it("builds option labels from registry native names", () => {
+    expect(languageOptionLabels(translate)).toEqual(["システム", "日本語", "English", "中文"]);
   });
 
-  it("resolves translated labels back to preference", () => {
-    const translate = (key: string) => {
-      switch (key) {
-        case "settings.languageSystem":
-          return "システム";
-        case "settings.languageJa":
-          return "日本語";
-        case "settings.languageEn":
-          return "English";
-        default:
-          return key;
-      }
-    };
-    expect(languageFromTranslatedLabel("システム", translate)).toBe("system");
-    expect(languageFromTranslatedLabel("English", translate)).toBe("en");
+  it("maps preference to display labels", () => {
+    expect(getLanguageOptionLabel("system", translate)).toBe("システム");
+    expect(getLanguageOptionLabel("ja", translate)).toBe("日本語");
+    expect(getLanguageOptionLabel("en", translate)).toBe("English");
+    expect(getLanguageOptionLabel("zh", translate)).toBe("中文");
+  });
+
+  it("resolves option labels back to preference", () => {
+    expect(languageFromOptionLabel("システム", translate)).toBe("system");
+    expect(languageFromOptionLabel("English", translate)).toBe("en");
+    expect(languageFromOptionLabel("中文", translate)).toBe("zh");
   });
 });

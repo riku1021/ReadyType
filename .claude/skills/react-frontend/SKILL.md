@@ -31,7 +31,7 @@ src/styled-system/     # 手編集禁止
 - [ ] 外部 import は feature / component の `index.ts` 経由
 - [ ] コンポーネント dir は PascalCase（`component-path-casing`）
 - [ ] UI 状態は Jotai、永続/OS は `invoke`
-- [ ] ユーザー向け文言は `t()`。`ja`/`en` の `translation.json` を同時更新（i18n §）
+- [ ] ユーザー向け文言は `t()`。`ja`/`en`/`zh` の `translation.json` を同時更新（i18n §）
 - [ ] スタイルは隣接 `*.styles.ts`（`panda-css`）
 - [ ] `any` / `unknown` なし
 - [ ] UI/UX・依存追加は承認済みか確認

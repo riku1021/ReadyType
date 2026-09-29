@@ -264,7 +264,7 @@ cargo test
 5. `lib.rs` の `generate_handler!` に登録
 6. **permissions `commands.allow` に追加**
 7. フロントの `invoke` 名と一致させる
-8. ユーザー向け文言があれば `ja`/`en` の翻訳キーを追加（フロント規約）
+8. ユーザー向け文言があれば `ja`/`en`/`zh` の翻訳キーを追加（フロント規約）
 9. `cargo test` / `cargo clippy` を通す
 
 ## Reference Implementations
