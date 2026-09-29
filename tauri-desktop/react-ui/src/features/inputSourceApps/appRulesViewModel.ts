@@ -1,4 +1,7 @@
+import type { TFunction } from "i18next";
+
 import type { RuleConditionDto, RuleDto, RuleTarget } from "@/features/inputSource";
+import i18n from "@/locales/i18n";
 
 const APP_LABELS: Record<string, string> = {
   "com.todesktop.230313mzl4w4u92": "Cursor",
@@ -28,55 +31,55 @@ export function appDisplayName(appId: string): string {
   return APP_LABELS[appId] ?? appId;
 }
 
-export function summarizeConditions(conditions: readonly RuleConditionDto[]): string {
+export function summarizeConditions(conditions: readonly RuleConditionDto[], t: TFunction): string {
   if (conditions.length === 0) {
-    return "条件なし（アプリ一致）";
+    return t("rules.conditionsNone");
   }
   return conditions
     .map((condition) => `${condition.attribute} ${condition.operator} ${condition.value}`)
     .join(" / ");
 }
 
-export function displayRuleLabel(rule: RuleDto): Omit<RuleDisplay, "rule"> {
+export function displayRuleLabel(rule: RuleDto, t: TFunction): Omit<RuleDisplay, "rule"> {
   const id = rule.id.toLowerCase();
   if (rule.conditions.length === 0) {
     return {
-      title: "デフォルト",
-      subtitle: "このアプリのすべての入力欄で使う既定の言語",
+      title: t("rules.defaultTitle"),
+      subtitle: t("rules.defaultSubtitle"),
       kind: "default",
     };
   }
   if (id.includes("chat") || id.includes("composer") || id.includes("ai-input")) {
     return {
-      title: "Chat（AIチャット欄）",
-      subtitle: "右サイドバーのチャット入力欄",
+      title: t("rules.chatTitle"),
+      subtitle: t("rules.chatSubtitle"),
       kind: "chat",
     };
   }
   if (id.includes("editor")) {
     return {
-      title: "Editor（コードエディタ）",
-      subtitle: "メインのエディタ入力欄",
+      title: t("rules.editorTitle"),
+      subtitle: t("rules.editorSubtitle"),
       kind: "editor",
     };
   }
   if (id.includes("terminal")) {
     return {
-      title: "Terminal（内蔵ターミナル）",
-      subtitle: "ターミナルのコマンド入力欄",
+      title: t("rules.terminalTitle"),
+      subtitle: t("rules.terminalSubtitle"),
       kind: "terminal",
     };
   }
   if (id.includes("rename")) {
     return {
-      title: "Rename（ファイル名変更）",
-      subtitle: "ファイル名の入力欄",
+      title: t("rules.renameTitle"),
+      subtitle: t("rules.renameSubtitle"),
       kind: "rename",
     };
   }
   return {
     title: rule.name,
-    subtitle: summarizeConditions(rule.conditions),
+    subtitle: summarizeConditions(rule.conditions, t),
     kind: "other",
   };
 }
@@ -98,7 +101,7 @@ function contextSortKey(rule: RuleDto): number {
   return 10 + rule.priority;
 }
 
-export function groupRulesByApp(rules: readonly RuleDto[]): AppRuleGroup[] {
+export function groupRulesByApp(rules: readonly RuleDto[], t: TFunction): AppRuleGroup[] {
   const byApp = new Map<string, RuleDto[]>();
   for (const rule of rules) {
     const list = byApp.get(rule.appId) ?? [];
@@ -113,7 +116,7 @@ export function groupRulesByApp(rules: readonly RuleDto[]): AppRuleGroup[] {
       const contextualRules = sorted
         .filter((rule) => rule.conditions.length > 0)
         .sort((left, right) => contextSortKey(left) - contextSortKey(right))
-        .map((rule) => ({ rule, ...displayRuleLabel(rule) }));
+        .map((rule) => ({ rule, ...displayRuleLabel(rule, t) }));
       return {
         appId,
         label: appDisplayName(appId),
@@ -123,30 +126,16 @@ export function groupRulesByApp(rules: readonly RuleDto[]): AppRuleGroup[] {
         contextualRules,
       };
     })
-    .sort((left, right) => left.label.localeCompare(right.label, "ja"));
-}
-
-export function summarizeLanguageTarget(target: RuleTarget): string {
-  switch (target.kind) {
-    case "preferredEnglish":
-      return "English（英語）";
-    case "preferredJapanese":
-      return "日本語";
-    case "exact":
-      return target.inputSourceId;
-  }
+    .sort((left, right) => left.label.localeCompare(right.label, i18n.language));
 }
 
 export function resolvedInputSourceId(
   target: RuleTarget,
-  preferredEnglish: string | null | undefined,
-  preferredJapanese: string | null | undefined
+  preferences: Record<string, string | null | undefined> | null | undefined
 ): string {
   switch (target.kind) {
-    case "preferredEnglish":
-      return preferredEnglish ?? "";
-    case "preferredJapanese":
-      return preferredJapanese ?? "";
+    case "preferredLanguage":
+      return preferences?.[target.language] ?? "";
     case "exact":
       return target.inputSourceId;
   }
@@ -154,14 +143,14 @@ export function resolvedInputSourceId(
 
 export function ruleTargetFromInputSourceId(
   inputSourceId: string,
-  preferredEnglish: string | null | undefined,
-  preferredJapanese: string | null | undefined
+  preferences: Record<string, string | null | undefined> | null | undefined
 ): RuleTarget {
-  if (preferredEnglish && inputSourceId === preferredEnglish) {
-    return { kind: "preferredEnglish" };
-  }
-  if (preferredJapanese && inputSourceId === preferredJapanese) {
-    return { kind: "preferredJapanese" };
+  if (preferences) {
+    for (const [language, preferredId] of Object.entries(preferences)) {
+      if (preferredId && inputSourceId === preferredId) {
+        return { kind: "preferredLanguage", language };
+      }
+    }
   }
   return { kind: "exact", inputSourceId };
 }

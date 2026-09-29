@@ -1,2 +1,2 @@
 export { getNavLinkByPath, navLinks } from "./navLinks";
-export type { NavLink } from "./types";
+export type { NavLabelKey, NavLink } from "./types";

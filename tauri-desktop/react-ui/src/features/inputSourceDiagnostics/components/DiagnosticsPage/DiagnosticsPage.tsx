@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/Button";
 import {
@@ -16,6 +17,7 @@ import {
 import * as styles from "./DiagnosticsPage.styles";
 
 export function DiagnosticsPage() {
+  const { t } = useTranslation();
   const {
     startDebugCapture,
     stopDebugCapture,
@@ -61,7 +63,7 @@ export function DiagnosticsPage() {
       await navigator.clipboard.writeText(text);
       setCopyError(null);
     } catch {
-      setCopyError("クリップボードへのコピーに失敗しました");
+      setCopyError(t("diagnostics.copyFailed"));
     }
   };
 
@@ -74,7 +76,7 @@ export function DiagnosticsPage() {
             void copyText(logsToTsv(logs));
           }}
         >
-          ログをコピー
+          {t("diagnostics.copyLogs")}
         </Button>
         <Button
           variant="secondary"
@@ -82,26 +84,26 @@ export function DiagnosticsPage() {
             void clearSwitchLogs().then(() => setLogs([]));
           }}
         >
-          ログをクリア
+          {t("diagnostics.clearLogs")}
         </Button>
       </div>
       {copyError ? <p className={styles.meta}>{copyError}</p> : null}
 
       <section className={styles.section}>
-        <h2 className={styles.title}>処理時間</h2>
+        <h2 className={styles.title}>{t("diagnostics.sectionLatency")}</h2>
         <p className={styles.meta}>
           p50 {latency.p50} / p95 {latency.p95}
         </p>
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.title}>フォーカス要素</h2>
+        <h2 className={styles.title}>{t("diagnostics.sectionFocus")}</h2>
         {snapshot ? (
           <p className={styles.meta}>
             {snapshot.app.appId} / generation {snapshot.generation}
           </p>
         ) : (
-          <p className={styles.meta}>スナップショットなし</p>
+          <p className={styles.meta}>{t("diagnostics.noSnapshot")}</p>
         )}
         {attributes.map((attribute) => (
           <div
@@ -118,7 +120,7 @@ export function DiagnosticsPage() {
                   void copyText(attribute.value);
                 }}
               >
-                コピー
+                {t("diagnostics.copy")}
               </Button>
             </div>
           </div>
@@ -126,18 +128,15 @@ export function DiagnosticsPage() {
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.title}>切替ログ</h2>
-        <p className={styles.meta}>
-          未実行（disabled / snoozed / noRule /
-          alreadySelected）も記録します。無視（ignored）は設定のデバッグログ ON 時のみです。
-        </p>
-        {logs.length === 0 ? <p className={styles.meta}>ログなし</p> : null}
+        <h2 className={styles.title}>{t("diagnostics.sectionSwitchLogs")}</h2>
+        <p className={styles.meta}>{t("diagnostics.switchLogsHelp")}</p>
+        {logs.length === 0 ? <p className={styles.meta}>{t("diagnostics.noLogs")}</p> : null}
         {logs.map((log) => (
           <p
             key={`${log.timestampUnixMs}-${log.generation}-${log.ruleId}-${log.decision}-${log.processingMicros}`}
             className={styles.meta}
           >
-            {formatSwitchLogLine(log)}
+            {formatSwitchLogLine(log, t)}
           </p>
         ))}
       </section>

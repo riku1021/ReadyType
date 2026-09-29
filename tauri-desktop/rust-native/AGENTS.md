@@ -13,4 +13,6 @@
 - 依存は外側 → 内側のみ（`domain` / `application` に `tauri`・OS を持ち込まない）
 - コマンドは薄く、処理は use case
 - 新規コマンドは `generate_handler!` とフロント `invoke` 名を一致させる
+- 新規コマンドは `permissions/*.toml` の `commands.allow` にも追加する
+- UI locale: preference（`system`|`ja`|`en`）と resolved（`ja`|`en`）を分離。トレイは resolved。mutex 保持中に tray publish しない
 - 完了前: `cargo fmt && cargo clippy --all-targets -- -D warnings && cargo test`

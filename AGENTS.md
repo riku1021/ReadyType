@@ -16,7 +16,7 @@ Codex 向けのプロジェクト指示。詳細なコーディング規約の�
 
 ReadyType はタイピング練習用の **Tauri 2 デスクトップアプリ**。
 
-- Frontend: React 19, Vite 8, TypeScript, TanStack Router, Panda CSS, Jotai, Biome, Vitest — `tauri-desktop/react-ui/`
+- Frontend: React 19, Vite 8, TypeScript, TanStack Router, Panda CSS, Jotai, **i18next**, Biome, Vitest — `tauri-desktop/react-ui/`
 - Native: Rust (Tauri), **Onion**（`domain` → `application` → `presentation` / `infrastructure`）— `tauri-desktop/rust-native/`
 - Tooling: mise, pnpm, lefthook
 
@@ -41,6 +41,8 @@ lefthook install          # 初回のみ
 - `src/features/`・`src/components/`（PascalCase）・`src/layouts/`・薄い `src/routes/`
 - UI 状態: Jotai / ネイティブ: `invoke`（React Query / axios 追加は承認必須）
 - スタイル: Panda（`*.styles.ts`）。`styled-system/` 手編集禁止
+- 文言: i18next（`src/locales/`）。`t()` 必須。詳細は `.claude/rules/react-frontend.md` §14 / `docs/rules/ja-JP/react-frontend-i18n.md`
+- 入力ソースモデル（LanguageTag ≠ UiLocale）: `docs/rules/ja-JP/input-source-model.md`
 
 ### Native（Onion）
 
@@ -63,9 +65,11 @@ lefthook install          # 初回のみ
 ## 必須の制約
 
 - `any` / `unknown` 禁止。TypeScript で `class` は必要最小限
+- ユーザー向け文言は i18n（ハードコード禁止）。`ja`/`en` を同時更新。locale preference は `system`|`ja`|`en`
 - UI/UX・依存追加（React Query / axios / 別 CSS スタック）は承認必須
 - 依頼範囲外のリファクタをしない（`agent-behavior`）
 - 秘密情報をハードコードしない
+- 新規 Tauri コマンドは `permissions/*.toml` の allow にも追加
 
 ## 生成物（手編集禁止）
 

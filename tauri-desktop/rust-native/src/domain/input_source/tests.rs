@@ -40,7 +40,7 @@ fn rule(
         app_id,
         priority,
         conditions,
-        RuleTarget::PreferredEnglish,
+        RuleTarget::PreferredLanguage(super::LanguageTag::en()),
     )
     .expect("valid rule")
 }

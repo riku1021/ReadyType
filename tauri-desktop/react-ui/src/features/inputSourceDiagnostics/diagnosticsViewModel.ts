@@ -1,3 +1,5 @@
+import type { TFunction } from "i18next";
+
 import type { AxAttribute, RuleConditionDto, SwitchLogDto } from "@/features/inputSource";
 
 export type SnapshotAttribute = {
@@ -89,12 +91,12 @@ export function logsToTsv(logs: readonly SwitchLogDto[]): string {
   return [header, ...rows].join("\n");
 }
 
-export function formatSwitchLogLine(log: SwitchLogDto): string {
+export function formatSwitchLogLine(log: SwitchLogDto, t: TFunction): string {
   const route = log.from || log.to ? `${log.from || "—"} → ${log.to || "—"}` : "—";
   const parts = [
-    log.success ? "成功" : "失敗",
+    log.success ? t("diagnostics.logSuccess") : t("diagnostics.logFailure"),
     log.decision,
-    log.attempted ? "実行" : "未実行",
+    log.attempted ? t("diagnostics.logAttempted") : t("diagnostics.logSkipped"),
     log.appId,
     `pid ${log.pid}`,
     `gen ${log.generation}`,

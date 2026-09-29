@@ -226,6 +226,17 @@ cargo test
 - フロントから渡る入力は domain / use case で検証する
 - ファイル・ネットワークは必要最小権限で触る
 
+## UI locale（トレイ / 設定）
+
+表示言語 preference は `SwitcherSettings.ui_locale`（`system` | `ja` | `en`）。
+
+- **resolved**（`ja` | `en`）は `SwitcherSettings::resolve_ui_locale`（`sys-locale`）で決める
+- トレイ・`UiLocaleCache` は resolved のみ扱う
+- state の publish / `tray::update` は **switcher mutex 解放後**に行う（`settings()` 再ロック禁止）
+- 新規 `#[tauri::command]` は `permissions/input-source-switcher.toml`（または該当 toml）の `commands.allow` に必ず追加する
+
+詳細（フロント含む）: `docs/rules/ja-JP/react-frontend-i18n.md`、`.claude/rules/react-frontend.md` §14
+
 ## Testing
 
 詳細は `rust-testing` ルール / スキルを参照。
@@ -241,6 +252,8 @@ cargo test
 - infrastructure の具象型を application が直接 new して配る
 - UI 文言の組み立てを domain に置く
 - 層をまたいだ循環依存
+- トレイ更新経路で switcher mutex を再取得する
+- IPC を ACL（permissions）に登録し忘れる
 
 ## Adding a New Feature（チェックリスト）
 
@@ -249,8 +262,10 @@ cargo test
 3. Infrastructure: port 実装（OS / I/O）
 4. Presentation: 薄い `#[tauri::command]`
 5. `lib.rs` の `generate_handler!` に登録
-6. フロントの `invoke` 名と一致させる
-7. `cargo test` / `cargo clippy` を通す
+6. **permissions `commands.allow` に追加**
+7. フロントの `invoke` 名と一致させる
+8. ユーザー向け文言があれば `ja`/`en` の翻訳キーを追加（フロント規約）
+9. `cargo test` / `cargo clippy` を通す
 
 ## Reference Implementations
 
@@ -258,3 +273,5 @@ cargo test
 - `src/presentation/commands/greet.rs`
 - `src/application/use_cases/greet.rs`
 - `src/domain/entities/guest_name.rs`
+- `src/application/settings.rs` — `normalize_ui_locale` / `resolve_ui_locale`
+- `src/infrastructure/desktop/tray.rs` — resolved locale でメニュー構築

@@ -1,6 +1,15 @@
 use super::{
-    AxAttribute, FocusRule, MatchOperator, Platform, RuleCondition, RuleTarget, SearchScope,
+    AxAttribute, FocusRule, LanguageTag, MatchOperator, Platform, RuleCondition, RuleTarget,
+    SearchScope,
 };
+
+fn preferred_en() -> RuleTarget {
+    RuleTarget::PreferredLanguage(LanguageTag::en())
+}
+
+fn preferred_ja() -> RuleTarget {
+    RuleTarget::PreferredLanguage(LanguageTag::ja())
+}
 
 const TERMINAL_BUNDLE_ID: &str = "com.apple.Terminal";
 const CURSOR_BUNDLE_ID: &str = "com.todesktop.230313mzl4w4u92";
@@ -47,7 +56,7 @@ fn contextual_rules(prefix: &str, app_name: &str, app_id: &str) -> Vec<FocusRule
                     "terminal",
                 ),
             ],
-            RuleTarget::PreferredEnglish,
+            preferred_en(),
         ),
         rule(
             &format!("preset-{prefix}-terminal-ja"),
@@ -62,7 +71,7 @@ fn contextual_rules(prefix: &str, app_name: &str, app_id: &str) -> Vec<FocusRule
                     "ターミナル",
                 ),
             ],
-            RuleTarget::PreferredEnglish,
+            preferred_en(),
         ),
         rule(
             &format!("preset-{prefix}-rename-en"),
@@ -77,7 +86,7 @@ fn contextual_rules(prefix: &str, app_name: &str, app_id: &str) -> Vec<FocusRule
                     "press enter to confirm",
                 ),
             ],
-            RuleTarget::PreferredEnglish,
+            preferred_en(),
         ),
         rule(
             &format!("preset-{prefix}-rename-ja"),
@@ -92,7 +101,7 @@ fn contextual_rules(prefix: &str, app_name: &str, app_id: &str) -> Vec<FocusRule
                     "ファイル名を入力",
                 ),
             ],
-            RuleTarget::PreferredEnglish,
+            preferred_en(),
         ),
         rule(
             &format!("preset-{prefix}-editor"),
@@ -104,7 +113,7 @@ fn contextual_rules(prefix: &str, app_name: &str, app_id: &str) -> Vec<FocusRule
                 MatchOperator::Contains,
                 "workbench.parts.editor",
             )],
-            RuleTarget::PreferredEnglish,
+            preferred_en(),
         ),
     ]
 }
@@ -116,7 +125,7 @@ pub fn default_rules() -> Vec<FocusRule> {
         TERMINAL_BUNDLE_ID,
         0,
         Vec::new(),
-        RuleTarget::PreferredEnglish,
+        preferred_en(),
     )];
 
     let mut cursor = contextual_rules("cursor", "Cursor", CURSOR_BUNDLE_ID);
@@ -130,7 +139,7 @@ pub fn default_rules() -> Vec<FocusRule> {
             MatchOperator::Contains,
             "aichat",
         )],
-        RuleTarget::PreferredJapanese,
+        preferred_ja(),
     ));
     cursor.push(rule(
         "preset-cursor-composer",
@@ -142,7 +151,7 @@ pub fn default_rules() -> Vec<FocusRule> {
             MatchOperator::Contains,
             "composer-",
         )],
-        RuleTarget::PreferredJapanese,
+        preferred_ja(),
     ));
     cursor.push(rule(
         "preset-cursor-ai-input",
@@ -154,7 +163,7 @@ pub fn default_rules() -> Vec<FocusRule> {
             MatchOperator::Contains,
             "aislash-editor-input",
         )],
-        RuleTarget::PreferredJapanese,
+        preferred_ja(),
     ));
     rules.extend(cursor);
 
@@ -169,7 +178,7 @@ pub fn default_rules() -> Vec<FocusRule> {
             MatchOperator::Contains,
             "workbench.panel.chat",
         )],
-        RuleTarget::PreferredJapanese,
+        preferred_ja(),
     ));
     rules.extend(vscode);
 

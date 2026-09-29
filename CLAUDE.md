@@ -10,7 +10,7 @@ ReadyType is a **Tauri 2 desktop app** for typing practice.
 
 **Tech Stack:**
 
-- Frontend: React 19, Vite 8, TypeScript, TanStack Router, Panda CSS, Jotai, Biome, Vitest
+- Frontend: React 19, Vite 8, TypeScript, TanStack Router, Panda CSS, Jotai, **i18next / react-i18next**, Biome, Vitest
 - Native: Rust (Tauri), **Onion Architecture** (`domain` → `application` → `presentation` / `infrastructure`)
 - Tooling: mise, pnpm, lefthook
 
@@ -69,6 +69,7 @@ src/
 ├── components/     # Button, Dialog, FormModal, Lottie, ThemeToggle
 ├── layouts/        # RootLayout, Drawer, Header
 ├── routes/         # TanStack Router (thin)
+├── locales/        # i18next（ja / en、preference system|ja|en）
 ├── styles/         # Panda tokens / globalCss
 ├── atoms/ hooks/
 └── styled-system/  # codegen only — do not edit
@@ -76,6 +77,7 @@ src/
 
 - Client UI state: Jotai
 - Native bridge: `@tauri-apps/api` `invoke`
+- UI copy: **i18next**（`useTranslation` / `t()`）。ハードコード禁止。詳細は `.claude/rules/react-frontend.md` §14 と `docs/rules/ja-JP/react-frontend-i18n.md`
 - Do **not** add React Query / axios without approval
 
 ### Native (`tauri-desktop/rust-native/`) — Onion Architecture
@@ -100,6 +102,7 @@ src/
 - No `any` / `unknown`; prefer named exports; avoid `class` unless necessary
 - Path alias `@/` → `src/`
 - Component directories: PascalCase
+- All user-facing text via i18next (`t()`). Keep `ja` / `en` JSON in sync. Locale preference may be `system` (resolve to `ja`|`en` for UI/tray)
 - UI/UX changes require approval
 
 ### Rust
@@ -118,7 +121,9 @@ src/
 - Subagents（Claude）: `.claude/agents/`（coder / quality-checker）
 - Rules（詳細・正本）: `.claude/rules/`
   - `agent-behavior`（always）、`rust-backend`、`rust-testing`
-  - `react-frontend`、`panda-css`、`typescript-general`、`typescript-testing`
+  - `react-frontend`（**i18n 含む**）、`panda-css`、`typescript-general`、`typescript-testing`
+- 人間向け i18n ガイド: `docs/rules/ja-JP/react-frontend-i18n.md`
+- 入力ソース / LanguageTag モデル: `docs/rules/ja-JP/input-source-model.md`
 - Skills（Claude）: `.claude/skills/`
 - Codex:
   - 指示: ルート `AGENTS.md`（＋ `react-ui` / `rust-native` 配下のネスト）

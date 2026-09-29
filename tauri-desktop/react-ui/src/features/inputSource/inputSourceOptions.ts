@@ -1,3 +1,4 @@
+import i18n from "@/locales/i18n";
 import { withConfiguredSource } from "./api";
 import type { InputSourceDto } from "./types";
 
@@ -6,8 +7,6 @@ export type InputSourceOption = {
   label: string;
   available: boolean;
 };
-
-const languageNames = new Intl.DisplayNames(["ja"], { type: "language" });
 
 export function buildInputSourceOptions(
   sources: readonly InputSourceDto[],
@@ -43,11 +42,12 @@ export function buildInputSourceOptions(
       label: displayLabelForSource(source, languageCounts),
       available: source.available,
     }))
-    .sort((left, right) => left.label.localeCompare(right.label, "ja"));
+    .sort((left, right) => left.label.localeCompare(right.label, i18n.language));
 }
 
 export function languageDisplayName(languageCode: string): string {
   try {
+    const languageNames = new Intl.DisplayNames([i18n.language], { type: "language" });
     return languageNames.of(languageCode) ?? languageCode;
   } catch {
     return languageCode;
@@ -59,7 +59,7 @@ function displayLabelForSource(
   languageCounts: ReadonlyMap<string, number>
 ): string {
   if (!source.available) {
-    return `${source.id}（利用不可）`;
+    return i18n.t("common.inputSourceUnavailable", { id: source.id });
   }
   const code = source.languageCode;
   if (!code) {
@@ -67,7 +67,10 @@ function displayLabelForSource(
   }
   const languageLabel = languageDisplayName(code);
   if ((languageCounts.get(code) ?? 0) > 1) {
-    return `${languageLabel}（${source.name}）`;
+    return i18n.t("common.inputSourceWithVariant", {
+      language: languageLabel,
+      name: source.name,
+    });
   }
   return languageLabel;
 }

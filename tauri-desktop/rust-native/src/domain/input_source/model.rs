@@ -23,6 +23,44 @@ impl InputSourceId {
     }
 }
 
+/// BCP-47 primary language subtag (open string, not a closed union).
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct LanguageTag(String);
+
+impl LanguageTag {
+    pub fn parse(value: &str) -> Result<Self, DomainError> {
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            return Err(DomainError::InvalidInput(
+                "language tag must not be empty".to_owned(),
+            ));
+        }
+        let primary = trimmed
+            .split(['-', '_'])
+            .next()
+            .unwrap_or(trimmed)
+            .to_ascii_lowercase();
+        if primary.is_empty() {
+            return Err(DomainError::InvalidInput(
+                "language tag must not be empty".to_owned(),
+            ));
+        }
+        Ok(Self(primary))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    pub fn en() -> Self {
+        Self("en".to_owned())
+    }
+
+    pub fn ja() -> Self {
+        Self("ja".to_owned())
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Platform {
     MacOs,
@@ -204,8 +242,7 @@ impl RuleCondition {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RuleTarget {
-    PreferredEnglish,
-    PreferredJapanese,
+    PreferredLanguage(LanguageTag),
     Exact(InputSourceId),
 }
 

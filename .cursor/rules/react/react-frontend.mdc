@@ -21,6 +21,7 @@ alwaysApply: false
 
 - 関数コンポーネント + named export
 - `any` / `unknown` 禁止
+- ユーザー向け文言は i18next（`t()`）。`src/locales/ja|en/translation.json` を同時更新。preference は `system`|`ja`|`en`
 - UI/UX（色・余白・レイアウト）の無断変更禁止
 - React Query / axios / 新バリデーションライブラリの導入は承認必須
 
@@ -28,5 +29,7 @@ alwaysApply: false
 
 - `tauri-desktop/react-ui/src/features/home/`
 - `tauri-desktop/react-ui/src/features/settings/`
+- `tauri-desktop/react-ui/src/locales/`
 - `tauri-desktop/react-ui/src/routes/__root.tsx`
 - `tauri-desktop/react-ui/src/layouts/RootLayout.tsx`
+- 詳細 i18n: `.claude/rules/react-frontend.md` §14、`docs/rules/ja-JP/react-frontend-i18n.md`

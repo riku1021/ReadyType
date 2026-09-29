@@ -14,5 +14,8 @@
 
 - `routes/` は薄い（スタイル・ビジネスロジック禁止）
 - feature の公開は `index.ts` 経由
+- ユーザー向け文言は `src/locales/` + `t()`（ハードコード禁止。`ja`/`en` 同時更新）
 - `styled-system/` と `routeTree.gen.ts` は手編集禁止
 - 完了前: `pnpm fix && pnpm typecheck && pnpm test`
+
+文言・言語設定の詳細: リポジトリの `.claude/rules/react-frontend.md` §14、`docs/rules/ja-JP/react-frontend-i18n.md`

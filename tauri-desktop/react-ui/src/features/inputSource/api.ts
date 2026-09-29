@@ -30,11 +30,6 @@ export const deleteRule = (id: string) => invoke<SwitcherStateDto>("delete_rule"
 export const reorderRules = (ids: readonly string[]) =>
   invoke<SwitcherStateDto>("reorder_rules", { ids: [...ids] });
 export const resetDefaultRules = () => invoke<SwitcherStateDto>("reset_default_rules");
-export const updateInputSourcePreferences = (preferredEnglish: string, preferredJapanese: string) =>
-  invoke<SwitcherStateDto>("update_input_source_preferences", {
-    preferredEnglish,
-    preferredJapanese,
-  });
 export const getInputSourceSettings = () =>
   invoke<InputSourceSettingsDto>("get_input_source_settings");
 export const getAccessibilityPermission = () =>
@@ -46,6 +41,8 @@ export const startDebugCapture = () => invoke<SwitcherStateDto>("start_debug_cap
 export const stopDebugCapture = () => invoke<SwitcherStateDto>("stop_debug_capture");
 export const setDebugLogging = (enabled: boolean) =>
   invoke<SwitcherStateDto>("set_debug_logging", { enabled });
+export const setUiLocale = (locale: string) =>
+  invoke<InputSourceSettingsDto>("set_ui_locale", { locale });
 export const getFocusSnapshot = () => invoke<FocusSnapshotDto | null>("get_focus_snapshot");
 export const listSwitchLogs = () => invoke<SwitchLogDto[]>("list_switch_logs");
 export const clearSwitchLogs = () => invoke<SwitcherStateDto>("clear_switch_logs");

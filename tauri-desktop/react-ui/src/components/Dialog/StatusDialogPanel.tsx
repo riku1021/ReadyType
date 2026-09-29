@@ -1,4 +1,5 @@
 import type { FC, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { IoIosClose } from "react-icons/io";
 
 import { cx } from "@/styled-system/css";
@@ -22,6 +23,7 @@ export const StatusDialogPanel: FC<StatusDialogPanelProps> = ({
   media,
   footer,
 }) => {
+  const { t } = useTranslation();
   const { isClosing, onClose, dismissible } = useDialogShell();
 
   return (
@@ -29,7 +31,12 @@ export const StatusDialogPanel: FC<StatusDialogPanelProps> = ({
       className={cx(styles.statusPanel, isClosing ? styles.contentFadeOut : styles.contentFadeIn)}
     >
       {dismissible ? (
-        <button type="button" className={styles.closeIcon} onClick={onClose} aria-label="閉じる">
+        <button
+          type="button"
+          className={styles.closeIcon}
+          onClick={onClose}
+          aria-label={t("common.closeAria")}
+        >
           <IoIosClose />
         </button>
       ) : null}

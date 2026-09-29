@@ -9,7 +9,7 @@ use crate::{
         switcher_controller::{ControllerError, SwitcherController},
         switcher_state::SwitcherState,
     },
-    domain::input_source::{FocusRule, InputSourceId},
+    domain::input_source::FocusRule,
     presentation::input_source_dto::{
         FocusSnapshotDto, InputSourceDto, PermissionDto, RuleDto, SettingsDto, StateDto,
         StateEventDto, SwitchLogDto,
@@ -43,9 +43,9 @@ impl TauriSwitcherEventPublisher {
 }
 
 impl SwitcherEventPublisher for TauriSwitcherEventPublisher {
-    fn publish(&self, state: &SwitcherState) {
+    fn publish(&self, state: &SwitcherState, locale: &str) {
         let _ = self.app.emit(STATE_EVENT_NAME, StateEventDto::from(state));
-        let _ = crate::infrastructure::desktop::tray::update(&self.app, state);
+        let _ = crate::infrastructure::desktop::tray::update(&self.app, state, locale);
     }
 }
 
@@ -183,22 +183,6 @@ pub fn reset_default_rules(
 }
 
 #[tauri::command]
-pub fn update_input_source_preferences(
-    preferred_english: String,
-    preferred_japanese: String,
-    controller: State<'_, Arc<SwitcherController>>,
-) -> Result<StateDto, IpcError> {
-    let english = InputSourceId::parse(&preferred_english)
-        .map_err(|error| invalid_input(error.to_string()))?;
-    let japanese = InputSourceId::parse(&preferred_japanese)
-        .map_err(|error| invalid_input(error.to_string()))?;
-    controller
-        .update_input_source_preferences(english, japanese)
-        .map(|state| StateDto::from(&state))
-        .map_err(IpcError::from)
-}
-
-#[tauri::command]
 pub fn get_input_source_settings(
     controller: State<'_, Arc<SwitcherController>>,
 ) -> Result<SettingsDto, IpcError> {
@@ -266,6 +250,18 @@ pub fn set_debug_logging(
     controller
         .set_debug_logging(enabled)
         .map(|state| StateDto::from(&state))
+        .map_err(IpcError::from)
+}
+
+#[tauri::command]
+pub fn set_ui_locale(
+    locale: String,
+    controller: State<'_, Arc<SwitcherController>>,
+) -> Result<SettingsDto, IpcError> {
+    controller.set_ui_locale(&locale).map_err(IpcError::from)?;
+    controller
+        .settings()
+        .map(|settings| SettingsDto::from(&settings))
         .map_err(IpcError::from)
 }
 

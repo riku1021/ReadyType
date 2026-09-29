@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { InputSourceViewState } from "@/features/inputSource";
+import type i18n from "@/locales/i18n";
 
 import { toStatusViewModel } from "./statusViewModel";
 
@@ -19,9 +20,9 @@ function stateWithStatus(
     lastDecision: "switched",
     accessibilityTrusted: true,
     permission: "granted",
-    settingsPreferredEnglish: "en",
-    settingsPreferredJapanese: "ja",
+    languagePreferences: { en: "en", ja: "ja" },
     debugLogging: false,
+    uiLocale: "ja",
     rules: [],
     initError: null,
     ready: true,
@@ -41,25 +42,31 @@ function stateWithStatus(
 
 describe("toStatusViewModel", () => {
   it.each([
-    ["running", "自動切替は有効です"],
-    ["snoozed", "一時停止中"],
-    ["permissionRequired", "アクセシビリティ権限が必要です"],
-    ["unsupported", "このOSでは未対応です"],
-  ] as const)("formats %s", (status, expected) => {
-    expect(toStatusViewModel(stateWithStatus(status)).headline).toBe(expected);
+    ["running", "home.headlineRunning"],
+    ["snoozed", "home.headlineSnoozed"],
+    ["permissionRequired", "home.headlinePermissionRequired"],
+    ["unsupported", "home.headlineUnsupported"],
+  ] as const)("formats %s", (status, expectedKey) => {
+    const t = ((key: string) => key) as typeof i18n.t;
+    expect(toStatusViewModel(stateWithStatus(status), t).headline).toBe(expectedKey);
   });
 
   it("formats empty current app and rule", () => {
-    const view = toStatusViewModel(stateWithStatus("running"));
-    expect(view.currentAppLabel).toBe("なし");
-    expect(view.matchedRuleLabel).toBe("なし");
+    const t = ((key: string) => key) as typeof i18n.t;
+    const view = toStatusViewModel(stateWithStatus("running"), t);
+    expect(view.currentAppLabel).toBe("common.none");
+    expect(view.matchedRuleLabel).toBe("common.none");
   });
 
   it("formats last decision labels", () => {
-    const view = toStatusViewModel({
-      ...stateWithStatus("running"),
-      lastDecision: "noRule",
-    });
-    expect(view.lastDecisionLabel).toBe("一致ルールなし");
+    const t = ((key: string) => key) as typeof i18n.t;
+    const view = toStatusViewModel(
+      {
+        ...stateWithStatus("running"),
+        lastDecision: "noRule",
+      },
+      t
+    );
+    expect(view.lastDecisionLabel).toBe("home.decisionNoRule");
   });
 });

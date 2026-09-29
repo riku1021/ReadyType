@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import "@/locales/i18n";
+
 import { buildInputSourceOptions } from "./inputSourceOptions";
 
 describe("buildInputSourceOptions", () => {

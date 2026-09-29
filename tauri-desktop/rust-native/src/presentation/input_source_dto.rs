@@ -8,8 +8,8 @@ use crate::{
         switcher_state::{SwitchLogEntry, SwitcherState},
     },
     domain::input_source::{
-        AxAttribute, AxElementSnapshot, FocusRule, FocusSnapshot, InputSourceId, MatchOperator,
-        Platform, RuleCondition, RuleTarget, SearchScope,
+        AxAttribute, AxElementSnapshot, FocusRule, FocusSnapshot, InputSourceId, LanguageTag,
+        MatchOperator, Platform, RuleCondition, RuleTarget, SearchScope,
     },
 };
 
@@ -300,6 +300,10 @@ wire_enum!(SearchScopeDto, SearchScope, {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum RuleTargetDto {
+    PreferredLanguage {
+        language: String,
+    },
+    /// Legacy wire variants accepted on input only.
     PreferredEnglish,
     PreferredJapanese,
     Exact {
@@ -313,8 +317,11 @@ impl TryFrom<RuleTargetDto> for RuleTarget {
 
     fn try_from(target: RuleTargetDto) -> Result<Self, Self::Error> {
         match target {
-            RuleTargetDto::PreferredEnglish => Ok(Self::PreferredEnglish),
-            RuleTargetDto::PreferredJapanese => Ok(Self::PreferredJapanese),
+            RuleTargetDto::PreferredLanguage { language } => LanguageTag::parse(&language)
+                .map(Self::PreferredLanguage)
+                .map_err(|error| error.to_string()),
+            RuleTargetDto::PreferredEnglish => Ok(Self::PreferredLanguage(LanguageTag::en())),
+            RuleTargetDto::PreferredJapanese => Ok(Self::PreferredLanguage(LanguageTag::ja())),
             RuleTargetDto::Exact { input_source_id } => InputSourceId::parse(&input_source_id)
                 .map(Self::Exact)
                 .map_err(|error| error.to_string()),
@@ -325,8 +332,9 @@ impl TryFrom<RuleTargetDto> for RuleTarget {
 impl From<&RuleTarget> for RuleTargetDto {
     fn from(target: &RuleTarget) -> Self {
         match target {
-            RuleTarget::PreferredEnglish => Self::PreferredEnglish,
-            RuleTarget::PreferredJapanese => Self::PreferredJapanese,
+            RuleTarget::PreferredLanguage(tag) => Self::PreferredLanguage {
+                language: tag.as_str().to_owned(),
+            },
             RuleTarget::Exact(id) => Self::Exact {
                 input_source_id: id.as_str().to_owned(),
             },
@@ -337,17 +345,31 @@ impl From<&RuleTarget> for RuleTargetDto {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SettingsDto {
-    pub preferred_english: String,
-    pub preferred_japanese: String,
+    pub language_preferences: std::collections::BTreeMap<String, Option<String>>,
     pub debug_logging: bool,
+    /// Preference: `system` | `ja` | `en`.
+    pub ui_locale: String,
+    /// Resolved display language: `ja` | `en`.
+    pub resolved_ui_locale: String,
 }
 
 impl From<&SwitcherSettings> for SettingsDto {
     fn from(settings: &SwitcherSettings) -> Self {
+        let language_preferences = settings
+            .language_preferences
+            .iter()
+            .map(|(tag, id)| {
+                (
+                    tag.as_str().to_owned(),
+                    id.as_ref().map(|value| value.as_str().to_owned()),
+                )
+            })
+            .collect();
         Self {
-            preferred_english: settings.preferred_english.as_str().to_owned(),
-            preferred_japanese: settings.preferred_japanese.as_str().to_owned(),
+            language_preferences,
             debug_logging: settings.debug_logging,
+            ui_locale: settings.ui_locale.clone(),
+            resolved_ui_locale: SwitcherSettings::resolve_ui_locale(&settings.ui_locale),
         }
     }
 }
@@ -473,7 +495,7 @@ mod tests {
                 "scope": "focusedOnly",
                 "value": " "
             }],
-            "target": { "kind": "preferredEnglish" }
+            "target": { "kind": "preferredLanguage", "language": "en" }
         });
         let dto: RuleDto = serde_json::from_value(json).expect("wire shape");
         assert!(crate::domain::input_source::FocusRule::try_from(dto).is_err());

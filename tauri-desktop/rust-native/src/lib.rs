@@ -46,6 +46,9 @@ pub fn run() {
                     config_directory.join("input-source-switcher.json"),
                 ));
             let settings = repository.load()?.settings().clone();
+            let ui_locale_preference = settings.ui_locale.clone();
+            let resolved_ui_locale =
+                application::settings::SwitcherSettings::resolve_ui_locale(&ui_locale_preference);
             let gateway: Box<dyn InputSourceGateway> = {
                 #[cfg(target_os = "macos")]
                 {
@@ -109,7 +112,11 @@ pub fn run() {
             };
             app.manage(app_icon_resolver);
 
-            infrastructure::desktop::tray::install(app.handle(), &initial_state)?;
+            infrastructure::desktop::tray::install(
+                app.handle(),
+                &initial_state,
+                &resolved_ui_locale,
+            )?;
 
             // Accessory だと Dock にも出ず、visible:false のウィンドウが
             // show() しても前面に来ない。通常起動は Regular、ログイン起動だけ Accessory。
@@ -148,6 +155,7 @@ pub fn run() {
                 let controller =
                     window.state::<Arc<application::switcher_controller::SwitcherController>>();
                 let _ = controller.inner().refresh_permission();
+                let _ = controller.inner().refresh_resolved_ui_locale();
             }
             tauri::WindowEvent::CloseRequested { api, .. } => {
                 api.prevent_close();
@@ -174,7 +182,6 @@ pub fn run() {
             presentation::commands::input_source_switcher::delete_rule,
             presentation::commands::input_source_switcher::reorder_rules,
             presentation::commands::input_source_switcher::reset_default_rules,
-            presentation::commands::input_source_switcher::update_input_source_preferences,
             presentation::commands::input_source_switcher::get_input_source_settings,
             presentation::commands::input_source_switcher::get_accessibility_permission,
             presentation::commands::input_source_switcher::request_accessibility_permission,
@@ -182,6 +189,7 @@ pub fn run() {
             presentation::commands::input_source_switcher::start_debug_capture,
             presentation::commands::input_source_switcher::stop_debug_capture,
             presentation::commands::input_source_switcher::set_debug_logging,
+            presentation::commands::input_source_switcher::set_ui_locale,
             presentation::commands::input_source_switcher::get_focus_snapshot,
             presentation::commands::input_source_switcher::list_switch_logs,
             presentation::commands::input_source_switcher::clear_switch_logs,

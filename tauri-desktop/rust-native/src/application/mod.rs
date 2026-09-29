@@ -6,4 +6,5 @@ pub mod ports;
 pub mod settings;
 pub mod switcher_controller;
 pub mod switcher_state;
+pub mod ui_locale_cache;
 pub mod use_cases;

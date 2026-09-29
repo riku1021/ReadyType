@@ -26,7 +26,6 @@ import {
   snoozeInputSourceSwitcherIndefinitely,
   startDebugCapture,
   stopDebugCapture,
-  updateInputSourcePreferences,
   updateRule,
   withConfiguredSource,
 } from "./api";
@@ -59,7 +58,7 @@ const validRule: RuleDto = {
   appId: "com.example.Editor",
   priority: 1,
   conditions: [],
-  target: { kind: "preferredEnglish" },
+  target: { kind: "preferredLanguage", language: "en" },
 };
 
 afterEach(() => clearMocks());
@@ -93,9 +92,10 @@ describe("input source IPC", () => {
       }
       if (command === "get_input_source_settings") {
         return {
-          preferredEnglish: "en",
-          preferredJapanese: "ja",
+          languagePreferences: { en: "en", ja: "ja" },
           debugLogging: false,
+          uiLocale: "ja",
+          resolvedUiLocale: "ja",
         };
       }
       if (command === "get_focus_snapshot" || command === "open_accessibility_settings") {
@@ -118,7 +118,6 @@ describe("input source IPC", () => {
     await deleteRule("custom-rule");
     await reorderRules(["a", "b"]);
     await resetDefaultRules();
-    await updateInputSourcePreferences("en", "ja");
     await getInputSourceSettings();
     await getAccessibilityPermission();
     await requestAccessibilityPermission();
@@ -145,7 +144,6 @@ describe("input source IPC", () => {
       "delete_rule",
       "reorder_rules",
       "reset_default_rules",
-      "update_input_source_preferences",
       "get_input_source_settings",
       "get_accessibility_permission",
       "request_accessibility_permission",
@@ -163,10 +161,6 @@ describe("input source IPC", () => {
     expect(calls[calls.length - 1]?.args).toEqual({ bundleIds: ["com.apple.Terminal"] });
     expect(calls[1]?.args).toEqual({ enabled: false });
     expect(calls[9]?.args).toEqual({ ids: ["a", "b"] });
-    expect(calls[11]?.args).toEqual({
-      preferredEnglish: "en",
-      preferredJapanese: "ja",
-    });
   });
 
   it("propagates invoke errors", async () => {

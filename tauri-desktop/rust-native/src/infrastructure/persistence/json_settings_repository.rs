@@ -13,8 +13,8 @@ use crate::{
         settings::SwitcherSettings,
     },
     domain::input_source::{
-        AxAttribute, FocusRule, InputSourceId, MatchOperator, Platform, RuleCondition, RuleTarget,
-        SearchScope,
+        AxAttribute, FocusRule, InputSourceId, LanguageTag, MatchOperator, Platform, RuleCondition,
+        RuleTarget, SearchScope,
     },
 };
 
@@ -113,16 +113,28 @@ impl SettingsRepository for JsonSettingsRepository {
     }
 }
 
+fn default_ui_locale() -> String {
+    crate::application::settings::DEFAULT_UI_LOCALE_PREFERENCE.to_owned()
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct SettingsDto {
     schema_version: u32,
     enabled: bool,
-    preferred_english: String,
-    preferred_japanese: String,
+    /// New form: language tag → input source id (null = unset).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    language_preferences: Option<std::collections::BTreeMap<String, Option<String>>>,
+    /// Legacy fields kept for read compatibility.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    preferred_english: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    preferred_japanese: Option<String>,
     rules: Vec<RuleDto>,
     debug_logging: bool,
     snoozed_until_unix_ms: Option<u64>,
+    #[serde(default = "default_ui_locale")]
+    ui_locale: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -186,6 +198,10 @@ enum ScopeDto {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 enum TargetDto {
+    PreferredLanguage {
+        language: String,
+    },
+    /// Legacy read-only variants.
     PreferredEnglish,
     PreferredJapanese,
     Exact {
@@ -196,14 +212,26 @@ enum TargetDto {
 
 impl From<&SwitcherSettings> for SettingsDto {
     fn from(settings: &SwitcherSettings) -> Self {
+        let language_preferences = settings
+            .language_preferences
+            .iter()
+            .map(|(tag, id)| {
+                (
+                    tag.as_str().to_owned(),
+                    id.as_ref().map(|value| value.as_str().to_owned()),
+                )
+            })
+            .collect();
         Self {
             schema_version: settings.schema_version,
             enabled: settings.enabled,
-            preferred_english: settings.preferred_english.as_str().to_owned(),
-            preferred_japanese: settings.preferred_japanese.as_str().to_owned(),
+            language_preferences: Some(language_preferences),
+            preferred_english: None,
+            preferred_japanese: None,
             rules: settings.rules.iter().map(RuleDto::from).collect(),
             debug_logging: settings.debug_logging,
             snoozed_until_unix_ms: settings.snoozed_until_unix_ms,
+            ui_locale: settings.ui_locale.clone(),
         }
     }
 }
@@ -212,13 +240,11 @@ impl TryFrom<SettingsDto> for SwitcherSettings {
     type Error = SettingsError;
 
     fn try_from(dto: SettingsDto) -> Result<Self, Self::Error> {
+        let language_preferences = parse_language_preferences(&dto)?;
         let settings = Self {
             schema_version: dto.schema_version,
             enabled: dto.enabled,
-            preferred_english: InputSourceId::parse(&dto.preferred_english)
-                .map_err(invalid_settings)?,
-            preferred_japanese: InputSourceId::parse(&dto.preferred_japanese)
-                .map_err(invalid_settings)?,
+            language_preferences,
             rules: dto
                 .rules
                 .into_iter()
@@ -226,10 +252,60 @@ impl TryFrom<SettingsDto> for SwitcherSettings {
                 .collect::<Result<Vec<_>, _>>()?,
             debug_logging: dto.debug_logging,
             snoozed_until_unix_ms: dto.snoozed_until_unix_ms,
+            ui_locale: SwitcherSettings::normalize_ui_locale(&dto.ui_locale),
         };
         settings.validate().map_err(invalid_settings)?;
         Ok(settings)
     }
+}
+
+fn parse_language_preferences(
+    dto: &SettingsDto,
+) -> Result<std::collections::BTreeMap<LanguageTag, Option<InputSourceId>>, SettingsError> {
+    let mut preferences = std::collections::BTreeMap::new();
+
+    if let Some(map) = &dto.language_preferences {
+        for (tag, id) in map {
+            let language = LanguageTag::parse(tag).map_err(invalid_settings)?;
+            let input_source = match id {
+                Some(value) => Some(InputSourceId::parse(value).map_err(invalid_settings)?),
+                None => None,
+            };
+            preferences.insert(language, input_source);
+        }
+    }
+
+    // Legacy fields fill missing keys (legacy-only files, or mixed documents).
+    insert_legacy_preference(
+        &mut preferences,
+        LanguageTag::en(),
+        dto.preferred_english.as_deref(),
+    )?;
+    insert_legacy_preference(
+        &mut preferences,
+        LanguageTag::ja(),
+        dto.preferred_japanese.as_deref(),
+    )?;
+
+    Ok(preferences)
+}
+
+fn insert_legacy_preference(
+    preferences: &mut std::collections::BTreeMap<LanguageTag, Option<InputSourceId>>,
+    tag: LanguageTag,
+    legacy_id: Option<&str>,
+) -> Result<(), SettingsError> {
+    let Some(id) = legacy_id else {
+        return Ok(());
+    };
+    if preferences.contains_key(&tag) {
+        return Ok(());
+    }
+    preferences.insert(
+        tag,
+        Some(InputSourceId::parse(id).map_err(invalid_settings)?),
+    );
+    Ok(())
 }
 
 impl From<&FocusRule> for RuleDto {
@@ -384,8 +460,9 @@ impl From<ScopeDto> for SearchScope {
 impl From<&RuleTarget> for TargetDto {
     fn from(value: &RuleTarget) -> Self {
         match value {
-            RuleTarget::PreferredEnglish => Self::PreferredEnglish,
-            RuleTarget::PreferredJapanese => Self::PreferredJapanese,
+            RuleTarget::PreferredLanguage(tag) => Self::PreferredLanguage {
+                language: tag.as_str().to_owned(),
+            },
             RuleTarget::Exact(id) => Self::Exact {
                 input_source_id: id.as_str().to_owned(),
             },
@@ -398,8 +475,11 @@ impl TryFrom<TargetDto> for RuleTarget {
 
     fn try_from(value: TargetDto) -> Result<Self, Self::Error> {
         match value {
-            TargetDto::PreferredEnglish => Ok(Self::PreferredEnglish),
-            TargetDto::PreferredJapanese => Ok(Self::PreferredJapanese),
+            TargetDto::PreferredLanguage { language } => LanguageTag::parse(&language)
+                .map(Self::PreferredLanguage)
+                .map_err(invalid_settings),
+            TargetDto::PreferredEnglish => Ok(Self::PreferredLanguage(LanguageTag::en())),
+            TargetDto::PreferredJapanese => Ok(Self::PreferredLanguage(LanguageTag::ja())),
             TargetDto::Exact { input_source_id } => InputSourceId::parse(&input_source_id)
                 .map(Self::Exact)
                 .map_err(invalid_settings),
@@ -485,7 +565,7 @@ mod tests {
     }
 
     #[test]
-    fn schema_v1_json_decodes() {
+    fn schema_v1_legacy_json_decodes_into_language_preferences() {
         let directory = TestDirectory::new("schema-v1");
         let path = directory.join("settings.json");
         write_settings(
@@ -504,13 +584,74 @@ mod tests {
         let outcome = repository(&directory).load().expect("decode schema v1");
 
         assert!(!outcome.settings().enabled);
-        assert_eq!(outcome.settings().preferred_english.as_str(), "english.id");
         assert_eq!(
-            outcome.settings().preferred_japanese.as_str(),
-            "japanese.id"
+            outcome
+                .settings()
+                .preferred(&crate::domain::input_source::LanguageTag::en())
+                .map(|id| id.as_str()),
+            Some("english.id")
+        );
+        assert_eq!(
+            outcome
+                .settings()
+                .preferred(&crate::domain::input_source::LanguageTag::ja())
+                .map(|id| id.as_str()),
+            Some("japanese.id")
         );
         assert!(outcome.settings().debug_logging);
         assert_eq!(outcome.settings().snoozed_until_unix_ms, Some(1234));
+    }
+
+    #[test]
+    fn language_preferences_form_decodes_and_legacy_targets_migrate() {
+        let directory = TestDirectory::new("language-preferences");
+        let path = directory.join("settings.json");
+        write_settings(
+            &path,
+            r#"{
+                "schemaVersion": 1,
+                "enabled": true,
+                "languagePreferences": {
+                    "en": "english.id",
+                    "ja": "japanese.id"
+                },
+                "rules": [{
+                    "id": "legacy-en",
+                    "name": "Legacy EN",
+                    "enabled": true,
+                    "platform": "macos",
+                    "appId": "com.example",
+                    "priority": 0,
+                    "conditions": [],
+                    "target": { "kind": "preferredEnglish" }
+                }],
+                "debugLogging": false,
+                "snoozedUntilUnixMs": null
+            }"#,
+        );
+
+        let outcome = repository(&directory)
+            .load()
+            .expect("decode language preferences");
+        let settings = outcome.settings();
+        assert_eq!(
+            settings
+                .preferred(&crate::domain::input_source::LanguageTag::en())
+                .map(|id| id.as_str()),
+            Some("english.id")
+        );
+        assert_eq!(
+            settings.rules[0].target(),
+            &crate::domain::input_source::RuleTarget::PreferredLanguage(
+                crate::domain::input_source::LanguageTag::en()
+            )
+        );
+
+        repository(&directory).save(settings).expect("rewrite");
+        let rewritten = fs::read_to_string(path).expect("read rewritten");
+        assert!(rewritten.contains("languagePreferences"));
+        assert!(rewritten.contains("preferredLanguage"));
+        assert!(!rewritten.contains("preferredEnglish"));
     }
 
     #[test]

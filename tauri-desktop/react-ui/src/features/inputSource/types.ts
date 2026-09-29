@@ -60,9 +60,10 @@ export interface RuleConditionDto {
 }
 
 export type RuleTarget =
-  | { kind: "preferredEnglish" }
-  | { kind: "preferredJapanese" }
+  | { kind: "preferredLanguage"; language: string }
   | { kind: "exact"; inputSourceId: string };
+
+export type LanguageInputPreferences = Record<string, string | null>;
 
 export interface RuleDto {
   id: string;
@@ -76,9 +77,12 @@ export interface RuleDto {
 }
 
 export interface InputSourceSettingsDto {
-  preferredEnglish: string;
-  preferredJapanese: string;
+  languagePreferences: LanguageInputPreferences;
   debugLogging: boolean;
+  /** Preference: system | ja | en */
+  uiLocale: string;
+  /** Resolved display language: ja | en */
+  resolvedUiLocale: string;
 }
 
 export interface SwitchLogDto {

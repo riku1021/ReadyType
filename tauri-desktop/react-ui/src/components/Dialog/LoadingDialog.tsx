@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import { useId } from "react";
+import { useTranslation } from "react-i18next";
 
 import LoadingAnimation from "@/animations/LoadingAnimation";
 
@@ -18,14 +19,12 @@ const noopClose = () => {
   return;
 };
 
-export const LoadingDialog: FC<LoadingDialogProps> = ({
-  isOpen,
-  onClose,
-  title = "処理中...",
-  text = "しばらくお待ちください",
-}) => {
+export const LoadingDialog: FC<LoadingDialogProps> = ({ isOpen, onClose, title, text }) => {
+  const { t } = useTranslation();
   const titleId = useId();
   const resolvedClose = onClose ?? noopClose;
+  const resolvedTitle = title ?? t("dialog.loadingTitleDefault");
+  const resolvedText = text ?? t("dialog.loadingTextDefault");
 
   return (
     <DialogShell
@@ -36,8 +35,8 @@ export const LoadingDialog: FC<LoadingDialogProps> = ({
     >
       <StatusDialogPanel
         titleId={titleId}
-        title={title}
-        text={text}
+        title={resolvedTitle}
+        text={resolvedText}
         media={
           <div className={styles.loadingContainer}>
             <LoadingAnimation />

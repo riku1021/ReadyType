@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import { useId } from "react";
+import { useTranslation } from "react-i18next";
 
 import ConfirmAnimation from "@/animations/ConfirmAnimation";
 import { Button } from "@/components/Button";
@@ -26,11 +27,14 @@ export const AlertDialog: FC<AlertDialogProps> = ({
   onClose,
   title,
   text,
-  confirmButtonText = "はい",
-  cancelButtonText = "キャンセル",
+  confirmButtonText,
+  cancelButtonText,
   onConfirm,
 }) => {
+  const { t } = useTranslation();
   const titleId = useId();
+  const confirmText = confirmButtonText ?? t("dialog.confirmDefault");
+  const cancelText = cancelButtonText ?? t("dialog.cancelDefault");
 
   const handleConfirm = () => {
     onConfirm?.();
@@ -40,10 +44,10 @@ export const AlertDialog: FC<AlertDialogProps> = ({
   const buttonFooter = (
     <div className={styles.buttonContainer}>
       <Button variant="primary" onClick={handleConfirm}>
-        {confirmButtonText}
+        {confirmText}
       </Button>
       <Button variant="secondary" onClick={onClose}>
-        {cancelButtonText}
+        {cancelText}
       </Button>
     </div>
   );

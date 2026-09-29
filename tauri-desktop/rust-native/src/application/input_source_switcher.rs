@@ -74,6 +74,8 @@ pub struct InputSourceSwitcher<G, R, C, E> {
     clock: C,
     publisher: E,
     state: SwitcherState,
+    /// Set by `bump_state`; drained outside the switcher mutex before publish.
+    publish_pending: bool,
     active_app: Option<PlatformAppId>,
     active_generation: u64,
     handled_generation: Option<u64>,
@@ -106,6 +108,22 @@ where
         settings
             .validate()
             .map_err(|error| ApplicationError::InvalidSettings(error.to_string()))?;
+        let mut settings = settings;
+        if settings.language_preferences.is_empty() {
+            if let Ok(mut guard) = gateway.lock() {
+                if let Ok(sources) = guard.list(false) {
+                    let current = guard.current().ok();
+                    let seeded = super::settings::seed_language_preferences_from_sources(
+                        &sources,
+                        current.as_ref(),
+                    );
+                    if !seeded.is_empty() {
+                        settings.language_preferences = seeded;
+                        repository.save(&settings)?;
+                    }
+                }
+            }
+        }
         let rules = RuleSet::new(settings.rules.clone())
             .map_err(|error| ApplicationError::InvalidSettings(error.to_string()))?;
         let state = SwitcherState::new(settings.enabled, settings.snoozed_until_unix_ms);
@@ -117,6 +135,7 @@ where
             clock,
             publisher,
             state,
+            publish_pending: false,
             active_app: None,
             active_generation: 0,
             handled_generation: None,
@@ -195,26 +214,21 @@ where
             .map(|deadline| deadline.saturating_sub(self.clock.now_unix_ms()))
     }
 
-    pub fn update_input_source_preferences(
-        &mut self,
-        preferred_english: InputSourceId,
-        preferred_japanese: InputSourceId,
-    ) -> Result<(), ApplicationError> {
-        let mut candidate = self.settings.clone();
-        candidate.preferred_english = preferred_english;
-        candidate.preferred_japanese = preferred_japanese;
-        self.commit_settings(candidate, None)
-    }
-
     pub fn set_debug_logging(&mut self, enabled: bool) -> Result<(), ApplicationError> {
         let mut candidate = self.settings.clone();
         candidate.debug_logging = enabled;
         self.commit_settings(candidate, None)
     }
 
+    pub fn set_ui_locale(&mut self, locale: &str) -> Result<(), ApplicationError> {
+        let mut candidate = self.settings.clone();
+        candidate.ui_locale = SwitcherSettings::normalize_ui_locale(locale);
+        self.commit_settings(candidate, None)
+    }
+
     pub fn clear_logs(&mut self) {
         self.state.logs.clear();
-        self.bump_and_publish();
+        self.bump_state();
     }
 
     pub fn activate(
@@ -229,7 +243,7 @@ where
         self.state.matched_rule_id = None;
         self.state.current_input_source = None;
         self.state.target_input_source = None;
-        self.bump_and_publish();
+        self.bump_state();
         Ok(())
     }
 
@@ -324,7 +338,28 @@ where
             );
             return Ok(PreparedFocus::Done(self.finish(SwitchDecision::NoRule)));
         };
-        let target = self.resolve_target(rule.target()).clone();
+        let Some(target) = self.resolve_target(rule.target()).cloned() else {
+            let reason = match rule.target() {
+                RuleTarget::PreferredLanguage(tag) => {
+                    format!("preferred language '{}' is unset", tag.as_str())
+                }
+                RuleTarget::Exact(_) => "exact target unresolved".to_owned(),
+            };
+            self.state.matched_rule_id = Some(rule.id().to_owned());
+            self.state.target_input_source = None;
+            self.push_log(
+                &snapshot,
+                rule.id(),
+                SwitchDecision::Failed,
+                "",
+                "",
+                false,
+                false,
+                reason,
+                started,
+            );
+            return Ok(PreparedFocus::Done(self.finish(SwitchDecision::Failed)));
+        };
         Ok(PreparedFocus::NeedsSwitch {
             snapshot,
             rule: Box::new(rule),
@@ -421,7 +456,7 @@ where
         &mut self,
         snapshot: FocusSnapshot,
     ) -> Result<SwitchDecision, ApplicationError> {
-        match self.prepare_focus(snapshot)? {
+        let result = match self.prepare_focus(snapshot)? {
             PreparedFocus::Done(decision) => Ok(decision),
             PreparedFocus::NeedsSwitch {
                 snapshot,
@@ -444,7 +479,9 @@ where
                     }
                 }
             }
-        }
+        };
+        self.flush_publish();
+        result
     }
 
     pub fn replace_rules(&mut self, rules: Vec<FocusRule>) -> Result<(), ApplicationError> {
@@ -469,7 +506,7 @@ where
             self.rules = rules;
             self.state.rules_version = self.state.rules_version.saturating_add(1);
         }
-        self.bump_and_publish();
+        self.bump_state();
         Ok(())
     }
 
@@ -513,11 +550,10 @@ where
         "focus rejected".to_owned()
     }
 
-    fn resolve_target<'a>(&'a self, target: &'a RuleTarget) -> &'a InputSourceId {
+    fn resolve_target<'a>(&'a self, target: &'a RuleTarget) -> Option<&'a InputSourceId> {
         match target {
-            RuleTarget::PreferredEnglish => &self.settings.preferred_english,
-            RuleTarget::PreferredJapanese => &self.settings.preferred_japanese,
-            RuleTarget::Exact(id) => id,
+            RuleTarget::PreferredLanguage(tag) => self.settings.preferred(tag),
+            RuleTarget::Exact(id) => Some(id),
         }
     }
 
@@ -575,15 +611,33 @@ where
 
     fn finish(&mut self, decision: SwitchDecision) -> SwitchDecision {
         self.state.last_decision = Some(decision);
-        self.bump_and_publish();
+        self.bump_state();
         decision
     }
 
-    fn bump_and_publish(&mut self) {
+    fn bump_state(&mut self) {
         self.state.version = self.state.version.saturating_add(1);
         self.state.enabled = self.settings.enabled;
         self.state.snoozed_until_unix_ms = self.settings.snoozed_until_unix_ms;
-        self.publisher.publish(&self.state);
+        self.publish_pending = true;
+    }
+
+    /// Take a publish snapshot if state changed. Call after releasing the
+    /// switcher mutex, then invoke the event publisher.
+    pub fn drain_publish_snapshot(&mut self) -> Option<(SwitcherState, String)> {
+        if !self.publish_pending {
+            return None;
+        }
+        self.publish_pending = false;
+        Some((self.state.clone(), self.settings.ui_locale.clone()))
+    }
+
+    /// For in-process callers (unit tests / `handle_focus`) that already own
+    /// `&mut self` without a shared mutex — flush pending publish immediately.
+    pub fn flush_publish(&mut self) {
+        if let Some((state, locale)) = self.drain_publish_snapshot() {
+            self.publisher.publish(&state, &locale);
+        }
     }
 }
 
@@ -622,7 +676,8 @@ mod tests {
             switcher_state::SwitcherState,
         },
         domain::input_source::{
-            FocusRule, FocusSnapshot, InputSourceId, Platform, PlatformAppId, RuleTarget,
+            FocusRule, FocusSnapshot, InputSourceId, LanguageTag, Platform, PlatformAppId,
+            RuleTarget,
         },
     };
 
@@ -695,7 +750,7 @@ mod tests {
     struct FakePublisher(Arc<Mutex<Vec<u64>>>);
 
     impl SwitcherEventPublisher for FakePublisher {
-        fn publish(&self, state: &SwitcherState) {
+        fn publish(&self, state: &SwitcherState, _locale: &str) {
             self.0.lock().expect("events lock").push(state.version);
         }
     }
@@ -750,6 +805,7 @@ mod tests {
         fn active() -> Self {
             let mut fixture = Self::new(SwitcherSettings::defaults());
             fixture.switcher.activate(app(42), 1).expect("activate app");
+            fixture.switcher.flush_publish();
             fixture
         }
     }
@@ -822,7 +878,7 @@ mod tests {
             APP_ID,
             0,
             Vec::new(),
-            RuleTarget::PreferredJapanese,
+            RuleTarget::PreferredLanguage(LanguageTag::ja()),
         )
         .expect("valid rule")];
 

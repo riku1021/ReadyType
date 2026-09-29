@@ -2,6 +2,12 @@ import { listen } from "@tauri-apps/api/event";
 import { useAtom, useSetAtom } from "jotai";
 import { useCallback, useEffect } from "react";
 
+import i18n, {
+  isResolvedUiLocale,
+  isUiLocalePreference,
+  persistLanguage,
+  resolveUiLocale,
+} from "@/locales/i18n";
 import {
   applyNewerStateEvent,
   clearSwitchLogs as clearSwitchLogsApi,
@@ -25,10 +31,10 @@ import {
   setDebugLogging as setDebugLoggingApi,
   setInputSourceSwitcherEnabled,
   setSnooze as setSnoozeApi,
+  setUiLocale as setUiLocaleApi,
   snoozeInputSourceSwitcherIndefinitely as snoozeIndefinitelyApi,
   startDebugCapture as startDebugCaptureApi,
   stopDebugCapture as stopDebugCaptureApi,
-  updateInputSourcePreferences as updateInputSourcePreferencesApi,
   updateRule as updateRuleApi,
 } from "../api";
 import { type InputSourceFeatureState, inputSourceStateAtom } from "../atoms/inputSourceStateAtom";
@@ -36,6 +42,7 @@ import type {
   AccessibilityPermission,
   FocusSnapshotDto,
   InputSourceDto,
+  LanguageInputPreferences,
   RuleDto,
   StateEventDto,
   SwitcherStateDto,
@@ -45,9 +52,9 @@ import type {
 export type InputSourceViewState = SwitcherStateDto & {
   accessibilityTrusted: boolean;
   permission: AccessibilityPermission | null;
-  settingsPreferredEnglish: string | null;
-  settingsPreferredJapanese: string | null;
+  languagePreferences: LanguageInputPreferences;
   debugLogging: boolean;
+  uiLocale: string | null;
   rules: RuleDto[];
   initError: string | null;
   ready: boolean;
@@ -79,6 +86,15 @@ export function useInputSourceBootstrap() {
         if (cancelled) {
           return;
         }
+        if (isUiLocalePreference(settings.uiLocale)) {
+          persistLanguage(settings.uiLocale);
+          const resolved = isResolvedUiLocale(settings.resolvedUiLocale)
+            ? settings.resolvedUiLocale
+            : resolveUiLocale(settings.uiLocale);
+          if (i18n.language !== resolved) {
+            await i18n.changeLanguage(resolved);
+          }
+        }
         setFeature({
           switcher,
           permission,
@@ -92,7 +108,7 @@ export function useInputSourceBootstrap() {
           return;
         }
         const message =
-          error instanceof Error ? error.message : "入力ソース切替の初期化に失敗しました";
+          error instanceof Error ? error.message : i18n.t("common.initSwitcherFailed");
         setFeature((current) => ({
           ...current,
           initError: message,
@@ -232,16 +248,6 @@ export function useInputSourceState() {
     return switcher;
   }, [refreshRules, setFeature]);
 
-  const updateInputSourcePreferences = useCallback(
-    async (preferredEnglish: string, preferredJapanese: string) => {
-      const switcher = await updateInputSourcePreferencesApi(preferredEnglish, preferredJapanese);
-      applySwitcher(setFeature, switcher);
-      await refreshSettings();
-      return switcher;
-    },
-    [refreshSettings, setFeature]
-  );
-
   const setDebugLogging = useCallback(
     async (enabled: boolean) => {
       const switcher = await setDebugLoggingApi(enabled);
@@ -250,6 +256,22 @@ export function useInputSourceState() {
       return switcher;
     },
     [refreshSettings, setFeature]
+  );
+
+  const setUiLocale = useCallback(
+    async (locale: string) => {
+      const settings = await setUiLocaleApi(locale);
+      setFeature((current) => ({ ...current, settings }));
+      if (isUiLocalePreference(settings.uiLocale)) {
+        persistLanguage(settings.uiLocale);
+        const resolved = isResolvedUiLocale(settings.resolvedUiLocale)
+          ? settings.resolvedUiLocale
+          : resolveUiLocale(settings.uiLocale);
+        await i18n.changeLanguage(resolved);
+      }
+      return settings;
+    },
+    [setFeature]
   );
 
   const startDebugCapture = useCallback(async () => {
@@ -289,14 +311,16 @@ export function useInputSourceState() {
     []
   );
 
+  const languagePreferences = feature.settings?.languagePreferences ?? {};
+
   const state: InputSourceViewState | null = feature.switcher
     ? {
         ...feature.switcher,
         accessibilityTrusted: feature.permission === "granted",
         permission: feature.permission,
-        settingsPreferredEnglish: feature.settings?.preferredEnglish ?? null,
-        settingsPreferredJapanese: feature.settings?.preferredJapanese ?? null,
+        languagePreferences,
         debugLogging: feature.settings?.debugLogging ?? false,
+        uiLocale: feature.settings?.uiLocale ?? null,
         rules: feature.rules,
         initError: feature.initError,
         ready: feature.ready,
@@ -314,9 +338,9 @@ export function useInputSourceState() {
           lastDecision: null,
           accessibilityTrusted: feature.permission === "granted",
           permission: feature.permission,
-          settingsPreferredEnglish: feature.settings?.preferredEnglish ?? null,
-          settingsPreferredJapanese: feature.settings?.preferredJapanese ?? null,
+          languagePreferences,
           debugLogging: feature.settings?.debugLogging ?? false,
+          uiLocale: feature.settings?.uiLocale ?? null,
           rules: feature.rules,
           initError: feature.initError,
           ready: feature.ready,
@@ -337,8 +361,8 @@ export function useInputSourceState() {
     deleteRule,
     reorderRules,
     resetDefaultRules,
-    updateInputSourcePreferences,
     setDebugLogging,
+    setUiLocale,
     startDebugCapture,
     stopDebugCapture,
     clearSwitchLogs,

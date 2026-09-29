@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { type ChangeEvent, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { MdPowerSettingsNew } from "react-icons/md";
 
 import { AlertDialog } from "@/components/Dialog";
@@ -8,11 +9,11 @@ import { cx } from "@/styled-system/css";
 
 import * as styles from "./SwitcherControls.styles";
 
-const SNOOZE_OPTIONS = [
-  { value: "5", label: "5分間" },
-  { value: "15", label: "15分間" },
-  { value: "60", label: "1時間" },
-  { value: "indefinite", label: "無期限" },
+const SNOOZE_OPTION_KEYS = [
+  { value: "5", labelKey: "switcher.snooze5m" },
+  { value: "15", labelKey: "switcher.snooze15m" },
+  { value: "60", labelKey: "switcher.snooze1h" },
+  { value: "indefinite", labelKey: "switcher.snoozeIndefinite" },
 ] as const;
 
 async function quitApp() {
@@ -20,6 +21,7 @@ async function quitApp() {
 }
 
 export function SwitcherControls() {
+  const { t } = useTranslation();
   const { state, setSnooze, snoozeIndefinitely, resume } = useInputSourceState();
   const [quitOpen, setQuitOpen] = useState(false);
 
@@ -64,7 +66,7 @@ export function SwitcherControls() {
           <button
             type="button"
             className={styles.hitTarget}
-            aria-label="自動切替を再開"
+            aria-label={t("switcher.resumeAria")}
             disabled={playPauseDisabled}
             onClick={() => {
               void resume();
@@ -73,17 +75,17 @@ export function SwitcherControls() {
         ) : (
           <select
             className={styles.hitTarget}
-            aria-label="一時停止の長さ"
+            aria-label={t("switcher.snoozeDurationAria")}
             defaultValue=""
             disabled={playPauseDisabled}
             onChange={onSnoozeChange}
           >
             <option value="" disabled>
-              一時停止の長さ
+              {t("switcher.snoozeDurationPlaceholder")}
             </option>
-            {SNOOZE_OPTIONS.map((option) => (
+            {SNOOZE_OPTION_KEYS.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {t(option.labelKey)}
               </option>
             ))}
           </select>
@@ -92,7 +94,7 @@ export function SwitcherControls() {
       <button
         type="button"
         className={styles.iconButton}
-        aria-label="ReadyTypeを終了"
+        aria-label={t("switcher.quitAria")}
         onClick={() => setQuitOpen(true)}
       >
         <MdPowerSettingsNew className={styles.icon} aria-hidden="true" />
@@ -100,9 +102,9 @@ export function SwitcherControls() {
       <AlertDialog
         isOpen={quitOpen}
         onClose={() => setQuitOpen(false)}
-        title="ReadyTypeを終了しますか？"
-        text="自動切替も含め、アプリを完全に終了します。ウィンドウを閉じるだけの場合は、ウィンドウの閉じるボタンを使ってください。"
-        confirmButtonText="終了"
+        title={t("switcher.quitConfirmTitle")}
+        text={t("switcher.quitConfirmText")}
+        confirmButtonText={t("switcher.quitConfirmButton")}
         onConfirm={() => {
           void quitApp();
         }}

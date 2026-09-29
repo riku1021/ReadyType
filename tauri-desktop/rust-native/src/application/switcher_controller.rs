@@ -11,7 +11,7 @@ use std::{
 };
 
 use crate::domain::input_source::{
-    default_rules, AxAttribute, FocusRule, FocusSnapshot, InputSourceId, PlatformAppId,
+    default_rules, AxAttribute, FocusRule, FocusSnapshot, PlatformAppId,
 };
 
 use super::{
@@ -27,6 +27,7 @@ use super::{
     },
     settings::SwitcherSettings,
     switcher_state::{SwitchLogEntry, SwitcherState},
+    ui_locale_cache::UiLocaleCache,
 };
 
 type RuntimeSwitcher = InputSourceSwitcher<
@@ -97,6 +98,8 @@ pub struct SwitcherController {
     monitoring: AtomicBool,
     debug_capture: AtomicBool,
     last_snapshot: Arc<Mutex<Option<FocusSnapshot>>>,
+    publisher: Arc<dyn SwitcherEventPublisher>,
+    ui_locale: Arc<UiLocaleCache>,
 }
 
 impl SwitcherController {
@@ -108,12 +111,14 @@ impl SwitcherController {
         publisher: Arc<dyn SwitcherEventPublisher>,
         monitor: Box<dyn FocusMonitor>,
     ) -> Result<Arc<Self>, ControllerError> {
+        let resolved = SwitcherSettings::resolve_ui_locale(&settings.ui_locale);
+        let ui_locale = Arc::new(UiLocaleCache::new(&resolved));
         let switcher = Arc::new(Mutex::new(InputSourceSwitcher::new(
             settings,
             repository_gateway(gateway),
             repository,
             clock,
-            publisher,
+            Arc::clone(&publisher),
         )?));
         let (sender, receiver) = mpsc::channel();
         let last_snapshot = Arc::new(Mutex::new(None));
@@ -125,13 +130,49 @@ impl SwitcherController {
             monitoring: AtomicBool::new(false),
             debug_capture: AtomicBool::new(false),
             last_snapshot: Arc::clone(&last_snapshot),
+            publisher: Arc::clone(&publisher),
+            ui_locale: Arc::clone(&ui_locale),
         });
         let worker = thread::Builder::new()
             .name("readytype-switcher".to_owned())
-            .spawn(move || run_worker(receiver, switcher, last_snapshot))
+            .spawn(move || {
+                run_worker(
+                    receiver,
+                    switcher,
+                    last_snapshot,
+                    publisher,
+                    ui_locale,
+                )
+            })
             .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
         *controller.lock_worker()? = Some(worker);
         Ok(controller)
+    }
+
+    /// Resolved display language (`ja` | `en`) for tray / UI sync.
+    pub fn resolved_ui_locale(&self) -> String {
+        self.ui_locale.load()
+    }
+
+    /// Re-resolve when preference is `system` (e.g. on window focus).
+    pub fn refresh_resolved_ui_locale(&self) -> Result<Option<SwitcherState>, ControllerError> {
+        let (preference, state) = {
+            let switcher = self.lock_switcher()?;
+            (
+                switcher.settings().ui_locale.clone(),
+                switcher.state().clone(),
+            )
+        };
+        if SwitcherSettings::normalize_ui_locale(&preference) != "system" {
+            return Ok(None);
+        }
+        let resolved = SwitcherSettings::resolve_ui_locale(&preference);
+        if resolved == self.ui_locale.load() {
+            return Ok(None);
+        }
+        self.ui_locale.store(&resolved);
+        self.publisher.publish(&state, &resolved);
+        Ok(Some(state))
     }
 
     pub fn state(&self) -> Result<SwitcherState, ControllerError> {
@@ -206,26 +247,37 @@ impl SwitcherController {
     }
 
     pub fn set_enabled(&self, enabled: bool) -> Result<SwitcherState, ControllerError> {
-        self.lock_switcher()?.set_enabled(enabled)?;
-        self.state()
+        self.mutate_switcher(|switcher| {
+            switcher.set_enabled(enabled)?;
+            Ok(switcher.state().clone())
+        })
     }
 
     pub fn set_snooze_minutes(&self, minutes: u64) -> Result<SwitcherState, ControllerError> {
-        self.lock_switcher()?.snooze_for_minutes(minutes)?;
+        let state = self.mutate_switcher(|switcher| {
+            switcher.snooze_for_minutes(minutes)?;
+            Ok(switcher.state().clone())
+        })?;
         self.wake_worker()?;
-        self.state()
+        Ok(state)
     }
 
     pub fn set_snooze_indefinitely(&self) -> Result<SwitcherState, ControllerError> {
-        self.lock_switcher()?.snooze_indefinitely()?;
+        let state = self.mutate_switcher(|switcher| {
+            switcher.snooze_indefinitely()?;
+            Ok(switcher.state().clone())
+        })?;
         self.wake_worker()?;
-        self.state()
+        Ok(state)
     }
 
     pub fn resume(&self) -> Result<SwitcherState, ControllerError> {
-        self.lock_switcher()?.set_snoozed_until(None)?;
+        let state = self.mutate_switcher(|switcher| {
+            switcher.set_snoozed_until(None)?;
+            Ok(switcher.state().clone())
+        })?;
         self.wake_worker()?;
-        self.state()
+        Ok(state)
     }
 
     pub fn list_input_sources(
@@ -311,16 +363,6 @@ impl SwitcherController {
         self.replace_rules(default_rules())
     }
 
-    pub fn update_input_source_preferences(
-        &self,
-        english: InputSourceId,
-        japanese: InputSourceId,
-    ) -> Result<SwitcherState, ControllerError> {
-        self.lock_switcher()?
-            .update_input_source_preferences(english, japanese)?;
-        self.state()
-    }
-
     pub fn set_debug_capture(&self, enabled: bool) -> Result<SwitcherState, ControllerError> {
         self.lock_monitor()?.set_debug_capture(enabled)?;
         self.debug_capture.store(enabled, Ordering::Release);
@@ -328,8 +370,17 @@ impl SwitcherController {
     }
 
     pub fn set_debug_logging(&self, enabled: bool) -> Result<SwitcherState, ControllerError> {
-        self.lock_switcher()?.set_debug_logging(enabled)?;
-        self.state()
+        self.mutate_switcher(|switcher| {
+            switcher.set_debug_logging(enabled)?;
+            Ok(switcher.state().clone())
+        })
+    }
+
+    pub fn set_ui_locale(&self, locale: &str) -> Result<SwitcherState, ControllerError> {
+        self.mutate_switcher(|switcher| {
+            switcher.set_ui_locale(locale)?;
+            Ok(switcher.state().clone())
+        })
     }
 
     pub fn focus_snapshot(&self) -> Result<Option<FocusSnapshot>, ControllerError> {
@@ -341,21 +392,49 @@ impl SwitcherController {
     }
 
     pub fn clear_logs(&self) -> Result<SwitcherState, ControllerError> {
-        self.lock_switcher()?.clear_logs();
-        self.state()
+        self.mutate_switcher(|switcher| {
+            switcher.clear_logs();
+            Ok(switcher.state().clone())
+        })
     }
 
     fn replace_rules(
         self: &Arc<Self>,
         rules: Vec<FocusRule>,
     ) -> Result<SwitcherState, ControllerError> {
-        self.lock_switcher()?.replace_rules(rules)?;
+        let state = self.mutate_switcher(|switcher| {
+            switcher.replace_rules(rules)?;
+            Ok(switcher.state().clone())
+        })?;
         if self.is_monitoring() {
             self.stop_monitoring()?;
             self.start_monitoring()?;
         }
         self.wake_worker()?;
-        self.state()
+        Ok(state)
+    }
+
+    /// Mutate under the switcher lock, then publish only after the guard drops.
+    fn mutate_switcher<T>(
+        &self,
+        f: impl FnOnce(&mut RuntimeSwitcher) -> Result<T, ControllerError>,
+    ) -> Result<T, ControllerError> {
+        let (result, pending) = {
+            let mut guard = self.lock_switcher()?;
+            let result = f(&mut guard)?;
+            let pending = guard.drain_publish_snapshot();
+            (result, pending)
+        };
+        self.dispatch_publish(pending);
+        Ok(result)
+    }
+
+    fn dispatch_publish(&self, pending: Option<(SwitcherState, String)>) {
+        if let Some((state, preference)) = pending {
+            let resolved = SwitcherSettings::resolve_ui_locale(&preference);
+            self.ui_locale.store(&resolved);
+            self.publisher.publish(&state, &resolved);
+        }
     }
 
     fn wake_worker(&self) -> Result<(), ControllerError> {
@@ -411,7 +490,17 @@ fn run_worker(
     receiver: Receiver<WorkerMessage>,
     switcher: Arc<Mutex<RuntimeSwitcher>>,
     last_snapshot: Arc<Mutex<Option<FocusSnapshot>>>,
+    publisher: Arc<dyn SwitcherEventPublisher>,
+    ui_locale: Arc<UiLocaleCache>,
 ) {
+    let dispatch = |pending: Option<(SwitcherState, String)>| {
+        if let Some((state, preference)) = pending {
+            let resolved = SwitcherSettings::resolve_ui_locale(&preference);
+            ui_locale.store(&resolved);
+            publisher.publish(&state, &resolved);
+        }
+    };
+
     let mut active: Option<(PlatformAppId, u64)> = None;
     loop {
         let wait = switcher
@@ -439,10 +528,12 @@ fn run_worker(
                     }
                     let gateway = switcher.gateway_handle();
                     let prepared = switcher.prepare_focus(snapshot);
-                    (gateway, prepared)
+                    let pending = switcher.drain_publish_snapshot();
+                    (gateway, prepared, pending)
                 };
                 // TIS はメインキューへ sync するため、switcher ロックを握ったまま待たない。
-                let (gateway, prepared) = prepared;
+                let (gateway, prepared, pending) = prepared;
+                dispatch(pending);
                 let Ok(prepared) = prepared else {
                     continue;
                 };
@@ -461,7 +552,7 @@ fn run_worker(
                         };
                         match switch_result {
                             Ok((current, select_result)) => {
-                                if let Ok(mut switcher) = switcher.lock() {
+                                let pending = if let Ok(mut switcher) = switcher.lock() {
                                     let _ = switcher.complete_focus(
                                         snapshot,
                                         *rule,
@@ -469,17 +560,25 @@ fn run_worker(
                                         current,
                                         select_result,
                                     );
-                                }
+                                    switcher.drain_publish_snapshot()
+                                } else {
+                                    None
+                                };
+                                dispatch(pending);
                             }
                             Err(error) => {
-                                if let Ok(mut switcher) = switcher.lock() {
+                                let pending = if let Ok(mut switcher) = switcher.lock() {
                                     switcher.record_switch_pipeline_error(
                                         &snapshot,
                                         rule.id(),
                                         &target,
                                         &error,
                                     );
-                                }
+                                    switcher.drain_publish_snapshot()
+                                } else {
+                                    None
+                                };
+                                dispatch(pending);
                             }
                         }
                     }
@@ -488,9 +587,13 @@ fn run_worker(
             Ok(WorkerMessage::SettingsChanged) => {}
             Ok(WorkerMessage::Stop) | Err(RecvTimeoutError::Disconnected) => break,
             Err(RecvTimeoutError::Timeout) => {
-                if let Ok(mut switcher) = switcher.lock() {
+                let pending = if let Ok(mut switcher) = switcher.lock() {
                     let _ = switcher.resume_if_due();
-                }
+                    switcher.drain_publish_snapshot()
+                } else {
+                    None
+                };
+                dispatch(pending);
             }
         }
     }
@@ -587,7 +690,7 @@ mod tests {
     struct NoopPublisher;
 
     impl SwitcherEventPublisher for NoopPublisher {
-        fn publish(&self, _state: &SwitcherState) {}
+        fn publish(&self, _state: &SwitcherState, _locale: &str) {}
     }
 
     #[derive(Default)]
@@ -699,19 +802,11 @@ mod tests {
     }
 
     #[test]
-    fn preferences_debug_options_and_duplicate_rules_are_validated() {
+    fn debug_options_and_duplicate_rules_are_validated() {
         let controller = controller(Arc::new(MonitorData::default()));
-        controller
-            .update_input_source_preferences(
-                InputSourceId::parse("english.custom").expect("english"),
-                InputSourceId::parse("japanese.custom").expect("japanese"),
-            )
-            .expect("preferences");
         controller.set_debug_logging(true).expect("debug logging");
         controller.set_debug_capture(true).expect("capture");
         let settings = controller.settings().expect("settings");
-        assert_eq!(settings.preferred_english.as_str(), "english.custom");
-        assert_eq!(settings.preferred_japanese.as_str(), "japanese.custom");
         assert!(settings.debug_logging);
         assert!(controller.is_debug_capture_enabled());
 

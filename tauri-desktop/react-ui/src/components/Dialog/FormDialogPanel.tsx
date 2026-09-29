@@ -1,4 +1,5 @@
 import type { FC, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { IoIosClose } from "react-icons/io";
 
 import { cx } from "@/styled-system/css";
@@ -15,12 +16,18 @@ type FormDialogPanelProps = {
 
 /** フォーム入力向けの左寄せパネル */
 export const FormDialogPanel: FC<FormDialogPanelProps> = ({ titleId, title, children, footer }) => {
+  const { t } = useTranslation();
   const { isClosing, onClose, dismissible } = useDialogShell();
 
   return (
     <div className={cx(styles.formPanel, isClosing ? styles.contentFadeOut : styles.contentFadeIn)}>
       {dismissible ? (
-        <button type="button" className={styles.closeIcon} onClick={onClose} aria-label="閉じる">
+        <button
+          type="button"
+          className={styles.closeIcon}
+          onClick={onClose}
+          aria-label={t("common.closeAria")}
+        >
           <IoIosClose />
         </button>
       ) : null}

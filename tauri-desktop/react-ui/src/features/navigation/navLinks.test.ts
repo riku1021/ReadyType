@@ -4,14 +4,14 @@ import { getNavLinkByPath, navLinks } from "./navLinks";
 
 describe("getNavLinkByPath", () => {
   it("完全一致のパスを返す", () => {
-    expect(getNavLinkByPath("/")?.label).toBe("ホーム");
-    expect(getNavLinkByPath("/accessibility")?.label).toBe("アクセシビリティ");
-    expect(getNavLinkByPath("/apps")?.label).toBe("アプリごとの設定");
-    expect(getNavLinkByPath("/diagnostics")?.label).toBe("診断");
-    expect(getNavLinkByPath("/settings")?.label).toBe("設定");
-    expect(getNavLinkByPath("/about")?.label).toBe("アプリについて");
-    expect(getNavLinkByPath("/update")?.label).toBe("アップデート");
-    expect(getNavLinkByPath("/lab")?.label).toBe("開発確認");
+    expect(getNavLinkByPath("/")?.labelKey).toBe("nav.home");
+    expect(getNavLinkByPath("/accessibility")?.labelKey).toBe("nav.accessibility");
+    expect(getNavLinkByPath("/apps")?.labelKey).toBe("nav.apps");
+    expect(getNavLinkByPath("/diagnostics")?.labelKey).toBe("nav.diagnostics");
+    expect(getNavLinkByPath("/settings")?.labelKey).toBe("nav.settings");
+    expect(getNavLinkByPath("/about")?.labelKey).toBe("nav.about");
+    expect(getNavLinkByPath("/update")?.labelKey).toBe("nav.update");
+    expect(getNavLinkByPath("/lab")?.labelKey).toBe("nav.lab");
   });
 
   it("ネストされたパスは最長プレフィックスでマッチする", () => {
@@ -33,6 +33,16 @@ describe("getNavLinkByPath", () => {
       "/about",
       "/update",
       "/lab",
+    ]);
+    expect(navLinks.map((link) => link.labelKey)).toEqual([
+      "nav.home",
+      "nav.accessibility",
+      "nav.apps",
+      "nav.diagnostics",
+      "nav.settings",
+      "nav.about",
+      "nav.update",
+      "nav.lab",
     ]);
   });
 });

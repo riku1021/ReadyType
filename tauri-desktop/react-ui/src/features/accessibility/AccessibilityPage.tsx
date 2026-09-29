@@ -1,20 +1,22 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/Button";
 import { useInputSourceState } from "@/features/inputSource";
 
 import * as styles from "./AccessibilityPage.styles";
-import { toAccessibilityViewModel } from "./accessibilityViewModel";
+import { type AccessibilityStatusKind, toAccessibilityViewModel } from "./accessibilityViewModel";
 
-const STATUS_LABELS = {
-  loading: "確認中",
-  granted: "許可済み",
-  denied: "未許可",
-  unsupported: "未対応",
-  error: "エラー",
-} as const;
+const STATUS_KEYS = {
+  loading: "accessibility.statusLoading",
+  granted: "accessibility.statusGranted",
+  denied: "accessibility.statusDenied",
+  unsupported: "accessibility.statusUnsupported",
+  error: "accessibility.statusError",
+} as const satisfies Record<AccessibilityStatusKind, string>;
 
 export function AccessibilityPage() {
+  const { t } = useTranslation();
   const { state, requestPermission, openAccessibilitySettings, refreshPermission } =
     useInputSourceState();
 
@@ -32,11 +34,14 @@ export function AccessibilityPage() {
     };
   }, [refreshPermission]);
 
-  const view = toAccessibilityViewModel({
-    ready: state?.ready ?? false,
-    permission: state?.permission ?? null,
-    initError: state?.initError ?? null,
-  });
+  const view = toAccessibilityViewModel(
+    {
+      ready: state?.ready ?? false,
+      permission: state?.permission ?? null,
+      initError: state?.initError ?? null,
+    },
+    t
+  );
 
   return (
     <div className={styles.page}>
@@ -44,8 +49,8 @@ export function AccessibilityPage() {
         <h2 className={styles.headline}>{view.headline}</h2>
         <p className={styles.description}>{view.description}</p>
         <div className={styles.statusRow}>
-          <span className={styles.label}>現在の状態</span>
-          <span className={styles.value}>{STATUS_LABELS[view.kind]}</span>
+          <span className={styles.label}>{t("accessibility.labelCurrentStatus")}</span>
+          <span className={styles.value}>{t(STATUS_KEYS[view.kind])}</span>
         </div>
         <div className={styles.actions}>
           {view.showPromptActions ? (
@@ -55,7 +60,7 @@ export function AccessibilityPage() {
                   void requestPermission();
                 }}
               >
-                権限を要求
+                {t("common.requestPermission")}
               </Button>
               <Button
                 variant="secondary"
@@ -63,7 +68,7 @@ export function AccessibilityPage() {
                   void openAccessibilitySettings();
                 }}
               >
-                システム設定を開く
+                {t("common.openSystemSettings")}
               </Button>
             </>
           ) : null}
@@ -73,7 +78,7 @@ export function AccessibilityPage() {
               void refreshPermission();
             }}
           >
-            状態を再確認
+            {t("accessibility.recheckStatus")}
           </Button>
         </div>
       </section>

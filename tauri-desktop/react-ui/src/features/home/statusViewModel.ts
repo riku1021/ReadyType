@@ -1,3 +1,5 @@
+import type { TFunction } from "i18next";
+
 import type { InputSourceViewState, SwitchDecision } from "@/features/inputSource";
 
 export type StatusKind =
@@ -19,26 +21,29 @@ export type StatusViewModel = {
   lastDecisionLabel: string;
 };
 
-const DECISION_LABELS: Record<SwitchDecision, string> = {
-  ignored: "無視",
-  disabled: "無効のため未切替",
-  snoozed: "一時停止中のため未切替",
-  noRule: "一致ルールなし",
-  alreadySelected: "すでに切替済み",
-  switched: "切替成功",
-  failed: "切替失敗",
-};
+const DECISION_KEYS = {
+  ignored: "home.decisionIgnored",
+  disabled: "home.decisionDisabled",
+  snoozed: "home.decisionSnoozed",
+  noRule: "home.decisionNoRule",
+  alreadySelected: "home.decisionAlreadySelected",
+  switched: "home.decisionSwitched",
+  failed: "home.decisionFailed",
+} as const satisfies Record<SwitchDecision, string>;
 
-export function toStatusViewModel(state: InputSourceViewState | null): StatusViewModel {
+export function toStatusViewModel(
+  state: InputSourceViewState | null,
+  t: TFunction
+): StatusViewModel {
   if (!state?.ready) {
     return {
       kind: "loading",
-      headline: "状態を読み込み中…",
-      currentAppLabel: "—",
-      matchedRuleLabel: "—",
-      currentSourceLabel: "—",
-      targetSourceLabel: "—",
-      lastDecisionLabel: "—",
+      headline: t("home.headlineLoading"),
+      currentAppLabel: t("common.emDash"),
+      matchedRuleLabel: t("common.emDash"),
+      currentSourceLabel: t("common.emDash"),
+      targetSourceLabel: t("common.emDash"),
+      lastDecisionLabel: t("common.emDash"),
     };
   }
 
@@ -46,34 +51,39 @@ export function toStatusViewModel(state: InputSourceViewState | null): StatusVie
     return {
       kind: "error",
       headline: state.initError,
-      currentAppLabel: "—",
-      matchedRuleLabel: "—",
-      currentSourceLabel: "—",
-      targetSourceLabel: "—",
-      lastDecisionLabel: "—",
+      currentAppLabel: t("common.emDash"),
+      matchedRuleLabel: t("common.emDash"),
+      currentSourceLabel: t("common.emDash"),
+      targetSourceLabel: t("common.emDash"),
+      lastDecisionLabel: t("common.emDash"),
     };
   }
 
   if (state.permission === "unsupported") {
-    return base(state, "unsupported", "このOSでは未対応です");
+    return base(state, "unsupported", t("home.headlineUnsupported"), t);
   }
 
   if (state.permission === "denied" || !state.accessibilityTrusted) {
-    return base(state, "permissionRequired", "アクセシビリティ権限が必要です");
+    return base(state, "permissionRequired", t("home.headlinePermissionRequired"), t);
   }
 
   if (state.snoozedUntilUnixMs != null) {
-    return base(state, "snoozed", "一時停止中");
+    return base(state, "snoozed", t("home.headlineSnoozed"), t);
   }
 
   if (!state.enabled) {
-    return base(state, "disabled", "自動切替はOFFです");
+    return base(state, "disabled", t("home.headlineDisabled"), t);
   }
 
-  return base(state, "running", "自動切替は有効です");
+  return base(state, "running", t("home.headlineRunning"), t);
 }
 
-function base(state: InputSourceViewState, kind: StatusKind, headline: string): StatusViewModel {
+function base(
+  state: InputSourceViewState,
+  kind: StatusKind,
+  headline: string,
+  t: TFunction
+): StatusViewModel {
   const matchedRule = state.matchedRuleId
     ? (state.rules.find((rule) => rule.id === state.matchedRuleId)?.name ?? state.matchedRuleId)
     : null;
@@ -81,12 +91,12 @@ function base(state: InputSourceViewState, kind: StatusKind, headline: string): 
   return {
     kind,
     headline,
-    currentAppLabel: state.currentApp?.appId ?? "なし",
-    matchedRuleLabel: matchedRule ?? "なし",
-    currentSourceLabel: state.currentInputSourceId ?? "不明",
-    targetSourceLabel: state.targetInputSourceId ?? "なし",
+    currentAppLabel: state.currentApp?.appId ?? t("common.none"),
+    matchedRuleLabel: matchedRule ?? t("common.none"),
+    currentSourceLabel: state.currentInputSourceId ?? t("common.unknown"),
+    targetSourceLabel: state.targetInputSourceId ?? t("common.none"),
     lastDecisionLabel: state.lastDecision
-      ? DECISION_LABELS[state.lastDecision]
-      : "まだ切替していません",
+      ? t(DECISION_KEYS[state.lastDecision])
+      : t("home.noSwitchYet"),
   };
 }

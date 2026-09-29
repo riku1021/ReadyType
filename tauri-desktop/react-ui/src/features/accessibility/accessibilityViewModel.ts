@@ -1,3 +1,5 @@
+import type { TFunction } from "i18next";
+
 import type { AccessibilityPermission } from "@/features/inputSource";
 
 export type AccessibilityStatusKind = "loading" | "granted" | "denied" | "unsupported" | "error";
@@ -9,16 +11,19 @@ export type AccessibilityViewModel = {
   showPromptActions: boolean;
 };
 
-export function toAccessibilityViewModel(input: {
-  ready: boolean;
-  permission: AccessibilityPermission | null;
-  initError: string | null;
-}): AccessibilityViewModel {
+export function toAccessibilityViewModel(
+  input: {
+    ready: boolean;
+    permission: AccessibilityPermission | null;
+    initError: string | null;
+  },
+  t: TFunction
+): AccessibilityViewModel {
   if (!input.ready) {
     return {
       kind: "loading",
-      headline: "状態を確認しています…",
-      description: "アクセシビリティ権限の状態を読み込んでいます。",
+      headline: t("accessibility.headlineLoading"),
+      description: t("accessibility.descriptionLoading"),
       showPromptActions: false,
     };
   }
@@ -26,7 +31,7 @@ export function toAccessibilityViewModel(input: {
   if (input.initError) {
     return {
       kind: "error",
-      headline: "状態を取得できませんでした",
+      headline: t("accessibility.headlineError"),
       description: input.initError,
       showPromptActions: false,
     };
@@ -35,8 +40,8 @@ export function toAccessibilityViewModel(input: {
   if (input.permission === "unsupported") {
     return {
       kind: "unsupported",
-      headline: "このOSでは未対応です",
-      description: "アクセシビリティ権限によるフォーカス監視は、現在 macOS のみ対応しています。",
+      headline: t("accessibility.headlineUnsupported"),
+      description: t("accessibility.descriptionUnsupported"),
       showPromptActions: false,
     };
   }
@@ -44,18 +49,16 @@ export function toAccessibilityViewModel(input: {
   if (input.permission === "granted") {
     return {
       kind: "granted",
-      headline: "アクセシビリティは許可されています",
-      description:
-        "フォーカス監視と入力ソースの自動切替に必要な権限が付与されています。システム設定で取り消した場合は、この画面を開き直すか「状態を再確認」を押してください。",
+      headline: t("accessibility.headlineGranted"),
+      description: t("accessibility.descriptionGranted"),
       showPromptActions: false,
     };
   }
 
   return {
     kind: "denied",
-    headline: "アクセシビリティ権限が必要です",
-    description:
-      "ReadyType がフォーカス中のアプリを検知するには、システム設定の「プライバシーとセキュリティ > アクセシビリティ」で ReadyType を許可してください。",
+    headline: t("accessibility.headlineDenied"),
+    description: t("accessibility.descriptionDenied"),
     showPromptActions: true,
   };
 }

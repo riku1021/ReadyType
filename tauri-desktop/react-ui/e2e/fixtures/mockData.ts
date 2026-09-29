@@ -13,9 +13,13 @@ export const mockSwitcherState = {
 } as const;
 
 export const mockSettings = {
-  preferredEnglish: "com.apple.keylayout.ABC",
-  preferredJapanese: "com.apple.inputmethod.Kotoeri.RomajiTyping",
+  languagePreferences: {
+    en: "com.apple.keylayout.ABC",
+    ja: "com.apple.inputmethod.Kotoeri.RomajiTyping",
+  },
   debugLogging: false,
+  uiLocale: "system",
+  resolvedUiLocale: "ja",
 } as const;
 
 const axContains = (attribute: string, value: string) => ({
@@ -34,7 +38,7 @@ export const mockRules = [
     appId: "com.apple.Terminal",
     priority: 0,
     conditions: [],
-    target: { kind: "preferredEnglish" as const },
+    target: { kind: "preferredLanguage" as const, language: "en" },
   },
   {
     id: "preset-cursor-composer",
@@ -44,7 +48,7 @@ export const mockRules = [
     appId: "com.todesktop.230313mzl4w4u92",
     priority: 111,
     conditions: [axContains("domClassList", "composer-")],
-    target: { kind: "preferredJapanese" as const },
+    target: { kind: "preferredLanguage" as const, language: "ja" },
   },
   {
     id: "preset-cursor-editor",
@@ -54,7 +58,7 @@ export const mockRules = [
     appId: "com.todesktop.230313mzl4w4u92",
     priority: 130,
     conditions: [axContains("domIdentifier", "workbench.parts.editor")],
-    target: { kind: "preferredEnglish" as const },
+    target: { kind: "preferredLanguage" as const, language: "en" },
   },
   {
     id: "preset-cursor-terminal-en",
@@ -64,6 +68,6 @@ export const mockRules = [
     appId: "com.todesktop.230313mzl4w4u92",
     priority: 100,
     conditions: [axContains("role", "text"), axContains("description", "terminal")],
-    target: { kind: "preferredEnglish" as const },
+    target: { kind: "preferredLanguage" as const, language: "en" },
   },
 ];

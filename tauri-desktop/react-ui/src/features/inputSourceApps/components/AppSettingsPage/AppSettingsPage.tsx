@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { IoAdd, IoSearch } from "react-icons/io5";
 
 import { Button } from "@/components/Button";
@@ -17,10 +18,11 @@ type AppListRow = AppRuleGroup & {
 };
 
 export function AppSettingsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { state, updateRule, resetDefaultRules } = useInputSourceState();
   const rules = state?.rules ?? [];
-  const groups = useMemo(() => groupRulesByApp(rules), [rules]);
+  const groups = useMemo(() => groupRulesByApp(rules, t), [rules, t]);
   const appIds = useMemo(() => groups.map((group) => group.appId), [groups]);
   const icons = useAppIcons(appIds);
   const [resetOpen, setResetOpen] = useState(false);
@@ -38,7 +40,7 @@ export function AppSettingsPage() {
   const columns: DataTableColumn<AppListRow>[] = [
     {
       id: "app",
-      header: "アプリ",
+      header: t("apps.columnApp"),
       width: "55%",
       headerClassName: styles.thApp,
       cellClassName: (_row, selected) => styles.tdApp({ selected }),
@@ -54,15 +56,19 @@ export function AppSettingsPage() {
     },
     {
       id: "rules",
-      header: "ルール",
+      header: t("apps.columnRules"),
       width: "6.5rem",
       headerClassName: styles.th,
       cellClassName: (_row, selected) => styles.td({ selected }),
-      cell: (group) => <span className={styles.ruleCount}>{group.ruleCount}個</span>,
+      cell: (group) => (
+        <span className={styles.ruleCount}>
+          {t("common.ruleCount", { count: group.ruleCount })}
+        </span>
+      ),
     },
     {
       id: "enabled",
-      header: "有効",
+      header: t("apps.columnEnabled"),
       width: "5.5rem",
       headerClassName: styles.thEnabled,
       cellClassName: (_row, selected) => styles.tdEnabled({ selected }),
@@ -70,7 +76,7 @@ export function AppSettingsPage() {
       cell: (group) => (
         <Toggle
           checked={group.enabled}
-          aria-label={`${group.label} を有効化`}
+          aria-label={t("common.enableAppAria", { label: group.label })}
           onChange={(enabled) => {
             void setAppEnabled(group, enabled);
           }}
@@ -82,23 +88,23 @@ export function AppSettingsPage() {
   return (
     <div className={styles.page}>
       <div className={styles.toolbar}>
-        <p className={styles.intro}>アプリや入力欄に応じて、入力言語を自動で切り替えます。</p>
+        <p className={styles.intro}>{t("apps.intro")}</p>
         <div className={styles.toolbarActions}>
           <span className={styles.searchBox}>
             <IoSearch className={styles.searchIcon} aria-hidden="true" />
             <input
               className={styles.searchInput}
               type="search"
-              placeholder="アプリを検索..."
-              aria-label="アプリを検索"
+              placeholder={t("apps.searchPlaceholder")}
+              aria-label={t("apps.searchAria")}
               disabled
             />
           </span>
           <Button variant="secondary" iconLeft={<IoAdd />} onClick={() => undefined} disabled>
-            アプリを追加
+            {t("apps.addApp")}
           </Button>
           <Button variant="secondary" onClick={() => setResetOpen(true)}>
-            既定ルールへ戻す
+            {t("apps.resetToDefaultRules")}
           </Button>
         </div>
       </div>
@@ -111,15 +117,15 @@ export function AppSettingsPage() {
           void navigate({ to: "/apps/$appId", params: { appId } });
         }}
         rowClassName={() => styles.row}
-        emptyMessage="表示できるアプリ設定がありません。既定ルールへ戻してください。"
+        emptyMessage={t("apps.emptyList")}
       />
 
       <AlertDialog
         isOpen={resetOpen}
         onClose={() => setResetOpen(false)}
-        title="既定ルールへ戻しますか？"
-        text="カスタムルールを含む現在のルール一覧を既定プリセットで置き換えます。"
-        confirmButtonText="戻す"
+        title={t("apps.resetConfirmTitle")}
+        text={t("apps.resetConfirmText")}
+        confirmButtonText={t("apps.resetConfirmButton")}
         onConfirm={() => {
           void resetDefaultRules();
         }}

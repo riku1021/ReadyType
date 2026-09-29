@@ -19,12 +19,14 @@ alwaysApply: false
 | TanStack Router   | ファイルベースルーティング                       |
 | Panda CSS         | ビルド時生成の型安全スタイリング                 |
 | Jotai             | クライアント UI 状態（テーマなど）               |
+| i18next / react-i18next | UI 文言（`ja` / `en`、preference `system`） |
 | Tauri API         | ネイティブ連携（`invoke` / プラグイン）          |
 | Vitest            | ユニットテスト                                   |
 | Biome             | lint / format                                    |
 | Bulletproof React | features モジュール化の指針                      |
 
 ※ React Query / axios は現状未導入。非同期の共有読みが増えたら導入を検討する（**承認必須**）。
+※ 国際化の詳細は本ファイル §14 および `docs/rules/ja-JP/react-frontend-i18n.md`。
 
 ## 2. ディレクトリ構成と役割
 
@@ -41,6 +43,7 @@ src/
 │   └── notFound/
 ├── hooks/                # 共有カスタムフック
 ├── layouts/              # RootLayout / Drawer / Header
+├── locales/              # i18next（ja / en、i18n.ts）
 ├── routes/               # TanStack Router（薄い）
 ├── styles/               # Panda トークン・globalCss
 ├── styled-system/        # Panda codegen（手編集禁止）
@@ -49,7 +52,7 @@ src/
 └── routeTree.gen.ts      # 生成物
 ```
 
-`public/pngs/` など Vite public 配下も静的アセットとして利用可。
+`public/pngs/` など Vite public 配下も静的アセットとして利用可。ユーザー向け文言は `locales/` 経由のみ（ハードコード禁止）。
 
 ## 3. 機能モジュール（Bulletproof React）
 
@@ -185,7 +188,8 @@ const message = await invoke<string>("greet", { name });
 3. 型安全性（`any` / `unknown` は使わない）
 4. UI 状態（Jotai）とネイティブ／永続データ（Rust）の責務分離
 5. アクセシビリティ（WAI-ARIA）
-6. 依頼範囲外のリファクタをしない（`agent-behavior`）
+6. ユーザー向け文言は i18n（`t()`）。ハードコード禁止
+7. 依頼範囲外のリファクタをしない（`agent-behavior`）
 
 ## 13. コマンド
 
@@ -200,7 +204,181 @@ pnpm test
 pnpm exec panda codegen
 ```
 
-## 14. Anti-Patterns
+## 14. 国際化 (i18n)
+
+ReadyType の UI 文言は **i18next + react-i18next** で管理する。テーマの `system` と同様に、表示言語も **preference（保存値）** と **resolved（実際に使う言語）** を分離する。
+
+### 翻訳ファイル構成
+
+翻訳は `tauri-desktop/react-ui/src/locales/{locale}/` 配下の JSON に置く:
+
+```
+src/locales/
+├── i18n.ts                 # 初期化・preference / resolve・localStorage
+├── ja/
+│   ├── index.ts            # 型付け（CustomTypeOptions）+ export
+│   └── translation.json    # メイン翻訳
+└── en/
+    ├── index.ts
+    └── translation.json
+```
+
+- 対応言語（resolved）: `ja` | `en`
+- preference: `system` | `ja` | `en`（デフォルト `system`）
+- 永続キー（フロント）: `readytype_ui_locale`（`LANGUAGE_STORE_KEY`）
+- ネイティブ永続: `SwitcherSettings.ui_locale`（同じ preference 文字列）
+
+`ja/index.ts` / `en/index.ts` で `i18next` の `CustomTypeOptions` を拡張し、`t()` のキーを型安全にする。
+
+### 翻訳 JSON 構造
+
+トップレベルは機能ドメインでグループ化する（例: `nav`, `common`, `settings`, `home`, `dialog`）。
+
+**例: `src/locales/ja/translation.json`（抜粋）**
+
+```json
+{
+  "nav": {
+    "home": "ホーム",
+    "settings": "設定",
+    "backToList": "一覧に戻る"
+  },
+  "common": {
+    "saveFailed": "保存に失敗しました",
+    "ruleCount": "{{count}}個"
+  },
+  "settings": {
+    "displayLanguage": "表示言語",
+    "languageSystem": "システム",
+    "languageJa": "日本語",
+    "languageEn": "English"
+  }
+}
+```
+
+**キー追加時の必須手順**
+
+1. `ja/translation.json` にキーを追加する
+2. **同じキー**を `en/translation.json` にも追加する（片方だけは禁止）
+3. コンポーネントでは `t('...')` のみを使う
+
+### preference と resolved
+
+| 概念 | 値 | 用途 |
+|------|-----|------|
+| preference | `system` \| `ja` \| `en` | 設定 UI・localStorage・Rust 設定ファイルに保存 |
+| resolved | `ja` \| `en` | `i18n.changeLanguage`・トレイ文言・`UiLocaleCache` |
+
+- preference が `ja` / `en` → resolved はそのまま
+- preference が `system` → OS 表示言語を解決（Rust: `sys-locale`、フロント起動直後のフォールバック: `navigator.languages`）
+- 対応外の OS 言語 → resolved は `ja`（`DEFAULT_RESOLVED_LANGUAGE`）
+- **UiLocale ≠ 入力の LanguageTag**: 入力ソース preference（`languagePreferences`）は別モデル。詳細は `docs/rules/ja-JP/input-source-model.md`
+
+テーマ（`light` / `dark` / `system`）と同じ分離なので、設定ラベル用ヘルパも同様に置く:
+
+- テーマ: `features/settings/themeLabels.ts`
+- 言語: `features/settings/languageLabels.ts`
+
+### コンポーネントでの i18n の使用
+
+**基本:**
+
+```tsx
+import { useTranslation } from "react-i18next";
+
+export function MyComponent() {
+  const { t } = useTranslation();
+
+  return (
+    <div>
+      <h1>{t("nav.settings")}</h1>
+      <button type="button">{t("common.requestPermission")}</button>
+    </div>
+  );
+}
+```
+
+**補間:**
+
+```tsx
+// JSON: "ruleCount": "{{count}}個"
+<p>{t("common.ruleCount", { count: rules.length })}</p>
+```
+
+**設定の表示言語切替:**
+
+```tsx
+import { getLanguageLabel, LANGUAGE_OPTIONS, languageFromTranslatedLabel } from "./languageLabels";
+
+// options は翻訳済みラベル配列
+// 保存は preference（"system" | "ja" | "en"）を setUiLocale → invoke("set_ui_locale")
+// 反映は settings.resolvedUiLocale で i18n.changeLanguage
+```
+
+### ネイティブ（トレイ）との同期
+
+- トレイラベルは Rust 側で **resolved** 言語だけを使う（`infrastructure/desktop/tray.rs`）
+- `set_ui_locale` 成功後、設定 DTO は `uiLocale`（preference）と `resolvedUiLocale` の両方を返す
+- publish / トレイ更新は **switcher mutex を握ったまま行わない**（ロック外で `publish(state, resolved)`）
+- ウィンドウフォーカス時、preference が `system` なら OS 言語を再解決してトレイを更新する
+
+### IPC / ACL
+
+新規または変更した `invoke` コマンドは次をセットで更新する:
+
+1. Rust: `#[tauri::command]` + `generate_handler!`
+2. フロント: `features/inputSource/api.ts` 等の `invoke` 名
+3. **`rust-native/permissions/input-source-switcher.toml` の `commands.allow`**（欠けると実行時に失敗する）
+
+言語関連の例: `set_ui_locale` は allow リスト必須。
+
+### i18n ベストプラクティス
+
+1. **常に翻訳キーを使う**: ユーザー向けテキストをハードコードしない。ラベル、メニュー、メッセージ、プレースホルダー、ツールチップ、aria-label、確認ダイアログはすべて `t()`。
+2. **ja / en を同時更新**: 片方の JSON だけ変更しない。
+3. **名前空間の整理**: 関連キーをトップレベルでグループ化する（`nav`, `common`, `settings`, …）。
+4. **一貫した命名**: ネストはドット記法（例: `settings.displayLanguage`）。
+5. **動的ラベルも i18n**: セレクト選択肢・ステータス文言もキー化する（`languageLabels` / `themeLabels` パターン）。
+6. **preference を保存する**: `system` 選択時に解決後の `ja`/`en` だけを永続化しない（「システム」の意味が消える）。
+7. **トレイは resolved**: preference 文字列をそのままトレイに渡さない。
+8. **型**: `isUiLocalePreference` / `resolveUiLocale` / `CustomTypeOptions` を使い、生文字列比較を避ける。
+
+### 重要: ユーザー向けテキストのハードコード禁止
+
+コンポーネント内に日本語・英語の表示文言を直接書かない。必ず `translation.json` に定義して `t()` で参照する。
+
+```tsx
+// ❌ WRONG
+<span>設定</span>
+<button type="button">保存に失敗しました</button>
+<button type="button" aria-label="一覧に戻る" />
+
+// ✅ CORRECT
+<span>{t("nav.settings")}</span>
+<button type="button">{t("common.saveFailed")}</button>
+<button type="button" aria-label={t("nav.backToList")} />
+```
+
+このルールが適用されるもの:
+
+- メニュー・ナビゲーション
+- ボタン・トグル・セクション見出し
+- プレースホルダー・空状態
+- エラー / 成功メッセージ
+- ツールチップ
+- ARIA ラベル（`aria-label={t('...')}`）
+- 確認ダイアログ
+- トレイに出す文言（Rust 側の locale 分岐。フロントの JSON と意味を揃える）
+
+### 作業チェックリスト（UI 文言を触るとき）
+
+- [ ] `ja/translation.json` と `en/translation.json` の両方にキーを追加・更新した
+- [ ] コンポーネントは `useTranslation` + `t()` のみ（ハードコードなし）
+- [ ] preference を変える場合は `set_ui_locale` と ACL を確認した
+- [ ] トレイ文言が絡む場合は resolved 経路とロック外 publish を崩していない
+- [ ] `pnpm typecheck`（キー型）と必要なら Vitest を通した
+
+## 15. Anti-Patterns
 
 - `routes/` にスタイルやビジネスロジック
 - feature 内部への横断 import
@@ -209,3 +387,8 @@ pnpm exec panda codegen
 - 承認なしの React Query / axios
 - `any` / `unknown`
 - コンポーネント dir の camelCase（PascalCase 必須）
+- UI 文言のハードコード（日本語・英語を JSX に直書き）
+- `ja` だけ / `en` だけの翻訳更新
+- preference `system` を永続化せず resolved だけ保存する
+- トレイ更新中に `controller.settings()` などで switcher mutex を再取得する
+- 新規 IPC を `permissions/*.toml` に追加し忘れる

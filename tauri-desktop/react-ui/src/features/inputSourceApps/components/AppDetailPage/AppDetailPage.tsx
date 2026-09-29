@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { IoAdd, IoEllipsisHorizontal, IoInformationCircle } from "react-icons/io5";
 
 import { Button } from "@/components/Button";
@@ -26,9 +27,10 @@ type AppDetailPageProps = {
 };
 
 export function AppDetailPage({ appId }: AppDetailPageProps) {
+  const { t } = useTranslation();
   const { state, updateRule, fetchInputSources } = useInputSourceState();
   const rules = state?.rules ?? [];
-  const groups = useMemo(() => groupRulesByApp(rules), [rules]);
+  const groups = useMemo(() => groupRulesByApp(rules, t), [rules, t]);
   const selected = groups.find((group) => group.appId === appId) ?? null;
   const icons = useAppIcons(selected ? [selected.appId] : []);
   const [sources, setSources] = useState<InputSourceDto[]>([]);
@@ -49,22 +51,27 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
     };
   }, [fetchInputSources]);
 
-  const preferredEnglish = state?.settingsPreferredEnglish ?? null;
-  const preferredJapanese = state?.settingsPreferredJapanese ?? null;
+  const languagePreferences = state?.languagePreferences ?? {};
+  const preferredIds = useMemo(
+    () =>
+      Object.values(languagePreferences).filter(
+        (id): id is string => typeof id === "string" && id.length > 0
+      ),
+    [languagePreferences]
+  );
 
   const languageOptions = useMemo(() => {
     const configuredIds = [
-      preferredEnglish ?? "",
-      preferredJapanese ?? "",
+      ...preferredIds,
       ...(selected?.defaultRule
-        ? [resolvedInputSourceId(selected.defaultRule.target, preferredEnglish, preferredJapanese)]
+        ? [resolvedInputSourceId(selected.defaultRule.target, languagePreferences)]
         : []),
       ...(selected?.contextualRules.map((item) =>
-        resolvedInputSourceId(item.rule.target, preferredEnglish, preferredJapanese)
+        resolvedInputSourceId(item.rule.target, languagePreferences)
       ) ?? []),
     ];
     return buildInputSourceOptions(sources, configuredIds);
-  }, [preferredEnglish, preferredJapanese, selected, sources]);
+  }, [languagePreferences, preferredIds, selected, sources]);
 
   const setAppEnabled = async (group: AppRuleGroup, enabled: boolean) => {
     const targets = rules.filter((rule) => rule.appId === group.appId);
@@ -72,14 +79,14 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
   };
 
   const setRuleTarget = async (rule: RuleDto, inputSourceId: string) => {
-    const target = ruleTargetFromInputSourceId(inputSourceId, preferredEnglish, preferredJapanese);
+    const target = ruleTargetFromInputSourceId(inputSourceId, languagePreferences);
     await updateRule({ ...rule, target });
   };
 
   const ruleColumns: DataTableColumn<RuleDisplay>[] = [
     {
       id: "rule",
-      header: "ルール",
+      header: t("apps.columnRule"),
       width: "50%",
       headerClassName: styles.thRule,
       cellClassName: styles.tdRule,
@@ -95,15 +102,15 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
     },
     {
       id: "language",
-      header: "入力言語",
+      header: t("apps.columnInputLanguage"),
       width: "10rem",
       headerClassName: styles.th,
       cellClassName: styles.td,
       stopPropagation: true,
       cell: (item) => (
         <LanguageSelect
-          value={resolvedInputSourceId(item.rule.target, preferredEnglish, preferredJapanese)}
-          label={`${item.title} の入力言語`}
+          value={resolvedInputSourceId(item.rule.target, languagePreferences)}
+          label={t("apps.ruleLanguageAria", { title: item.title })}
           options={languageOptions}
           onChange={(value) => {
             void setRuleTarget(item.rule, value);
@@ -113,7 +120,7 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
     },
     {
       id: "actions",
-      header: "操作",
+      header: t("apps.columnActions"),
       width: "4rem",
       headerClassName: styles.thActions,
       cellClassName: styles.tdActions,
@@ -122,7 +129,7 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
         <button
           type="button"
           className={styles.iconButton}
-          aria-label={`${item.title} の詳細メニュー`}
+          aria-label={t("apps.ruleMenuAria", { title: item.title })}
           disabled
         >
           <IoEllipsisHorizontal aria-hidden="true" />
@@ -134,13 +141,13 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
   if (!selected) {
     return (
       <div className={styles.page}>
-        <p className={styles.empty}>指定されたアプリの設定が見つかりません。</p>
+        <p className={styles.empty}>{t("apps.notFound")}</p>
       </div>
     );
   }
 
   return (
-    <section className={styles.page} aria-label="アプリ詳細">
+    <section className={styles.page} aria-label={t("apps.detailAria")}>
       <div className={styles.detailHeader}>
         <div className={styles.detailIdentity}>
           <AppIconView src={icons[selected.appId]} label={selected.label} large />
@@ -151,7 +158,7 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
         </div>
         <Toggle
           checked={selected.enabled}
-          aria-label={`${selected.label} を有効化`}
+          aria-label={t("common.enableAppAria", { label: selected.label })}
           onChange={(enabled) => {
             void setAppEnabled(selected, enabled);
           }}
@@ -160,17 +167,11 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
 
       {selected.defaultRule ? (
         <div className={styles.fieldBlock}>
-          <p className={styles.fieldLabel}>デフォルトの入力言語</p>
-          <p className={styles.fieldHelp}>
-            このアプリで、特にルールが設定されていない入力欄に使用する言語です。
-          </p>
+          <p className={styles.fieldLabel}>{t("apps.defaultInputLanguage")}</p>
+          <p className={styles.fieldHelp}>{t("apps.defaultInputLanguageHelp")}</p>
           <LanguageSelect
-            value={resolvedInputSourceId(
-              selected.defaultRule.target,
-              preferredEnglish,
-              preferredJapanese
-            )}
-            label="デフォルトの入力言語"
+            value={resolvedInputSourceId(selected.defaultRule.target, languagePreferences)}
+            label={t("apps.defaultInputLanguage")}
             options={languageOptions}
             wide
             onChange={(value) => {
@@ -181,19 +182,19 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
           />
           <div className={styles.infoBox}>
             <IoInformationCircle className={styles.infoIcon} aria-hidden="true" />
-            <span>個別のルールで指定がある入力欄は、そちらの設定が優先されます。</span>
+            <span>{t("apps.contextualOverrideNote")}</span>
           </div>
         </div>
       ) : null}
 
       <div className={styles.fieldBlock}>
         <div className={styles.sectionHeader}>
-          <p className={styles.fieldLabel}>個別のルール</p>
+          <p className={styles.fieldLabel}>{t("apps.contextualRules")}</p>
           <Button variant="secondary" iconLeft={<IoAdd />} onClick={() => undefined} disabled>
-            ルールを追加
+            {t("apps.addRule")}
           </Button>
         </div>
-        <p className={styles.fieldHelp}>特定の入力欄に対して、異なる言語を設定できます。</p>
+        <p className={styles.fieldHelp}>{t("apps.contextualRulesHelp")}</p>
       </div>
 
       <DataTable
@@ -201,15 +202,12 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
         rows={selected.contextualRules}
         getRowId={(item) => item.rule.id}
         rowClassName={() => styles.row}
-        emptyMessage="個別ルールはありません。"
+        emptyMessage={t("apps.emptyContextualRules")}
       />
 
       <div className={styles.infoBox}>
         <IoInformationCircle className={styles.infoIcon} aria-hidden="true" />
-        <span>
-          Chat / Editor / Terminal
-          は分かりやすさのための表示で、実際の判定は各ルールの条件（AX）で行います。
-        </span>
+        <span>{t("apps.kindDisplayNote")}</span>
       </div>
     </section>
   );

@@ -17,42 +17,42 @@ import type { NavLink } from "./types";
 export const navLinks: NavLink[] = [
   {
     to: "/",
-    label: "ホーム",
+    labelKey: "nav.home",
     icon: Home,
   },
   {
     to: "/accessibility",
-    label: "アクセシビリティ",
+    labelKey: "nav.accessibility",
     icon: Accessibility,
   },
   {
     to: "/apps",
-    label: "アプリごとの設定",
+    labelKey: "nav.apps",
     icon: Apps,
   },
   {
     to: "/diagnostics",
-    label: "診断",
+    labelKey: "nav.diagnostics",
     icon: Diagnostics,
   },
   {
     to: "/settings",
-    label: "設定",
+    labelKey: "nav.settings",
     icon: Settings,
   },
   {
     to: "/about",
-    label: "アプリについて",
+    labelKey: "nav.about",
     icon: About,
   },
   {
     to: "/update",
-    label: "アップデート",
+    labelKey: "nav.update",
     icon: Update,
   },
   {
     to: "/lab",
-    label: "開発確認",
+    labelKey: "nav.lab",
     icon: Lab,
   },
 ];

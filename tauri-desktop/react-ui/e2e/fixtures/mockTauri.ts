@@ -49,7 +49,6 @@ export async function installTauriMocks(page: Page): Promise<void> {
         case "delete_rule":
         case "reorder_rules":
         case "reset_default_rules":
-        case "update_input_source_preferences":
         case "start_debug_capture":
         case "stop_debug_capture":
         case "set_debug_logging":
@@ -60,18 +59,28 @@ export async function installTauriMocks(page: Page): Promise<void> {
           return "granted";
         case "get_input_source_settings":
           return { ...data.settings };
+        case "set_ui_locale": {
+          const locale =
+            typeof args?.locale === "string" &&
+            (args.locale === "en" || args.locale === "ja" || args.locale === "system")
+              ? args.locale
+              : "system";
+          const resolvedUiLocale = locale === "en" || locale === "ja" ? locale : "ja";
+          data.settings = { ...data.settings, uiLocale: locale, resolvedUiLocale };
+          return { ...data.settings };
+        }
         case "list_rules":
           return data.rules.map((rule) => ({ ...rule, conditions: [...rule.conditions] }));
         case "list_input_sources":
           return [
             {
-              id: data.settings.preferredEnglish,
+              id: data.settings.languagePreferences.en,
               name: "ABC",
               languageCode: "en",
               available: true,
             },
             {
-              id: data.settings.preferredJapanese,
+              id: data.settings.languagePreferences.ja,
               name: "日本語",
               languageCode: "ja",
               available: true,

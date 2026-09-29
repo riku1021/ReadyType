@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/Button";
 import { AlertDialog, ErrorDialog, LoadingDialog, SuccessDialog } from "@/components/Dialog";
@@ -7,6 +8,7 @@ import { FormModal } from "@/components/FormModal";
 import * as styles from "./LabPage.styles";
 
 export function LabPage() {
+  const { t } = useTranslation();
   const [infoResult, setInfoResult] = useState("");
   const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
   const [isErrorDialogOpen, setIsErrorDialogOpen] = useState(false);
@@ -23,67 +25,67 @@ export function LabPage() {
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.heading}>開発確認</h1>
-      <p className={styles.lead}>
-        ダイアログやモーダルなど、共通コンポーネントの動作確認用ページです。
-      </p>
+      <h1 className={styles.heading}>{t("lab.heading")}</h1>
+      <p className={styles.lead}>{t("lab.lead")}</p>
 
-      <h2 className={styles.sectionTitle}>ダイアログ / モーダル確認</h2>
+      <h2 className={styles.sectionTitle}>{t("lab.sectionDialogs")}</h2>
       <div className={styles.buttonGroup}>
         <Button variant="primary" onClick={() => setIsSuccessDialogOpen(true)}>
-          成功
+          {t("lab.buttonSuccess")}
         </Button>
         <Button variant="primary" onClick={() => setIsErrorDialogOpen(true)}>
-          エラー
+          {t("lab.buttonError")}
         </Button>
         <Button variant="secondary" onClick={() => setIsAlertDialogOpen(true)}>
-          確認
+          {t("lab.buttonConfirm")}
         </Button>
         <Button variant="primary" onClick={handleLoadingDialog}>
-          ローディング
+          {t("lab.buttonLoading")}
         </Button>
         <Button variant="secondary" onClick={() => setIsFormModalOpen(true)}>
-          フォームモーダル
+          {t("lab.buttonFormModal")}
         </Button>
       </div>
-      {infoResult ? <p className={styles.result}>結果: {infoResult}</p> : null}
+      {infoResult ? (
+        <p className={styles.result}>{t("lab.resultPrefix", { value: infoResult })}</p>
+      ) : null}
 
       <SuccessDialog
         isOpen={isSuccessDialogOpen}
         onClose={() => setIsSuccessDialogOpen(false)}
-        title="成功"
-        text="操作が完了しました"
+        title={t("lab.successTitle")}
+        text={t("lab.successText")}
       />
       <ErrorDialog
         isOpen={isErrorDialogOpen}
         onClose={() => setIsErrorDialogOpen(false)}
-        title="エラー"
-        text="エラーが発生しました"
+        title={t("lab.errorTitle")}
+        text={t("lab.errorText")}
       />
       <AlertDialog
         isOpen={isAlertDialogOpen}
         onClose={() => setIsAlertDialogOpen(false)}
-        title="確認"
-        text="この操作を実行しますか？"
-        confirmButtonText="実行する"
-        cancelButtonText="キャンセル"
-        onConfirm={() => setInfoResult("操作が確認されました")}
+        title={t("lab.alertTitle")}
+        text={t("lab.alertText")}
+        confirmButtonText={t("lab.alertConfirm")}
+        cancelButtonText={t("lab.alertCancel")}
+        onConfirm={() => setInfoResult(t("lab.alertConfirmedResult"))}
       />
       <LoadingDialog
         isOpen={isLoadingDialogOpen}
         onClose={() => setIsLoadingDialogOpen(false)}
-        title="処理中..."
-        text="データを読み込んでいます"
+        title={t("lab.loadingTitle")}
+        text={t("lab.loadingText")}
       />
       <FormModal
         isOpen={isFormModalOpen}
         onClose={() => setIsFormModalOpen(false)}
-        title="サンプル"
+        title={t("lab.formModalTitle")}
       >
         <div className={styles.formBody}>
-          <p>FormModal の中身サンプルです。実際のフォームは今後ここに載せます。</p>
+          <p>{t("lab.formModalBody")}</p>
           <Button variant="primary" onClick={() => setIsFormModalOpen(false)}>
-            閉じる
+            {t("lab.close")}
           </Button>
         </div>
       </FormModal>
