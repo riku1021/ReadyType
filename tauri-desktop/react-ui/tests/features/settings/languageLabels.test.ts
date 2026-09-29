@@ -5,7 +5,7 @@ import {
   languageFromOptionLabel,
   languageOptionLabels,
   SYSTEM_LANGUAGE_LABEL_KEY,
-} from "./languageLabels";
+} from "@/features/settings/languageLabels";
 
 describe("languageLabels", () => {
   const translate = (key: typeof SYSTEM_LANGUAGE_LABEL_KEY) => {

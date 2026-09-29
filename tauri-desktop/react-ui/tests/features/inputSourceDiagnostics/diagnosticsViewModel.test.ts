@@ -5,7 +5,7 @@ import {
   formatLatencyMicros,
   logsToTsv,
   toCondition,
-} from "./diagnosticsViewModel";
+} from "@/features/inputSourceDiagnostics/diagnosticsViewModel";
 
 describe("diagnosticsViewModel", () => {
   it("maps an ancestor DOM identifier to a contains condition", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { shouldRevealMainWindow } from "./revealMainWindow";
+import { shouldRevealMainWindow } from "@/hooks/revealMainWindow";
 
 describe("shouldRevealMainWindow", () => {
   it("shows the window for a manual launch", () => {

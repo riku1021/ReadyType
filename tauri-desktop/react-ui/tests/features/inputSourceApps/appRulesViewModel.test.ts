@@ -9,7 +9,7 @@ import {
   groupRulesByApp,
   resolvedInputSourceId,
   ruleTargetFromInputSourceId,
-} from "./appRulesViewModel";
+} from "@/features/inputSourceApps/appRulesViewModel";
 
 const t = ((key: string) => key) as typeof i18n.t;
 

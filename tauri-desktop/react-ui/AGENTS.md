@@ -14,6 +14,7 @@
 
 - `routes/` は薄い（スタイル・ビジネスロジック禁止）
 - feature の公開は `index.ts` 経由
+- 単体テストは `tests/`（`src` と同階層のミラー）。E2E は `e2e/`
 - ユーザー向け文言は `src/locales/` + `t()`（ハードコード禁止）。対応言語は `locales/registry.json`。UI 文言は全パック同時更新
 - `styled-system/` と `routeTree.gen.ts` は手編集禁止
 - 完了前: `pnpm fix && pnpm typecheck && pnpm test`

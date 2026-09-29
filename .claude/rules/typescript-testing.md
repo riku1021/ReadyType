@@ -38,15 +38,18 @@ pnpm test -- --coverage   # スクリプトがある場合
 
 ## File Organization
 
-- コロケーション: `foo.ts` の隣に `foo.test.ts`、または `__tests__/`
+- 配置: `tauri-desktop/react-ui/tests/` に `src/` と同じ相対パスをミラーする（例: `src/features/foo/bar.ts` → `tests/features/foo/bar.test.ts`）
+- `src` 内への `*.test.ts` コロケーションはしない
 - テストファイル名: `*.test.ts` / `*.test.tsx`
-- テスト専用ユーティリティは `src/test/` または既存の helper 配置に合わせる
+- 被テストモジュールは `@/` エイリアスで import する
+- E2E（Playwright）は `e2e/`（本ルールの Vitest 配置とは別）
+- テスト専用ユーティリティは `tests/` 配下、または既存の helper 配置に合わせる
 
 ## Arrange / Act / Assert
 
 ```ts
 import { describe, expect, it } from "vitest";
-import { formatLabel } from "./formatLabel";
+import { formatLabel } from "@/features/example/formatLabel";
 
 describe("formatLabel", () => {
   it("trims and returns label", () => {
@@ -81,7 +84,7 @@ describe("isValidName", () => {
 ```ts
 import { mockIPC } from "@tauri-apps/api/mocks";
 import { beforeEach, describe, expect, it } from "vitest";
-import { greet } from "./greet";
+import { greet } from "@/features/example/greet";
 
 describe("greet", () => {
   beforeEach(() => {
@@ -155,7 +158,7 @@ it("handles invoke failure", async () => {
 
 ## Checklist（新機能）
 
-1. 純粋ロジックに `*.test.ts` を追加
+1. 純粋ロジックに `tests/` 配下へ `*.test.ts` を追加（`src` ミラー）
 2. `invoke` を使うなら mockIPC ケースを追加
 3. `pnpm test` と `pnpm typecheck` を通す
 4. Rust 側で担保すべきルールは `cargo test` に寄せる

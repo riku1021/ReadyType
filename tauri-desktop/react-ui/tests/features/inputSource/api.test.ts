@@ -28,8 +28,8 @@ import {
   stopDebugCapture,
   updateRule,
   withConfiguredSource,
-} from "./api";
-import type { RuleDto, SwitcherStateDto } from "./types";
+} from "@/features/inputSource/api";
+import type { RuleDto, SwitcherStateDto } from "@/features/inputSource/types";
 
 beforeAll(() => {
   Object.defineProperty(globalThis, "window", {

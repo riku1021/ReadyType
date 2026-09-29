@@ -5,7 +5,7 @@ import {
   THEME_OPTIONS,
   themeFromLabel,
   themeFromTranslatedLabel,
-} from "./themeLabels";
+} from "@/features/settings/themeLabels";
 
 describe("themeLabels", () => {
   it("テーマ値を表示ラベルキーへ変換する", () => {

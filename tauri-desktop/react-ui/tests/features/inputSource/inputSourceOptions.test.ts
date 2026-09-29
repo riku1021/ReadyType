@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import "@/locales/i18n";
 
-import { buildInputSourceOptions } from "./inputSourceOptions";
+import { buildInputSourceOptions } from "@/features/inputSource/inputSourceOptions";
 
 describe("buildInputSourceOptions", () => {
   it("keeps a removed configured source visible and unavailable", () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getNavLinkByPath, navLinks } from "./navLinks";
+import { getNavLinkByPath, navLinks } from "@/features/navigation/navLinks";
 
 describe("getNavLinkByPath", () => {
   it("完全一致のパスを返す", () => {

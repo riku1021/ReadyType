@@ -6,7 +6,7 @@ import {
   INTERACTION_OKLCH_LIGHTNESS_DELTA,
   mixWithWhite,
   withAlpha,
-} from "./color-utils";
+} from "@/styles/utils/color-utils";
 
 describe("mixWithWhite", () => {
   it("白 100% は白になる", () => {
