@@ -11,10 +11,11 @@ description: >-
 
 ## 優先順位
 
-1. domain / use case の純粋ロジック
+1. domain / use case の純粋ロジック（**ソース隣接** `#[cfg(test)]`）
 2. port は Fake / ダブルで差し替え
 3. Tauri コマンドは薄いので最小限
 4. UI / IPC の見た目側は Vitest（フロント）
+5. FE の `tests/` ミラーにユニットを寄せない。クレート `tests/` は公開 API 統合のみ
 
 ## コマンド
 

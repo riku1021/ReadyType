@@ -43,6 +43,7 @@ pnpm test -- --coverage   # スクリプトがある場合
 - テストファイル名: `*.test.ts` / `*.test.tsx`
 - 被テストモジュールは `@/` エイリアスで import する
 - E2E（Playwright）は `e2e/`（本ルールの Vitest 配置とは別）
+- Rust（`rust-native`）は本配置を適用しない。ユニットはソース隣接 `#[cfg(test)]`（`.claude/rules/rust-testing.md`）
 - テスト専用ユーティリティは `tests/` 配下、または既存の helper 配置に合わせる
 
 ## Arrange / Act / Assert

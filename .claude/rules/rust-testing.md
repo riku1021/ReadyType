@@ -12,17 +12,22 @@ alwaysApply: false
 | 項目 | 内容 |
 |------|------|
 | Runner | `cargo test` |
-| 配置 | モジュール隣接 `#[cfg(test)] mod tests`、またはクレート `tests/` |
+| ユニット配置 | **モジュール隣接** `#[cfg(test)] mod tests`（公式デフォルト。`src` 内） |
+| 統合配置 | クレート直下 `tests/*.rs`（**公開 API のみ**。別クレート扱い） |
 | Mock | 手書きテストダブル、または必要なら mockall 等（追加は承認必須） |
 
 フロントの Vitest（`mockIPC`）と責務を分ける。Rust は domain / use case / infrastructure を、IPC 契約の UI 側は Vitest を担当する。
 
+**FE の `react-ui/tests/` ミラー配置を Rust にコピーしない。**  
+Cargo の `tests/` は Jest/Vitest の `tests/` と意味が違う（統合・ブラックボックス専用）。ユニットをそこに移すと private 検証ができず、テストのためだけの `pub` が増えやすい。
+
 ## 方針
 
-1. **domain / use case の純粋ロジックを最優先**でユニットテストする
+1. **domain / use case の純粋ロジックを最優先**でユニットテストする（隣接）
 2. port はモックまたはテストダブルで差し替え可能にする
 3. Tauri コマンドの薄いラッパは、必要なら結合寄りで最小限
 4. フレイキーな OS 依存テストは避け、抽象経由で検証する
+5. 公開 API を横断するシナリオが必要になったときだけクレート `tests/` を追加する
 
 ## Commands
 
@@ -44,7 +49,11 @@ cd tauri-desktop && cargo test
 
 ## Test File Organization
 
-### モジュール隣接（推奨・デフォルト）
+参照: [The Rust Book — Test Organization](https://doc.rust-lang.org/stable/book/ch11-03-test-organization.html)
+
+### ユニット（推奨・デフォルト）
+
+対象コードと**同じファイル**（または同じモジュール配下の `tests.rs`）に置く。`use super::*` で private を検証できる。
 
 ```rust
 #[cfg(test)]
@@ -65,9 +74,25 @@ mod tests {
 }
 ```
 
-### 統合テスト
+ファイルが長くなったら、モジュール分割を優先する。どうしてもテストだけ切り出す場合は **同じモジュール内**で:
 
-大きくなったら `tauri-desktop/rust-native/tests/` に配置を検討する。
+```text
+src/foo/
+  mod.rs          # 本番
+  tests.rs        # #[cfg(test)] mod tests; から読む（まだクレート内部）
+```
+
+空の `rust-native/tests/` を先に作らない。
+
+### 統合テスト（公開 API・複数モジュール連携）
+
+`tauri-desktop/rust-native/tests/*.rs` は **外からクレートを使う**テスト専用。例: 設定の読み書き＋スイッチ状態など、公開境界をまたぐシナリオ。
+
+- 各 `tests/*.rs` は別クレートとしてコンパイルされる
+- private / `pub(crate)` には届かない（届くように本番 API を広げない）
+- 共有ヘルパは `tests/common/mod.rs`（`tests/common.rs` にしない）
+
+ユニットで足りるロジックを統合に重複させない。
 
 ## Arrange / Act / Assert
 
@@ -196,6 +221,8 @@ fn use_case_propagates_platform_error() {
 - テスト間で共有ミュータブル状態
 - 本番コードにテスト専用の公開 API を増やす
 - フロントと重複する IPC 契約テストを両側で過剰に持つ
+- FE の `tests/` ミラーに倣ってユニットをクレート `tests/` に移す
+- 中身のない `tests/` ディレクトリだけを先に置く
 
 ## Checklist（新機能）
 
