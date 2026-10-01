@@ -15,7 +15,10 @@
       "!pnpm-lock.yaml",
       "!**/*-lock.yaml",
       "!**/dist",
-      "!**/build"
+      "!**/build",
+      "!**/playwright-report",
+      "!**/test-results",
+      "!**/blob-report"
     ],
     "ignoreUnknown": false
   },

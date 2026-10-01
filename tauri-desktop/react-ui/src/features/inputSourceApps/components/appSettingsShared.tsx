@@ -8,7 +8,11 @@ import {
   IoTerminal,
 } from "react-icons/io5";
 
-import { getAppIcons, type InputSourceOption } from "@/features/inputSource";
+import {
+  getAppIcons,
+  type InputSourceOption,
+  visibleInputSourceOptions,
+} from "@/features/inputSource";
 import { cx } from "@/styled-system/css";
 
 import type { RuleKind } from "../appRulesViewModel";
@@ -94,16 +98,17 @@ export function LanguageSelect({
   onChange: (value: string) => void;
   wide?: boolean;
 }) {
-  const hasOption = options.some((option) => option.value === value);
+  const visibleOptions = visibleInputSourceOptions(options, value);
+  const hasOption = visibleOptions.some((option) => option.value === value);
   return (
     <select
       className={cx(styles.select, wide ? styles.selectWide : undefined)}
       aria-label={label}
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      disabled={options.length === 0}
+      disabled={visibleOptions.length === 0}
     >
-      {options.map((option) => (
+      {visibleOptions.map((option) => (
         <option key={option.value} value={option.value}>
           {option.label}
         </option>

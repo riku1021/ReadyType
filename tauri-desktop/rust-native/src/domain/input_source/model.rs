@@ -1,3 +1,5 @@
+use std::collections::{BTreeMap, BTreeSet};
+
 use crate::domain::errors::DomainError;
 
 fn required(value: &str, field: &str) -> Result<String, DomainError> {
@@ -58,6 +60,69 @@ impl LanguageTag {
 
     pub fn ja() -> Self {
         Self("ja".to_owned())
+    }
+}
+
+/// IME のラテン／英数モードか（Apple / Google が使う `.Roman` サフィックス）。
+/// 言語名は見ない。`.FullWidthRoman` は全角英数で別扱い。
+pub fn is_ime_latin_mode(source_id: &str) -> bool {
+    let id = source_id.to_ascii_lowercase();
+    if id.ends_with(".fullwidthroman") {
+        return false;
+    }
+    id.ends_with(".roman")
+}
+
+fn parent_input_source_prefix(source_id: &str) -> Option<&str> {
+    source_id.rsplit_once('.').map(|(prefix, _)| prefix)
+}
+
+/// TIS が IME 英数モードを `en` と報告するケースを、同一プレフィックス家族の言語へ寄せる。
+/// 家族内の非 `en` がただ一つのときだけ書き換え（言語ホワイトリストなし）。
+pub fn canonicalize_language_codes_by_family(entries: &mut [(String, Option<String>)]) {
+    let mut family_non_en: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for (id, language) in entries.iter() {
+        let Some(prefix) = parent_input_source_prefix(id.as_str()) else {
+            continue;
+        };
+        let Some(code) = language.as_deref() else {
+            continue;
+        };
+        let Ok(tag) = LanguageTag::parse(code) else {
+            continue;
+        };
+        if tag.as_str() == "en" {
+            continue;
+        }
+        family_non_en
+            .entry(prefix.to_owned())
+            .or_default()
+            .insert(tag.as_str().to_owned());
+    }
+
+    for (id, language) in entries.iter_mut() {
+        if !is_ime_latin_mode(id.as_str()) {
+            continue;
+        }
+        let reported_is_en = language
+            .as_deref()
+            .and_then(|code| LanguageTag::parse(code).ok())
+            .is_some_and(|tag| tag.as_str() == "en");
+        if !reported_is_en {
+            continue;
+        }
+        let Some(prefix) = parent_input_source_prefix(id.as_str()) else {
+            continue;
+        };
+        let Some(non_en) = family_non_en.get(prefix) else {
+            continue;
+        };
+        if non_en.len() != 1 {
+            continue;
+        }
+        if let Some(only) = non_en.iter().next() {
+            *language = Some(only.clone());
+        }
     }
 }
 

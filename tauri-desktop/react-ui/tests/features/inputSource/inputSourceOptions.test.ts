@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import "@/locales/i18n";
 
-import { buildInputSourceOptions } from "@/features/inputSource/inputSourceOptions";
+import {
+  buildInputSourceOptions,
+  visibleInputSourceOptions,
+} from "@/features/inputSource/inputSourceOptions";
 
 describe("buildInputSourceOptions", () => {
   it("keeps a removed configured source visible and unavailable", () => {
@@ -82,5 +85,28 @@ describe("buildInputSourceOptions", () => {
       ["missing.a", "missing.b"]
     );
     expect(options.map((option) => option.value).sort()).toEqual(["en", "missing.a", "missing.b"]);
+  });
+});
+
+describe("visibleInputSourceOptions", () => {
+  const options = [
+    { value: "en", label: "英語", available: true },
+    { value: "removed", label: "removed（利用不可）", available: false },
+    { value: "ja", label: "日本語", available: true },
+  ];
+
+  it("hides unavailable options that are not the current value", () => {
+    expect(visibleInputSourceOptions(options, "ja").map((option) => option.value)).toEqual([
+      "en",
+      "ja",
+    ]);
+  });
+
+  it("keeps an unavailable option when it is the current value", () => {
+    expect(visibleInputSourceOptions(options, "removed").map((option) => option.value)).toEqual([
+      "en",
+      "removed",
+      "ja",
+    ]);
   });
 });

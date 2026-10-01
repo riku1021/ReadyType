@@ -45,6 +45,14 @@ export function buildInputSourceOptions(
     .sort((left, right) => left.label.localeCompare(right.label, i18n.language));
 }
 
+/** 現在値以外の利用不可ソースは選択肢から除外する。 */
+export function visibleInputSourceOptions(
+  options: readonly InputSourceOption[],
+  currentValue: string
+): InputSourceOption[] {
+  return options.filter((option) => option.available || option.value === currentValue);
+}
+
 export function languageDisplayName(languageCode: string): string {
   try {
     const languageNames = new Intl.DisplayNames([i18n.language], { type: "language" });

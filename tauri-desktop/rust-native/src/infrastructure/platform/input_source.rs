@@ -1,6 +1,6 @@
 use crate::{
     application::ports::input_source::{AvailableInputSource, GatewayError, InputSourceGateway},
-    domain::input_source::InputSourceId,
+    domain::input_source::{canonicalize_language_codes_by_family, InputSourceId},
 };
 
 pub struct NativeInputSource<H> {
@@ -75,13 +75,20 @@ impl<B: TisBackend> InputSourceGateway for MacOsInputSourceGateway<B> {
         if refresh {
             self.refresh()?;
         }
+        let mut entries = self
+            .cache
+            .iter()
+            .map(|source| (source.id.as_str().to_owned(), source.language_code.clone()))
+            .collect::<Vec<_>>();
+        canonicalize_language_codes_by_family(&mut entries);
         Ok(self
             .cache
             .iter()
-            .map(|source| AvailableInputSource {
+            .zip(entries.into_iter().map(|(_, language_code)| language_code))
+            .map(|(source, language_code)| AvailableInputSource {
                 id: source.id.clone(),
                 name: source.name.clone(),
-                language_code: source.language_code.clone(),
+                language_code,
                 available: true,
             })
             .collect())

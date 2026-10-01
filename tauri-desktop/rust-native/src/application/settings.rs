@@ -80,19 +80,7 @@ pub fn seed_language_preferences_from_sources(
     sources: &[crate::application::ports::input_source::AvailableInputSource],
     current: Option<&InputSourceId>,
 ) -> BTreeMap<LanguageTag, Option<InputSourceId>> {
-    let mut by_language: BTreeMap<
-        LanguageTag,
-        Vec<&crate::application::ports::input_source::AvailableInputSource>,
-    > = BTreeMap::new();
-    for source in sources {
-        let Some(code) = source.language_code.as_deref() else {
-            continue;
-        };
-        let Ok(tag) = LanguageTag::parse(code) else {
-            continue;
-        };
-        by_language.entry(tag).or_default().push(source);
-    }
+    let by_language = group_sources_by_language(sources);
 
     let mut preferences = BTreeMap::new();
     if let Some(current_id) = current {
@@ -114,13 +102,69 @@ pub fn seed_language_preferences_from_sources(
     preferences
 }
 
+/// OS 一覧と突き合わせ、消失・言語不一致の preference を差し替える。
+pub fn reconcile_language_preferences(
+    preferences: &BTreeMap<LanguageTag, Option<InputSourceId>>,
+    sources: &[crate::application::ports::input_source::AvailableInputSource],
+) -> BTreeMap<LanguageTag, Option<InputSourceId>> {
+    let by_language = group_sources_by_language(sources);
+    let mut result = BTreeMap::new();
+    for (tag, preferred) in preferences {
+        let still_valid = preferred.as_ref().is_some_and(|id| {
+            sources.iter().any(|source| {
+                source.available
+                    && &source.id == id
+                    && source
+                        .language_code
+                        .as_deref()
+                        .and_then(|code| LanguageTag::parse(code).ok())
+                        .as_ref()
+                        == Some(tag)
+            })
+        });
+        if still_valid {
+            result.insert(tag.clone(), preferred.clone());
+        } else {
+            let replacement = by_language
+                .get(tag)
+                .and_then(|group| pick_default_source_id(group));
+            result.insert(tag.clone(), replacement);
+        }
+    }
+    result
+}
+
+fn group_sources_by_language(
+    sources: &[crate::application::ports::input_source::AvailableInputSource],
+) -> BTreeMap<LanguageTag, Vec<&crate::application::ports::input_source::AvailableInputSource>> {
+    let mut by_language: BTreeMap<
+        LanguageTag,
+        Vec<&crate::application::ports::input_source::AvailableInputSource>,
+    > = BTreeMap::new();
+    for source in sources {
+        let Some(code) = source.language_code.as_deref() else {
+            continue;
+        };
+        let Ok(tag) = LanguageTag::parse(code) else {
+            continue;
+        };
+        by_language.entry(tag).or_default().push(source);
+    }
+    by_language
+}
+
 fn pick_default_source_id(
     group: &[&crate::application::ports::input_source::AvailableInputSource],
 ) -> Option<InputSourceId> {
-    group
+    let available = group
         .iter()
-        .find(|source| source.available)
-        .or_else(|| group.first())
+        .copied()
+        .filter(|source| source.available)
+        .collect::<Vec<_>>();
+    available
+        .iter()
+        .find(|source| !crate::domain::input_source::is_ime_latin_mode(source.id.as_str()))
+        .or_else(|| available.first())
         .map(|source| source.id.clone())
 }
 
@@ -141,12 +185,14 @@ fn resolve_os_ui_locale() -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        seed_language_preferences_from_sources, SwitcherSettings, CURRENT_SCHEMA_VERSION,
-        DEFAULT_UI_LOCALE_PREFERENCE,
+        reconcile_language_preferences, seed_language_preferences_from_sources, SwitcherSettings,
+        CURRENT_SCHEMA_VERSION, DEFAULT_UI_LOCALE_PREFERENCE,
     };
     use crate::{
         application::ports::input_source::AvailableInputSource,
-        domain::input_source::{InputSourceId, LanguageTag},
+        domain::input_source::{
+            canonicalize_language_codes_by_family, is_ime_latin_mode, InputSourceId, LanguageTag,
+        },
     };
 
     #[test]
@@ -228,6 +274,115 @@ mod tests {
         }];
         let seeded = seed_language_preferences_from_sources(&sources, None);
         assert_eq!(seeded.get(&LanguageTag::en()).cloned().flatten(), Some(en));
+    }
+
+    #[test]
+    fn family_canonicalization_maps_ime_latin_modes_without_language_whitelist() {
+        assert!(is_ime_latin_mode("com.google.inputmethod.Japanese.Roman"));
+        assert!(is_ime_latin_mode("com.apple.inputmethod.Korean.Roman"));
+        assert!(!is_ime_latin_mode(
+            "com.google.inputmethod.Japanese.FullWidthRoman"
+        ));
+        assert!(!is_ime_latin_mode("com.apple.keylayout.ABC"));
+
+        let mut entries = vec![
+            ("com.apple.keylayout.ABC".to_owned(), Some("en".to_owned())),
+            (
+                "com.google.inputmethod.Japanese.base".to_owned(),
+                Some("ja".to_owned()),
+            ),
+            (
+                "com.google.inputmethod.Japanese.Roman".to_owned(),
+                Some("en".to_owned()),
+            ),
+            (
+                "com.apple.inputmethod.Korean.2SetKorean".to_owned(),
+                Some("ko".to_owned()),
+            ),
+            (
+                "com.apple.inputmethod.Korean.Roman".to_owned(),
+                Some("en".to_owned()),
+            ),
+            (
+                "com.apple.keylayout.ABC-AZERTY".to_owned(),
+                Some("fr".to_owned()),
+            ),
+        ];
+        canonicalize_language_codes_by_family(&mut entries);
+
+        assert_eq!(entries[0].1.as_deref(), Some("en")); // real English layout stays
+        assert_eq!(entries[1].1.as_deref(), Some("ja"));
+        assert_eq!(entries[2].1.as_deref(), Some("ja")); // Japanese IME latin → ja
+        assert_eq!(entries[3].1.as_deref(), Some("ko"));
+        assert_eq!(entries[4].1.as_deref(), Some("ko")); // Korean IME latin → ko
+        assert_eq!(entries[5].1.as_deref(), Some("fr"));
+    }
+
+    #[test]
+    fn reconcile_replaces_unavailable_or_mismatched_preferences() {
+        let abc = InputSourceId::parse("com.apple.keylayout.ABC").expect("abc");
+        let roman = InputSourceId::parse("com.google.inputmethod.Japanese.Roman").expect("roman");
+        let base = InputSourceId::parse("com.google.inputmethod.Japanese.base").expect("base");
+        let mut preferences = std::collections::BTreeMap::new();
+        preferences.insert(LanguageTag::en(), Some(roman.clone()));
+        preferences.insert(LanguageTag::ja(), Some(base.clone()));
+
+        let sources = vec![
+            AvailableInputSource {
+                id: abc.clone(),
+                name: "ABC".to_owned(),
+                language_code: Some("en".to_owned()),
+                available: true,
+            },
+            AvailableInputSource {
+                id: base.clone(),
+                name: "Hiragana".to_owned(),
+                language_code: Some("ja".to_owned()),
+                available: true,
+            },
+            // Roman is available but classified as ja (canonical), so invalid for en.
+            AvailableInputSource {
+                id: roman,
+                name: "Alphanumeric".to_owned(),
+                language_code: Some("ja".to_owned()),
+                available: true,
+            },
+        ];
+
+        let reconciled = reconcile_language_preferences(&preferences, &sources);
+        assert_eq!(
+            reconciled.get(&LanguageTag::en()).cloned().flatten(),
+            Some(abc)
+        );
+        assert_eq!(
+            reconciled.get(&LanguageTag::ja()).cloned().flatten(),
+            Some(base)
+        );
+    }
+
+    #[test]
+    fn pick_default_skips_ime_latin_modes() {
+        let roman = InputSourceId::parse("com.google.inputmethod.Japanese.Roman").expect("roman");
+        let base = InputSourceId::parse("com.google.inputmethod.Japanese.base").expect("base");
+        let sources = vec![
+            AvailableInputSource {
+                id: roman,
+                name: "Alphanumeric".to_owned(),
+                language_code: Some("ja".to_owned()),
+                available: true,
+            },
+            AvailableInputSource {
+                id: base.clone(),
+                name: "Hiragana".to_owned(),
+                language_code: Some("ja".to_owned()),
+                available: true,
+            },
+        ];
+        let seeded = seed_language_preferences_from_sources(&sources, None);
+        assert_eq!(
+            seeded.get(&LanguageTag::ja()).cloned().flatten(),
+            Some(base)
+        );
     }
 
     #[test]

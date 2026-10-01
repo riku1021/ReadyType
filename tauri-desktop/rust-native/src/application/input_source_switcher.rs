@@ -109,18 +109,24 @@ where
             .validate()
             .map_err(|error| ApplicationError::InvalidSettings(error.to_string()))?;
         let mut settings = settings;
-        if settings.language_preferences.is_empty() {
-            if let Ok(mut guard) = gateway.lock() {
-                if let Ok(sources) = guard.list(false) {
+        if let Ok(mut guard) = gateway.lock() {
+            if let Ok(sources) = guard.list(false) {
+                let next_preferences = if settings.language_preferences.is_empty() {
                     let current = guard.current().ok();
-                    let seeded = super::settings::seed_language_preferences_from_sources(
+                    super::settings::seed_language_preferences_from_sources(
                         &sources,
                         current.as_ref(),
-                    );
-                    if !seeded.is_empty() {
-                        settings.language_preferences = seeded;
-                        repository.save(&settings)?;
-                    }
+                    )
+                } else {
+                    super::settings::reconcile_language_preferences(
+                        &settings.language_preferences,
+                        &sources,
+                    )
+                };
+                if !next_preferences.is_empty() && next_preferences != settings.language_preferences
+                {
+                    settings.language_preferences = next_preferences;
+                    repository.save(&settings)?;
                 }
             }
         }
