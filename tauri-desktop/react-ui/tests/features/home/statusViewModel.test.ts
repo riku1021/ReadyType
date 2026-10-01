@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
-
+import { toStatusViewModel } from "@/features/home/statusViewModel";
 import type { InputSourceViewState } from "@/features/inputSource";
 import type i18n from "@/locales/i18n";
-
-import { toStatusViewModel } from "@/features/home/statusViewModel";
 
 function stateWithStatus(
   status: "running" | "snoozed" | "permissionRequired" | "unsupported"

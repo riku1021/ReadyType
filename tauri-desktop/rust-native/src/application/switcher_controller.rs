@@ -135,15 +135,7 @@ impl SwitcherController {
         });
         let worker = thread::Builder::new()
             .name("readytype-switcher".to_owned())
-            .spawn(move || {
-                run_worker(
-                    receiver,
-                    switcher,
-                    last_snapshot,
-                    publisher,
-                    ui_locale,
-                )
-            })
+            .spawn(move || run_worker(receiver, switcher, last_snapshot, publisher, ui_locale))
             .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
         *controller.lock_worker()? = Some(worker);
         Ok(controller)

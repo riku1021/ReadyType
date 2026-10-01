@@ -30,8 +30,7 @@ impl UiLocaleCache {
 }
 
 fn encode(locale: &str) -> u8 {
-    let index = tray_strings::index_of(locale)
-        .unwrap_or_else(tray_strings::default_resolved_index);
+    let index = tray_strings::index_of(locale).unwrap_or_else(tray_strings::default_resolved_index);
     u8::try_from(index).expect("ui locale count fits in u8")
 }
 

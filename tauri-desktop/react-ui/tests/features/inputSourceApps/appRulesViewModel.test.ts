@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import type { RuleDto } from "@/features/inputSource";
-import type i18n from "@/locales/i18n";
-
 import {
   appDisplayName,
   displayRuleLabel,
@@ -10,6 +8,7 @@ import {
   resolvedInputSourceId,
   ruleTargetFromInputSourceId,
 } from "@/features/inputSourceApps/appRulesViewModel";
+import type i18n from "@/locales/i18n";
 
 const t = ((key: string) => key) as typeof i18n.t;
 

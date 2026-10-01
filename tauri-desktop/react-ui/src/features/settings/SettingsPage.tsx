@@ -11,7 +11,11 @@ import { SettingsSection } from "@/components/SettingsSection";
 import { useInputSourceState } from "@/features/inputSource";
 import { isUiLocalePreference, type UiLocalePreference } from "@/locales/i18n";
 
-import { getLanguageOptionLabel, languageFromOptionLabel, languageOptionLabels } from "./languageLabels";
+import {
+  getLanguageOptionLabel,
+  languageFromOptionLabel,
+  languageOptionLabels,
+} from "./languageLabels";
 import * as styles from "./SettingsPage.styles";
 import { getThemeLabel, THEME_OPTIONS, themeFromTranslatedLabel } from "./themeLabels";
 

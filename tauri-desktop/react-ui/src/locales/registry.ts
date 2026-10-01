@@ -20,10 +20,7 @@ export const SUPPORTED_LANGUAGES = UI_LOCALE_REGISTRY.locales.map(
   (locale) => locale.code
 ) as readonly string[];
 
-export const LANGUAGE_PREFERENCES = [
-  SYSTEM_LANGUAGE_PREFERENCE,
-  ...SUPPORTED_LANGUAGES,
-] as const;
+export const LANGUAGE_PREFERENCES = [SYSTEM_LANGUAGE_PREFERENCE, ...SUPPORTED_LANGUAGES] as const;
 
 export type ResolvedUiLocale = (typeof SUPPORTED_LANGUAGES)[number];
 export type UiLocalePreference = (typeof LANGUAGE_PREFERENCES)[number];

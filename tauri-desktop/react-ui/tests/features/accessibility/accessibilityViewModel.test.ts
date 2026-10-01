@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import type i18n from "@/locales/i18n";
-
 import { toAccessibilityViewModel } from "@/features/accessibility/accessibilityViewModel";
+import type i18n from "@/locales/i18n";
 
 const t = ((key: string) => key) as typeof i18n.t;
 

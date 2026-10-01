@@ -5,10 +5,10 @@ import {
   isResolvedUiLocale,
   isUiLocalePreference,
   LANGUAGE_PREFERENCES,
+  type ResolvedUiLocale,
   SUPPORTED_LANGUAGES,
   SYSTEM_LANGUAGE_PREFERENCE,
   UI_LOCALE_REGISTRY,
-  type ResolvedUiLocale,
   type UiLocalePreference,
 } from "@/locales/registry";
 
@@ -16,10 +16,10 @@ export {
   isResolvedUiLocale,
   isUiLocalePreference,
   LANGUAGE_PREFERENCES,
+  type ResolvedUiLocale,
   SUPPORTED_LANGUAGES,
   SYSTEM_LANGUAGE_PREFERENCE,
   UI_LOCALE_REGISTRY,
-  type ResolvedUiLocale,
   type UiLocalePreference,
 };
 

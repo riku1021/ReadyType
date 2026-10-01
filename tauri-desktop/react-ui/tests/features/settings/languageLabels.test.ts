@@ -4,7 +4,7 @@ import {
   getLanguageOptionLabel,
   languageFromOptionLabel,
   languageOptionLabels,
-  SYSTEM_LANGUAGE_LABEL_KEY,
+  type SYSTEM_LANGUAGE_LABEL_KEY,
 } from "@/features/settings/languageLabels";
 
 describe("languageLabels", () => {
