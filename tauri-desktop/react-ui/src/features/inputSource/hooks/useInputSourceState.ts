@@ -32,6 +32,8 @@ import {
   setInputSourceSwitcherEnabled,
   setSnooze as setSnoozeApi,
   setUiLocale as setUiLocaleApi,
+  shouldApplyFetchedRules,
+  shouldRefreshRulesOnStateEvent,
   snoozeInputSourceSwitcherIndefinitely as snoozeIndefinitelyApi,
   startDebugCapture as startDebugCaptureApi,
   stopDebugCapture as stopDebugCaptureApi,
@@ -118,13 +120,42 @@ export function useInputSourceBootstrap() {
 
       try {
         unlisten = await listen<StateEventDto>(INPUT_SOURCE_STATE_EVENT, (event) => {
+          let shouldRefreshRules = false;
           setFeature((current) => {
+            const previousRulesVersion = current.switcher?.rulesVersion;
             const nextSwitcher = applyNewerStateEvent(current.switcher, event.payload);
-            if (nextSwitcher === current.switcher) {
+            const eventAccepted = nextSwitcher !== current.switcher;
+            shouldRefreshRules = shouldRefreshRulesOnStateEvent(
+              previousRulesVersion,
+              nextSwitcher,
+              eventAccepted
+            );
+            if (!eventAccepted) {
               return current;
             }
             return { ...current, switcher: nextSwitcher };
           });
+          if (!shouldRefreshRules || cancelled) {
+            return;
+          }
+          const expectedRulesVersion = event.payload.state.rulesVersion;
+          void listRules()
+            .then((rules) => {
+              if (cancelled) {
+                return;
+              }
+              setFeature((current) => {
+                if (
+                  !shouldApplyFetchedRules(current.switcher?.rulesVersion, expectedRulesVersion)
+                ) {
+                  return current;
+                }
+                return { ...current, rules };
+              });
+            })
+            .catch(() => {
+              // 一時的な IPC 失敗は次回イベント / 手動操作に委ねる
+            });
         });
       } catch {
         // ブラウザ単体起動など

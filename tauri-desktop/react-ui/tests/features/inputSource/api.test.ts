@@ -23,6 +23,8 @@ import {
   setDebugLogging,
   setInputSourceSwitcherEnabled,
   setSnooze,
+  shouldApplyFetchedRules,
+  shouldRefreshRulesOnStateEvent,
   snoozeInputSourceSwitcherIndefinitely,
   startDebugCapture,
   stopDebugCapture,
@@ -189,5 +191,20 @@ describe("state helpers", () => {
       languageCode: null,
       available: false,
     });
+  });
+
+  it("refreshes rules only when an accepted event changes rulesVersion", () => {
+    const next = { ...stateAtVersion(6), rulesVersion: 2 };
+    expect(shouldRefreshRulesOnStateEvent(1, next, true)).toBe(true);
+    expect(shouldRefreshRulesOnStateEvent(2, next, true)).toBe(false);
+    expect(shouldRefreshRulesOnStateEvent(1, next, false)).toBe(false);
+    expect(shouldRefreshRulesOnStateEvent(undefined, next, true)).toBe(true);
+    expect(shouldRefreshRulesOnStateEvent(1, null, true)).toBe(false);
+  });
+
+  it("applies fetched rules only for the still-current rulesVersion", () => {
+    expect(shouldApplyFetchedRules(3, 3)).toBe(true);
+    expect(shouldApplyFetchedRules(4, 3)).toBe(false);
+    expect(shouldApplyFetchedRules(undefined, 3)).toBe(false);
   });
 });

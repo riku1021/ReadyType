@@ -191,6 +191,20 @@
     "dark": "深色",
     "system": "使用系统设置"
   },
+  "quickSet": {
+    "title": "快速设置",
+    "chooseLanguage": "此输入框使用的输入源",
+    "currentSetting": "当前设置",
+    "changeTo": "更改为 {{language}}",
+    "advanced": "高级设置...",
+    "editRule": "编辑规则...",
+    "saved": "已设为 {{language}}",
+    "fieldFallback": "输入栏",
+    "waiting": "正在获取目标…",
+    "noLanguages": "尚未配置首选输入语言。请在设置中确认优先输入源。",
+    "loadFailed": "无法打开快速设置",
+    "saveFailed": "保存失败"
+  },
   "rules": {
     "conditionsNone": "无条件（匹配应用）",
     "defaultTitle": "默认",

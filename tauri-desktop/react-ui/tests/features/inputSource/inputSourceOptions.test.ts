@@ -1,13 +1,14 @@
-import { describe, expect, it } from "vitest";
-
-import "@/locales/i18n";
-
+import { beforeAll, describe, expect, it } from "vitest";
 import {
   buildInputSourceOptions,
   visibleInputSourceOptions,
 } from "@/features/inputSource/inputSourceOptions";
+import i18n from "@/locales/i18n";
 
 describe("buildInputSourceOptions", () => {
+  beforeAll(async () => {
+    await i18n.changeLanguage("ja");
+  });
   it("keeps a removed configured source visible and unavailable", () => {
     expect(
       buildInputSourceOptions(

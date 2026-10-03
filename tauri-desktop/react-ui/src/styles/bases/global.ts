@@ -40,4 +40,14 @@ export const globalCss = {
   "body.no-scroll": {
     overflow: "hidden",
   },
+  /** Quick Set 透過窓: NSWindow clear + CSS 角丸を見せる */
+  'html[data-window="quick-set"]': {
+    backgroundColor: "transparent",
+  },
+  'html[data-window="quick-set"] body': {
+    backgroundColor: "transparent",
+  },
+  'html[data-window="quick-set"] #root': {
+    backgroundColor: "transparent",
+  },
 };

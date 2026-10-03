@@ -191,6 +191,20 @@
     "dark": "Dark",
     "system": "Use system setting"
   },
+  "quickSet": {
+    "title": "Quick set",
+    "chooseLanguage": "Input source for this field",
+    "currentSetting": "Current setting",
+    "changeTo": "Change to {{language}}",
+    "advanced": "Advanced settings...",
+    "editRule": "Edit rule...",
+    "saved": "Set to {{language}}",
+    "fieldFallback": "Field",
+    "waiting": "Detecting target…",
+    "noLanguages": "No preferred languages are configured. Check preferred input sources in Settings.",
+    "loadFailed": "Could not open Quick Set",
+    "saveFailed": "Failed to save"
+  },
   "rules": {
     "conditionsNone": "No conditions (app match)",
     "defaultTitle": "Default",

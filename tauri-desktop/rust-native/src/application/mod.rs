@@ -3,6 +3,7 @@
 
 pub mod input_source_switcher;
 pub mod ports;
+pub mod quick_set;
 pub mod settings;
 pub mod switcher_controller;
 pub mod switcher_state;

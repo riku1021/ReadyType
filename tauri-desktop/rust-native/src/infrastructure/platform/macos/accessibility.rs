@@ -2,9 +2,11 @@ use std::ptr::NonNull;
 
 use objc2_application_services::{
     kAXTrustedCheckOptionPrompt, AXError, AXIsProcessTrusted, AXIsProcessTrustedWithOptions,
-    AXUIElement,
+    AXUIElement, AXValue, AXValueType,
 };
-use objc2_core_foundation::{CFArray, CFBoolean, CFDictionary, CFRetained, CFString, CFType};
+use objc2_core_foundation::{
+    CFArray, CFBoolean, CFDictionary, CFRetained, CFString, CFType, CGPoint, CGSize,
+};
 
 use crate::domain::input_source::{AxAttribute, AxElementSnapshot};
 
@@ -12,6 +14,16 @@ use super::super::focus_monitor::{AttributePlan, MAX_PARENT_DEPTH};
 
 const FOCUSED_ELEMENT: &str = "AXFocusedUIElement";
 const PARENT: &str = "AXParent";
+const POSITION: &str = "AXPosition";
+const SIZE: &str = "AXSize";
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ElementFrame {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
 
 pub fn is_process_trusted() -> bool {
     // SAFETY: this function has no parameters and only reads the current process trust state.
@@ -55,6 +67,24 @@ pub fn snapshot_elements(
         current = parent;
     }
     result
+}
+
+/// Focused element frame in AX / Core Graphics global coordinates.
+///
+/// Per `kAXPositionAttribute`: origin is the **top-left** of the display that
+/// shows the menu bar; X increases right, Y increases **downward** (pixels).
+/// This matches Tauri `LogicalPosition` (top-left), so no Y-flip is applied.
+pub fn focused_element_frame(pid: i32) -> Option<ElementFrame> {
+    let application = application_element(pid);
+    let focused = copy_element(&application, FOCUSED_ELEMENT)?;
+    let position = copy_ax_point(&focused, POSITION)?;
+    let size = copy_ax_size(&focused, SIZE)?;
+    Some(ElementFrame {
+        x: position.x,
+        y: position.y,
+        width: size.width,
+        height: size.height,
+    })
 }
 
 fn attribute_name(attribute: AxAttribute) -> &'static str {
@@ -107,4 +137,22 @@ fn copy_attribute_text(element: &AXUIElement, name: &'static str) -> Option<Stri
     } else {
         Some(parts.join(" "))
     }
+}
+
+fn copy_ax_point(element: &AXUIElement, name: &'static str) -> Option<CGPoint> {
+    let value = copy_value(element, name)?;
+    let ax_value = value.downcast::<AXValue>().ok()?;
+    let mut point = CGPoint::ZERO;
+    // SAFETY: out pointer is a valid CGPoint; type matches AXPosition.
+    let ok = unsafe { ax_value.value(AXValueType::CGPoint, NonNull::from(&mut point).cast()) };
+    ok.then_some(point)
+}
+
+fn copy_ax_size(element: &AXUIElement, name: &'static str) -> Option<CGSize> {
+    let value = copy_value(element, name)?;
+    let ax_value = value.downcast::<AXValue>().ok()?;
+    let mut size = CGSize::ZERO;
+    // SAFETY: out pointer is a valid CGSize; type matches AXSize.
+    let ok = unsafe { ax_value.value(AXValueType::CGSize, NonNull::from(&mut size).cast()) };
+    ok.then_some(size)
 }

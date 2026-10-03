@@ -30,4 +30,8 @@ commands.allow = [
   "list_switch_logs",
   "clear_switch_logs",
   "get_app_icons",
+  "get_quick_set_session",
+  "apply_quick_set_language",
+  "hide_quick_set",
+  "open_quick_set_advanced",
 ]

@@ -11,7 +11,7 @@ use std::{
 };
 
 use crate::domain::input_source::{
-    default_rules, AxAttribute, FocusRule, FocusSnapshot, PlatformAppId,
+    default_rules, AxAttribute, FocusRule, FocusSnapshot, LanguageTag, PlatformAppId,
 };
 
 use super::{
@@ -24,6 +24,10 @@ use super::{
         input_source::{AvailableInputSource, InputSourceGateway},
         settings_repository::SettingsRepository,
         switcher_events::SwitcherEventPublisher,
+    },
+    quick_set::{
+        build_created_rule, build_quick_set_session, build_updated_rule, next_quick_set_priority,
+        QuickSetSession,
     },
     settings::SwitcherSettings,
     switcher_state::{SwitchLogEntry, SwitcherState},
@@ -98,6 +102,7 @@ pub struct SwitcherController {
     monitoring: AtomicBool,
     debug_capture: AtomicBool,
     last_snapshot: Arc<Mutex<Option<FocusSnapshot>>>,
+    quick_set_session: Mutex<Option<QuickSetSession>>,
     publisher: Arc<dyn SwitcherEventPublisher>,
     ui_locale: Arc<UiLocaleCache>,
 }
@@ -130,6 +135,7 @@ impl SwitcherController {
             monitoring: AtomicBool::new(false),
             debug_capture: AtomicBool::new(false),
             last_snapshot: Arc::clone(&last_snapshot),
+            quick_set_session: Mutex::new(None),
             publisher: Arc::clone(&publisher),
             ui_locale: Arc::clone(&ui_locale),
         });
@@ -379,6 +385,78 @@ impl SwitcherController {
         Ok(self.lock_last_snapshot()?.clone())
     }
 
+    /// Capture current focus into a Quick Set session (call before showing the popover window).
+    pub fn prepare_quick_set_session(self: &Arc<Self>) -> Result<QuickSetSession, ControllerError> {
+        let snapshot = self
+            .lock_last_snapshot()?
+            .clone()
+            .ok_or_else(|| ControllerError::InvalidRequest("no focused input field".to_owned()))?;
+        if snapshot.elements().is_empty() {
+            return Err(ControllerError::InvalidRequest(
+                "no focused input field".to_owned(),
+            ));
+        }
+        let rules = self.rules()?;
+        let settings = self.settings()?;
+        let sources = self.list_input_sources(false)?;
+        let session = build_quick_set_session(&snapshot, &rules, &settings, &sources);
+        *self.lock_quick_set_session()? = Some(session.clone());
+        Ok(session)
+    }
+
+    pub fn quick_set_session(&self) -> Result<Option<QuickSetSession>, ControllerError> {
+        Ok(self.lock_quick_set_session()?.clone())
+    }
+
+    pub fn clear_quick_set_session(&self) -> Result<(), ControllerError> {
+        *self.lock_quick_set_session()? = None;
+        Ok(())
+    }
+
+    pub fn apply_quick_set_language(
+        self: &Arc<Self>,
+        language: &str,
+    ) -> Result<SwitcherState, ControllerError> {
+        let tag = LanguageTag::parse(language)
+            .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
+        let session = self.lock_quick_set_session()?.clone().ok_or_else(|| {
+            ControllerError::InvalidRequest("quick set session expired".to_owned())
+        })?;
+        if !session
+            .languages
+            .iter()
+            .any(|option| option.language == tag)
+        {
+            return Err(ControllerError::InvalidRequest(
+                "language is not configured in preferences".to_owned(),
+            ));
+        }
+
+        let state = if let Some(rule_id) = session.matched_rule_id.as_deref() {
+            let existing = self
+                .rules()?
+                .into_iter()
+                .find(|rule| rule.id() == rule_id)
+                .ok_or_else(|| ControllerError::InvalidRequest("rule not found".to_owned()))?;
+            let updated = build_updated_rule(&existing, tag)
+                .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
+            self.update_rule(updated)?
+        } else {
+            let rules = self.rules()?;
+            let priority = next_quick_set_priority(&rules, &session.app_id);
+            let rule_id = format!(
+                "quick-set-{}-{}",
+                sanitize_id_part(&session.app_id),
+                self.lock_switcher()?.state().version
+            );
+            let created = build_created_rule(&session, tag, priority, &rule_id)
+                .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
+            self.create_rule(created)?
+        };
+        *self.lock_quick_set_session()? = None;
+        Ok(state)
+    }
+
     pub fn logs(&self) -> Result<Vec<SwitchLogEntry>, ControllerError> {
         Ok(self.lock_switcher()?.state().logs.clone())
     }
@@ -458,6 +536,14 @@ impl SwitcherController {
             .lock()
             .map_err(|_| ControllerError::WorkerStopped)
     }
+
+    fn lock_quick_set_session(
+        &self,
+    ) -> Result<MutexGuard<'_, Option<QuickSetSession>>, ControllerError> {
+        self.quick_set_session
+            .lock()
+            .map_err(|_| ControllerError::WorkerStopped)
+    }
 }
 
 impl Drop for SwitcherController {
@@ -476,6 +562,22 @@ fn repository_gateway(
     gateway: Box<dyn InputSourceGateway>,
 ) -> Arc<Mutex<Box<dyn InputSourceGateway>>> {
     Arc::new(Mutex::new(gateway))
+}
+
+fn sanitize_id_part(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for ch in value.chars() {
+        if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
+            out.push(ch);
+        } else {
+            out.push('-');
+        }
+    }
+    if out.is_empty() {
+        "app".to_owned()
+    } else {
+        out
+    }
 }
 
 fn run_worker(

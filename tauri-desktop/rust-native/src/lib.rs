@@ -38,6 +38,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(autostart.build())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
             let config_directory = app.path().app_config_dir()?;
             std::fs::create_dir_all(&config_directory)?;
@@ -148,6 +149,30 @@ pub fn run() {
                     let _ = window.set_focus();
                 }
             }
+
+            let _ = infrastructure::desktop::quick_set_window::ensure_window(app.handle());
+
+            {
+                use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+                let shortcut = "CommandOrControl+Alt+L"
+                    .parse::<Shortcut>()
+                    .map_err(|error| format!("invalid quick-set shortcut: {error}"))?;
+                let handle = app.handle().clone();
+                app.handle().global_shortcut().on_shortcut(
+                    shortcut,
+                    move |_app, _shortcut, event| {
+                        if event.state != ShortcutState::Pressed {
+                            return;
+                        }
+                        if let Err(error) =
+                            infrastructure::desktop::quick_set_window::open(&handle)
+                        {
+                            eprintln!("quick-set open failed: {error}");
+                        }
+                    },
+                )?;
+            }
+
             Ok(())
         })
         .on_window_event(|window, event| match event {
@@ -159,7 +184,13 @@ pub fn run() {
             }
             tauri::WindowEvent::CloseRequested { api, .. } => {
                 api.prevent_close();
-                let _ = window.hide();
+                if window.label()
+                    == infrastructure::desktop::quick_set_window::QUICK_SET_WINDOW_LABEL
+                {
+                    infrastructure::desktop::quick_set_window::hide(window.app_handle());
+                } else {
+                    let _ = window.hide();
+                }
             }
             _ => {}
         })
@@ -193,6 +224,10 @@ pub fn run() {
             presentation::commands::input_source_switcher::get_focus_snapshot,
             presentation::commands::input_source_switcher::list_switch_logs,
             presentation::commands::input_source_switcher::clear_switch_logs,
+            presentation::commands::quick_set::get_quick_set_session,
+            presentation::commands::quick_set::apply_quick_set_language,
+            presentation::commands::quick_set::hide_quick_set,
+            presentation::commands::quick_set::open_quick_set_advanced,
             presentation::commands::sync_window_chrome::sync_window_chrome_theme,
         ])
         .run(tauri::generate_context!())

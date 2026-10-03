@@ -4,7 +4,7 @@ use std::sync::Arc;
 use tauri::{
     menu::{IsMenuItem, Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, Manager,
+    AppHandle, Manager,
 };
 
 use crate::application::{
@@ -12,6 +12,7 @@ use crate::application::{
     switcher_controller::SwitcherController,
     tray_strings::tray_strings,
 };
+use crate::infrastructure::desktop::main_window;
 
 pub const SNOOZE_MINUTES: [u64; 3] = [5, 15, 60];
 pub const TRAY_ID: &str = "readytype-main-tray";
@@ -110,7 +111,7 @@ pub fn install(app: &AppHandle, state: &SwitcherState, locale: &str) -> tauri::R
                     ..
                 }
             ) {
-                show_main_window(tray.app_handle(), None);
+                main_window::show_main_window(tray.app_handle(), None);
             }
         });
     if let Some(icon) = app.default_window_icon() {
@@ -178,11 +179,11 @@ fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
         return;
     }
     if id == "show" {
-        show_main_window(app, None);
+        main_window::show_main_window(app, None);
         return;
     }
     if id == "settings" {
-        show_main_window(app, Some("/settings"));
+        main_window::show_main_window(app, Some("/settings"));
         return;
     }
     let controller = app.state::<Arc<SwitcherController>>();
@@ -200,20 +201,6 @@ fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
     if let Ok(state) = result {
         let locale = resolve_ui_locale(app);
         let _ = update(app, &state, &locale);
-    }
-}
-
-fn show_main_window(app: &AppHandle, route: Option<&str>) {
-    #[cfg(target_os = "macos")]
-    {
-        let _ = app.set_activation_policy(tauri::ActivationPolicy::Regular);
-    }
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.show();
-        let _ = window.set_focus();
-        if let Some(route) = route {
-            let _ = app.emit("readytype://navigate", route);
-        }
     }
 }
 

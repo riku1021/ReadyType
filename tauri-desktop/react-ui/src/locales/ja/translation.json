@@ -191,6 +191,20 @@
     "dark": "ダーク",
     "system": "システムの設定を使う"
   },
+  "quickSet": {
+    "title": "クイック設定",
+    "chooseLanguage": "この入力欄で使用する入力ソース",
+    "currentSetting": "現在の設定",
+    "changeTo": "{{language}}に変更",
+    "advanced": "詳細設定...",
+    "editRule": "ルールを編集...",
+    "saved": "{{language}}に設定しました",
+    "fieldFallback": "入力欄",
+    "waiting": "対象を取得しています…",
+    "noLanguages": "設定済みの入力言語がありません。設定画面で優先入力ソースを確認してください。",
+    "loadFailed": "クイック設定を開けませんでした",
+    "saveFailed": "保存に失敗しました"
+  },
   "rules": {
     "conditionsNone": "条件なし（アプリ一致）",
     "defaultTitle": "デフォルト",

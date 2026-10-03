@@ -60,6 +60,26 @@ export function applyNewerStateEvent(
   return current && event.version <= current.version ? current : event.state;
 }
 
+/** state イベント採用後に rules を再取得すべきか（rulesVersion 変化時のみ）。 */
+export function shouldRefreshRulesOnStateEvent(
+  previousRulesVersion: number | undefined,
+  nextSwitcher: SwitcherStateDto | null,
+  eventAccepted: boolean
+): boolean {
+  if (!eventAccepted || nextSwitcher === null) {
+    return false;
+  }
+  return nextSwitcher.rulesVersion !== previousRulesVersion;
+}
+
+/** listRules 完了時、より新しい state イベントが既に来ていれば破棄する。 */
+export function shouldApplyFetchedRules(
+  currentRulesVersion: number | undefined,
+  expectedRulesVersion: number
+): boolean {
+  return currentRulesVersion === expectedRulesVersion;
+}
+
 export function withConfiguredSource(
   sources: readonly InputSourceDto[],
   configuredId: string

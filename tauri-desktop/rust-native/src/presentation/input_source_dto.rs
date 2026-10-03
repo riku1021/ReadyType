@@ -460,6 +460,58 @@ impl From<&AxElementSnapshot> for AxElementDto {
     }
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QuickSetLanguageDto {
+    pub language: String,
+    pub preferred_source_id: String,
+    pub preferred_source_name: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QuickSetSessionDto {
+    pub app_id: String,
+    pub app_display_name: String,
+    pub platform: PlatformDto,
+    pub pid: i32,
+    pub field_label: String,
+    pub proposed_name: String,
+    pub proposed_conditions: Vec<ConditionDto>,
+    pub matched_rule_id: Option<String>,
+    pub matched_target: Option<RuleTargetDto>,
+    pub languages: Vec<QuickSetLanguageDto>,
+}
+
+impl From<&crate::application::quick_set::QuickSetSession> for QuickSetSessionDto {
+    fn from(session: &crate::application::quick_set::QuickSetSession) -> Self {
+        Self {
+            app_id: session.app_id.clone(),
+            app_display_name: session.app_display_name.clone(),
+            platform: PlatformDto::from(session.platform),
+            pid: session.pid,
+            field_label: session.field_label.clone(),
+            proposed_name: session.proposed_name.clone(),
+            proposed_conditions: session
+                .proposed_conditions
+                .iter()
+                .map(ConditionDto::from)
+                .collect(),
+            matched_rule_id: session.matched_rule_id.clone(),
+            matched_target: session.matched_target.as_ref().map(RuleTargetDto::from),
+            languages: session
+                .languages
+                .iter()
+                .map(|language| QuickSetLanguageDto {
+                    language: language.language.as_str().to_owned(),
+                    preferred_source_id: language.preferred_source_id.clone(),
+                    preferred_source_name: language.preferred_source_name.clone(),
+                })
+                .collect(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{RuleDto, StateDto};

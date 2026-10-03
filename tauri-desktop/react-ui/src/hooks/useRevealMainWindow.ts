@@ -29,6 +29,15 @@ export function useRevealMainWindow() {
     let cancelled = false;
 
     const reveal = async () => {
+      try {
+        if (getCurrentWindow().label !== "main") {
+          clearBootstrapBackground();
+          return;
+        }
+      } catch {
+        // browser / non-tauri
+      }
+
       const theme = readResolvedTheme();
 
       try {

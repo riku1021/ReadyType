@@ -1,12 +1,12 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { NotFoundPage } from "@/features/notFound";
-import { RootLayout } from "@/layouts/RootLayout";
+import { AppShell } from "@/layouts/AppShell";
 
 export const Route = createRootRoute({
   component: () => (
-    <RootLayout>
+    <AppShell>
       <Outlet />
-    </RootLayout>
+    </AppShell>
   ),
   notFoundComponent: NotFoundPage,
 });
