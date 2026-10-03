@@ -11,7 +11,7 @@ use std::{
 };
 
 use crate::domain::input_source::{
-    default_rules, AxAttribute, FocusRule, FocusSnapshot, LanguageTag, PlatformAppId,
+    default_rules, AxAttribute, FocusRule, FocusSnapshot, InputSourceId, LanguageTag, PlatformAppId,
 };
 
 use super::{
@@ -422,37 +422,51 @@ impl SwitcherController {
         let session = self.lock_quick_set_session()?.clone().ok_or_else(|| {
             ControllerError::InvalidRequest("quick set session expired".to_owned())
         })?;
-        if !session
+        let option = session
             .languages
             .iter()
-            .any(|option| option.language == tag)
-        {
-            return Err(ControllerError::InvalidRequest(
-                "language is not configured in preferences".to_owned(),
-            ));
-        }
+            .find(|option| option.language == tag)
+            .ok_or_else(|| {
+                ControllerError::InvalidRequest(
+                    "language is not available for quick set".to_owned(),
+                )
+            })?;
+        let source_id = InputSourceId::parse(&option.preferred_source_id)
+            .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
 
-        let state = if let Some(rule_id) = session.matched_rule_id.as_deref() {
-            let existing = self
-                .rules()?
-                .into_iter()
-                .find(|rule| rule.id() == rule_id)
+        let next_rules = if let Some(rule_id) = session.matched_rule_id.as_deref() {
+            let mut rules = self.rules()?;
+            let index = rules
+                .iter()
+                .position(|rule| rule.id() == rule_id)
                 .ok_or_else(|| ControllerError::InvalidRequest("rule not found".to_owned()))?;
-            let updated = build_updated_rule(&existing, tag)
+            let updated = build_updated_rule(&rules[index], tag.clone())
                 .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
-            self.update_rule(updated)?
+            rules[index] = updated;
+            rules
         } else {
-            let rules = self.rules()?;
+            let mut rules = self.rules()?;
             let priority = next_quick_set_priority(&rules, &session.app_id);
             let rule_id = format!(
                 "quick-set-{}-{}",
                 sanitize_id_part(&session.app_id),
                 self.lock_switcher()?.state().version
             );
-            let created = build_created_rule(&session, tag, priority, &rule_id)
+            let created = build_created_rule(&session, tag.clone(), priority, &rule_id)
                 .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
-            self.create_rule(created)?
+            rules.push(created);
+            rules
         };
+
+        let state = self.mutate_switcher(|switcher| {
+            switcher.replace_rules_with_language_preference(next_rules, &tag, source_id)?;
+            Ok(switcher.state().clone())
+        })?;
+        if self.is_monitoring() {
+            self.stop_monitoring()?;
+            self.start_monitoring()?;
+        }
+        self.wake_worker()?;
         *self.lock_quick_set_session()? = None;
         Ok(state)
     }

@@ -2,6 +2,7 @@ use std::{
     fs::{self, OpenOptions},
     io::{ErrorKind, Write},
     path::{Path, PathBuf},
+    sync::atomic::{AtomicBool, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -18,25 +19,23 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct JsonSettingsRepository {
     path: PathBuf,
+    /// Set when corrupt load could not restore from `.bak`; blocks persisting defaults.
+    writes_suspended: AtomicBool,
 }
 
 impl JsonSettingsRepository {
     pub fn new(path: PathBuf) -> Self {
-        Self { path }
+        Self {
+            path,
+            writes_suspended: AtomicBool::new(false),
+        }
     }
 
-    fn recover(&self, reason: &str) -> Result<LoadOutcome, SettingsError> {
-        let backup_path = self.corrupt_backup_path();
-        fs::rename(&self.path, &backup_path)
-            .map_err(|error| SettingsError::Io(error.to_string()))?;
-        Ok(LoadOutcome::Recovered {
-            settings: SwitcherSettings::defaults(),
-            backup_path,
-            warning: format!("設定ファイルを読み込めませんでした: {reason}"),
-        })
+    fn bak_path(&self) -> PathBuf {
+        self.path.with_extension("bak.json")
     }
 
     fn corrupt_backup_path(&self) -> PathBuf {
@@ -51,41 +50,27 @@ impl JsonSettingsRepository {
             .unwrap_or("settings");
         parent.join(format!("{stem}.corrupt-{timestamp}.json"))
     }
-}
 
-impl SettingsRepository for JsonSettingsRepository {
-    fn load(&self) -> Result<LoadOutcome, SettingsError> {
-        let bytes = match fs::read(&self.path) {
-            Ok(bytes) => bytes,
-            Err(error) if error.kind() == ErrorKind::NotFound => {
-                return Ok(LoadOutcome::Defaults {
-                    settings: SwitcherSettings::defaults(),
-                });
-            }
-            Err(error) => return Err(SettingsError::Io(error.to_string())),
-        };
-
-        let decoded = match serde_json::from_slice::<SettingsDto>(&bytes) {
-            Ok(decoded) => decoded,
-            Err(error) => return self.recover(&error.to_string()),
-        };
-        let settings = match SwitcherSettings::try_from(decoded) {
-            Ok(settings) => settings,
-            Err(error) => return self.recover(&error.to_string()),
-        };
-        if let Err(error) = settings.validate() {
-            return self.recover(&error.to_string());
-        }
-
-        Ok(LoadOutcome::Loaded { settings })
+    fn parse_settings_bytes(&self, bytes: &[u8]) -> Result<SwitcherSettings, String> {
+        let decoded = serde_json::from_slice::<SettingsDto>(bytes).map_err(|e| e.to_string())?;
+        let settings = SwitcherSettings::try_from(decoded).map_err(|e| e.to_string())?;
+        settings.validate().map_err(|e| e.to_string())?;
+        Ok(settings)
     }
 
-    fn save(&self, settings: &SwitcherSettings) -> Result<(), SettingsError> {
-        settings
-            .validate()
-            .map_err(|error| SettingsError::InvalidSettings(error.to_string()))?;
-        let bytes = serde_json::to_vec_pretty(&SettingsDto::from(settings))
-            .map_err(|error| SettingsError::Serialization(error.to_string()))?;
+    fn try_load_bak(&self) -> Option<SwitcherSettings> {
+        let bytes = fs::read(self.bak_path()).ok()?;
+        self.parse_settings_bytes(&bytes).ok()
+    }
+
+    fn snapshot_bak_best_effort(&self) {
+        if !self.path.exists() {
+            return;
+        }
+        let _ = fs::copy(&self.path, self.bak_path());
+    }
+
+    fn write_atomic(&self, bytes: &[u8]) -> Result<(), SettingsError> {
         if let Some(parent) = self.path.parent() {
             fs::create_dir_all(parent).map_err(|error| SettingsError::Io(error.to_string()))?;
         }
@@ -98,7 +83,7 @@ impl SettingsRepository for JsonSettingsRepository {
                 .truncate(true)
                 .open(&temporary_path)
                 .map_err(|error| SettingsError::Io(error.to_string()))?;
-            file.write_all(&bytes)
+            file.write_all(bytes)
                 .map_err(|error| SettingsError::Io(error.to_string()))?;
             file.sync_all()
                 .map_err(|error| SettingsError::Io(error.to_string()))?;
@@ -110,6 +95,74 @@ impl SettingsRepository for JsonSettingsRepository {
             let _ = fs::remove_file(&temporary_path);
         }
         write_result
+    }
+
+    /// Quarantine unreadable main; restore from `.bak` when possible, else suspend writes.
+    fn recover(&self, reason: &str) -> Result<LoadOutcome, SettingsError> {
+        let corrupt_path = self.corrupt_backup_path();
+        fs::rename(&self.path, &corrupt_path)
+            .map_err(|error| SettingsError::Io(error.to_string()))?;
+
+        if let Some(settings) = self.try_load_bak() {
+            let bytes = serde_json::to_vec_pretty(&SettingsDto::from(&settings))
+                .map_err(|error| SettingsError::Serialization(error.to_string()))?;
+            // Heal main without rotating `.bak` (keep last-known-good intact).
+            self.write_atomic(&bytes)?;
+            self.writes_suspended.store(false, Ordering::SeqCst);
+            return Ok(LoadOutcome::RestoredFromBackup {
+                settings,
+                corrupt_path: corrupt_path.clone(),
+                warning: format!(
+                    "設定ファイルをバックアップから修復しました（{reason}）。破損コピー: {}",
+                    corrupt_path.display()
+                ),
+            });
+        }
+
+        self.writes_suspended.store(true, Ordering::SeqCst);
+        Ok(LoadOutcome::Recovered {
+            settings: SwitcherSettings::defaults(),
+            backup_path: corrupt_path,
+            warning: format!(
+                "設定ファイルを読み込めませんでした: {reason}。書き込みは抑制されています。"
+            ),
+        })
+    }
+}
+
+impl SettingsRepository for JsonSettingsRepository {
+    fn load(&self) -> Result<LoadOutcome, SettingsError> {
+        let bytes = match fs::read(&self.path) {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == ErrorKind::NotFound => {
+                self.writes_suspended.store(false, Ordering::SeqCst);
+                return Ok(LoadOutcome::Defaults {
+                    settings: SwitcherSettings::defaults(),
+                });
+            }
+            Err(error) => return Err(SettingsError::Io(error.to_string())),
+        };
+
+        match self.parse_settings_bytes(&bytes) {
+            Ok(settings) => {
+                self.writes_suspended.store(false, Ordering::SeqCst);
+                Ok(LoadOutcome::Loaded { settings })
+            }
+            Err(reason) => self.recover(&reason),
+        }
+    }
+
+    fn save(&self, settings: &SwitcherSettings) -> Result<(), SettingsError> {
+        if self.writes_suspended.load(Ordering::SeqCst) {
+            return Err(SettingsError::WritesSuspended);
+        }
+        settings
+            .validate()
+            .map_err(|error| SettingsError::InvalidSettings(error.to_string()))?;
+        let bytes = serde_json::to_vec_pretty(&SettingsDto::from(settings))
+            .map_err(|error| SettingsError::Serialization(error.to_string()))?;
+        self.snapshot_bak_best_effort();
+        self.write_atomic(&bytes)
     }
 }
 
@@ -501,7 +554,7 @@ mod tests {
 
     use super::JsonSettingsRepository;
     use crate::application::{
-        ports::settings_repository::{LoadOutcome, SettingsRepository},
+        ports::settings_repository::{LoadOutcome, SettingsError, SettingsRepository},
         settings::SwitcherSettings,
     };
 
@@ -660,9 +713,11 @@ mod tests {
         let path = directory.join("settings.json");
         write_settings(&path, "{not-json");
 
-        let outcome = repository(&directory).load().expect("recover");
+        let repo = repository(&directory);
+        let outcome = repo.load().expect("recover");
 
         assert!(matches!(outcome, LoadOutcome::Recovered { .. }));
+        assert!(outcome.writes_suspended());
         assert_eq!(outcome.settings(), &SwitcherSettings::defaults());
         assert!(outcome.backup_path().expect("backup path").exists());
         assert!(outcome
@@ -670,6 +725,54 @@ mod tests {
             .expect("warning")
             .contains("読み込めません"));
         assert!(!path.exists());
+        assert!(matches!(
+            repo.save(&SwitcherSettings::defaults()),
+            Err(SettingsError::WritesSuspended)
+        ));
+    }
+
+    #[test]
+    fn corrupt_main_restores_from_bak_without_suspending_writes() {
+        let directory = TestDirectory::new("restore-bak");
+        let path = directory.join("settings.json");
+        let bak = directory.join("settings.bak.json");
+        let repo = repository(&directory);
+
+        repo.save(&SwitcherSettings::defaults())
+            .expect("first save");
+        repo.save(&SwitcherSettings::defaults())
+            .expect("second save creates bak");
+        assert!(bak.exists());
+        write_settings(&path, "{not-json");
+
+        let outcome = repo.load().expect("restore");
+        assert!(matches!(outcome, LoadOutcome::RestoredFromBackup { .. }));
+        assert!(!outcome.writes_suspended());
+        assert!(path.exists());
+        assert!(outcome.backup_path().expect("corrupt path").exists());
+        repo.save(&SwitcherSettings::defaults())
+            .expect("writes remain allowed");
+    }
+
+    #[test]
+    fn save_rotates_last_known_good_bak() {
+        let directory = TestDirectory::new("bak-rotate");
+        let path = directory.join("settings.json");
+        let bak = directory.join("settings.bak.json");
+        let repo = repository(&directory);
+
+        let mut first = SwitcherSettings::defaults();
+        first.debug_logging = true;
+        repo.save(&first).expect("first save");
+        assert!(!bak.exists(), "no prior main → no bak yet");
+
+        let second = SwitcherSettings::defaults();
+        repo.save(&second).expect("second save");
+        assert!(bak.exists());
+        let bak_text = fs::read_to_string(&bak).expect("read bak");
+        assert!(bak_text.contains("\"debugLogging\": true"));
+        let main_text = fs::read_to_string(&path).expect("read main");
+        assert!(main_text.contains("\"debugLogging\": false"));
     }
 
     #[test]

@@ -134,7 +134,7 @@ pub fn reconcile_language_preferences(
     result
 }
 
-fn group_sources_by_language(
+pub(crate) fn group_sources_by_language(
     sources: &[crate::application::ports::input_source::AvailableInputSource],
 ) -> BTreeMap<LanguageTag, Vec<&crate::application::ports::input_source::AvailableInputSource>> {
     let mut by_language: BTreeMap<
@@ -153,7 +153,7 @@ fn group_sources_by_language(
     by_language
 }
 
-fn pick_default_source_id(
+pub(crate) fn pick_default_source_id(
     group: &[&crate::application::ports::input_source::AvailableInputSource],
 ) -> Option<InputSourceId> {
     let available = group

@@ -5,7 +5,8 @@ use std::{
 };
 
 use crate::domain::input_source::{
-    AxAttribute, FocusRule, FocusSnapshot, InputSourceId, PlatformAppId, RuleSet, RuleTarget,
+    AxAttribute, FocusRule, FocusSnapshot, InputSourceId, LanguageTag, PlatformAppId, RuleSet,
+    RuleTarget,
 };
 
 use super::{
@@ -126,7 +127,12 @@ where
                 if !next_preferences.is_empty() && next_preferences != settings.language_preferences
                 {
                     settings.language_preferences = next_preferences;
-                    repository.save(&settings)?;
+                    match repository.save(&settings) {
+                        Ok(()) => {}
+                        // Corrupt recovery: keep in-memory seed, do not clobber quarantined data.
+                        Err(SettingsError::WritesSuspended) => {}
+                        Err(error) => return Err(ApplicationError::from(error)),
+                    }
                 }
             }
         }
@@ -491,9 +497,34 @@ where
     }
 
     pub fn replace_rules(&mut self, rules: Vec<FocusRule>) -> Result<(), ApplicationError> {
+        self.commit_rules(rules, None)
+    }
+
+    /// Replace rules and upsert a language preference in a single settings commit.
+    pub fn replace_rules_with_language_preference(
+        &mut self,
+        rules: Vec<FocusRule>,
+        tag: &LanguageTag,
+        source_id: InputSourceId,
+    ) -> Result<(), ApplicationError> {
+        self.commit_rules(rules, Some((tag, source_id)))
+    }
+
+    fn commit_rules(
+        &mut self,
+        rules: Vec<FocusRule>,
+        language_preference: Option<(&LanguageTag, InputSourceId)>,
+    ) -> Result<(), ApplicationError> {
         let validated = RuleSet::new(rules.clone())
             .map_err(|error| ApplicationError::InvalidSettings(error.to_string()))?;
         let mut candidate = self.settings.clone();
+        if let Some((tag, source_id)) = language_preference {
+            if candidate.preferred(tag) != Some(&source_id) {
+                candidate
+                    .language_preferences
+                    .insert(tag.clone(), Some(source_id));
+            }
+        }
         candidate.rules = rules;
         self.commit_settings(candidate, Some(validated))
     }

@@ -46,7 +46,11 @@ pub fn run() {
                 Arc::new(infrastructure::persistence::JsonSettingsRepository::new(
                     config_directory.join("input-source-switcher.json"),
                 ));
-            let settings = repository.load()?.settings().clone();
+            let load_outcome = repository.load()?;
+            if let Some(warning) = load_outcome.warning() {
+                eprintln!("settings: {warning}");
+            }
+            let settings = load_outcome.settings().clone();
             let ui_locale_preference = settings.ui_locale.clone();
             let resolved_ui_locale =
                 application::settings::SwitcherSettings::resolve_ui_locale(&ui_locale_preference);
