@@ -65,21 +65,15 @@ export const headerBlock = css({
   display: "flex",
   flexDirection: "column",
   gap: "xs",
-  paddingBlock: "sm",
-  paddingInline: "sm",
-  // 右上バツボタン（32px + sm）と被らないよう余白を確保
+  // ロゴ行は Drawer と同じ 60px。下の文言だけ横パディング
+  paddingBottom: "sm",
+  // 右上バツボタン（32px + sm）とロゴ文字が被らないよう余白を確保
   paddingRight: "48px",
-});
-
-export const brand = css({
-  margin: "0",
-  fontSize: "sm",
-  fontWeight: "semibold",
-  color: "text.main",
 });
 
 export const targetLabel = css({
   margin: "0",
+  paddingInline: "sm",
   fontSize: "sm",
   fontWeight: "semibold",
   color: "text.main",
@@ -87,6 +81,7 @@ export const targetLabel = css({
 
 export const prompt = css({
   margin: "0",
+  paddingInline: "sm",
   fontSize: "xs",
   color: "text.secondary",
 });

@@ -11,6 +11,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { MdClose, MdSettings } from "react-icons/md";
 
+import { BrandLogo } from "@/components/BrandLogo";
 import { SuccessDialog } from "@/components/Dialog";
 import { SettingItem } from "@/components/SettingItem";
 import { cx } from "@/styled-system/css";
@@ -22,7 +23,6 @@ import {
   openQuickSetAdvanced,
 } from "./api";
 import {
-  brand,
   closeButton,
   divider,
   emptyState,
@@ -149,7 +149,7 @@ export function QuickSetPage() {
   const rows: ReactNode[] = session
     ? [
         <div key="header" className={headerBlock}>
-          <p className={brand}>ReadyType</p>
+          <BrandLogo />
           <p className={targetLabel}>{targetHeading(session, t)}</p>
           <p className={prompt}>
             {hasExisting ? t("quickSet.currentSetting") : t("quickSet.chooseLanguage")}

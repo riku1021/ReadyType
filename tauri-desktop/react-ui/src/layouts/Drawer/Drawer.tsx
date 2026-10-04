@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
+import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SwitcherControls } from "@/features/inputSource";
 import { navLinks } from "@/features/navigation";
@@ -14,13 +15,7 @@ export function Drawer() {
     <aside className={styles.drawer}>
       <div className={styles.drawerCard}>
         <Link to="/" className={styles.logoLink}>
-          <span className={styles.logoImageBox}>
-            <img src="/pngs/logo.png" alt="" className={styles.logoImage} />
-          </span>
-          <span className={styles.logoText}>
-            <span className={styles.logoAccent}>R</span>eady
-            <span className={styles.logoAccent}>T</span>ype
-          </span>
+          <BrandLogo />
         </Link>
         <nav className={styles.navLinks} aria-label={t("nav.mainNavigationAria")}>
           {navLinks.map((link) => {
