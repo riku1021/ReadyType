@@ -196,26 +196,16 @@
     "chooseLanguage": "Input source for this field",
     "currentSetting": "Current setting",
     "changeTo": "Change to {{language}}",
+    "ruleName": "Rule name",
     "advanced": "Advanced settings...",
     "editRule": "Edit rule...",
     "saved": "Set to {{language}}",
-    "fieldFallback": "Field",
     "waiting": "Detecting target…",
     "noLanguages": "No preferred languages are configured. Check preferred input sources in Settings.",
     "loadFailed": "Could not open Quick Set",
     "saveFailed": "Failed to save"
   },
   "rules": {
-    "conditionsNone": "No conditions (app match)",
-    "defaultTitle": "Default",
-    "defaultSubtitle": "Default language for all input fields in this app",
-    "chatTitle": "Chat (AI chat field)",
-    "chatSubtitle": "Chat input in the right sidebar",
-    "editorTitle": "Editor (code editor)",
-    "editorSubtitle": "Main editor input",
-    "terminalTitle": "Terminal (built-in terminal)",
-    "terminalSubtitle": "Terminal command input",
-    "renameTitle": "Rename (file rename)",
-    "renameSubtitle": "File name input"
+    "defaultTitle": "Default"
   }
 }

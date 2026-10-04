@@ -3,8 +3,8 @@
 use std::collections::BTreeSet;
 
 use crate::domain::input_source::{
-    propose_conditions, propose_field_label, propose_rule_name, FocusRule, FocusSnapshot,
-    LanguageTag, Platform, RuleCondition, RuleTarget,
+    propose_conditions, propose_rule_name, FocusRule, FocusSnapshot, LanguageTag, Platform,
+    RuleCondition, RuleTarget,
 };
 
 use super::ports::input_source::AvailableInputSource;
@@ -23,7 +23,6 @@ pub struct QuickSetSession {
     pub app_display_name: String,
     pub platform: Platform,
     pub pid: i32,
-    pub field_label: String,
     pub proposed_name: String,
     pub proposed_conditions: Vec<RuleCondition>,
     /// Present only when an existing *contextual* (non-empty conditions) rule matched.
@@ -41,9 +40,6 @@ pub fn build_quick_set_session(
     app_display_name: Option<String>,
 ) -> QuickSetSession {
     let app_id = snapshot.app().app_id().to_owned();
-    // Empty when AX has no label; FE localizes the display fallback.
-    let field_label = propose_field_label(snapshot).unwrap_or_default();
-    let proposed_name = propose_rule_name(snapshot);
     let proposed_conditions = propose_conditions(snapshot);
 
     let matched = rules
@@ -51,11 +47,14 @@ pub fn build_quick_set_session(
         .filter(|rule| rule.matches(snapshot))
         .min_by_key(|rule| rule.priority());
 
-    let (matched_rule_id, matched_target) = match matched {
-        Some(rule) if !rule.conditions().is_empty() => {
-            (Some(rule.id().to_owned()), Some(rule.target().clone()))
-        }
-        _ => (None, None),
+    let (matched_rule_id, matched_target, proposed_name) = match matched {
+        Some(rule) if !rule.conditions().is_empty() => (
+            Some(rule.id().to_owned()),
+            Some(rule.target().clone()),
+            // Existing rule name is the user's truth when updating.
+            rule.name().to_owned(),
+        ),
+        _ => (None, None, propose_rule_name(snapshot)),
     };
 
     let languages = build_quick_set_languages(rules, settings, sources);
@@ -69,7 +68,6 @@ pub fn build_quick_set_session(
         app_display_name,
         platform: snapshot.app().platform(),
         pid: snapshot.app().pid(),
-        field_label,
         proposed_name,
         proposed_conditions,
         matched_rule_id,
@@ -161,15 +159,26 @@ pub fn next_quick_set_priority(rules: &[FocusRule], app_id: &str) -> u32 {
     }
 }
 
+/// Resolve the persisted rule name: non-empty user input wins, else session draft.
+pub fn resolve_quick_set_name(session: &QuickSetSession, name: &str) -> String {
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        session.proposed_name.clone()
+    } else {
+        trimmed.to_owned()
+    }
+}
+
 pub fn build_created_rule(
     session: &QuickSetSession,
     language: LanguageTag,
     priority: u32,
     rule_id: &str,
+    name: &str,
 ) -> Result<FocusRule, crate::domain::errors::DomainError> {
     FocusRule::new(
         rule_id,
-        &session.proposed_name,
+        name,
         true,
         session.platform,
         &session.app_id,
@@ -182,10 +191,11 @@ pub fn build_created_rule(
 pub fn build_updated_rule(
     existing: &FocusRule,
     language: LanguageTag,
+    name: &str,
 ) -> Result<FocusRule, crate::domain::errors::DomainError> {
     FocusRule::new(
         existing.id(),
-        existing.name(),
+        name,
         existing.enabled(),
         existing.platform(),
         existing.app_id(),
@@ -303,6 +313,25 @@ mod tests {
         );
         assert_eq!(session.matched_rule_id.as_deref(), Some("field-rule"));
         assert_eq!(session.app_display_name, "Cursor");
+        assert_eq!(session.proposed_name, "AI Chat");
+    }
+
+    #[test]
+    fn resolve_quick_set_name_prefers_user_input() {
+        let session = QuickSetSession {
+            app_id: "com.example.app".to_owned(),
+            app_display_name: "Example".to_owned(),
+            platform: Platform::MacOs,
+            pid: 1,
+            proposed_name: "draft".to_owned(),
+            proposed_conditions: Vec::new(),
+            matched_rule_id: None,
+            matched_target: None,
+            languages: Vec::new(),
+        };
+        assert_eq!(resolve_quick_set_name(&session, "  URL bar  "), "URL bar");
+        assert_eq!(resolve_quick_set_name(&session, "   "), "draft");
+        assert_eq!(resolve_quick_set_name(&session, ""), "draft");
     }
 
     #[test]

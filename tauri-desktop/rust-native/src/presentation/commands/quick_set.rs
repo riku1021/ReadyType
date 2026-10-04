@@ -24,10 +24,11 @@ pub fn get_quick_set_session(
 #[tauri::command]
 pub fn apply_quick_set_language(
     language: String,
+    name: String,
     controller: State<'_, Arc<SwitcherController>>,
 ) -> Result<StateDto, IpcError> {
     controller
-        .apply_quick_set_language(&language)
+        .apply_quick_set_language(&language, &name)
         .map(|state| StateDto::from(&state))
         .map_err(IpcError::from)
 }

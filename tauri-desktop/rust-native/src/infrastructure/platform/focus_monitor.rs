@@ -51,6 +51,7 @@ impl AttributePlan {
                 AxAttribute::DomIdentifier,
                 AxAttribute::DomClassList,
                 AxAttribute::Help,
+                AxAttribute::Placeholder,
             ],
         }
     }
@@ -338,8 +339,9 @@ mod tests {
         );
 
         let debug = AttributePlan::debug();
-        assert_eq!(debug.attributes().len(), 9);
+        assert_eq!(debug.attributes().len(), 10);
         assert!(debug.attributes().contains(&AxAttribute::Help));
+        assert!(debug.attributes().contains(&AxAttribute::Placeholder));
         assert!(debug.attributes().contains(&AxAttribute::DomClassList));
     }
 

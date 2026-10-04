@@ -31,6 +31,7 @@ export function flattenSnapshotAttributes(
     domIdentifier: string;
     domClassList: string;
     help: string;
+    placeholder: string;
   }[]
 ): SnapshotAttribute[] {
   const result: SnapshotAttribute[] = [];
@@ -45,6 +46,7 @@ export function flattenSnapshotAttributes(
       ["domIdentifier", element.domIdentifier],
       ["domClassList", element.domClassList],
       ["help", element.help],
+      ["placeholder", element.placeholder],
     ];
     for (const [attribute, value] of entries) {
       if (value.trim()) {

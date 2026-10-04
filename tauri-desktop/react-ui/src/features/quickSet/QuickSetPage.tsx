@@ -27,6 +27,9 @@ import {
   divider,
   emptyState,
   headerBlock,
+  nameField,
+  nameInput,
+  nameLabel,
   optionButton,
   optionButtonCurrent,
   optionSubtitle,
@@ -61,6 +64,7 @@ function withDividers(items: ReactNode[]): ReactNode[] {
 export function QuickSetPage() {
   const { t } = useTranslation();
   const [session, setSession] = useState<QuickSetSessionDto | null>(null);
+  const [ruleName, setRuleName] = useState("");
   const [phase, setPhase] = useState<QuickSetUiPhase>({ kind: "idle" });
   const [error, setError] = useState<string | null>(null);
 
@@ -69,15 +73,23 @@ export function QuickSetPage() {
     setError(null);
   }, []);
 
+  const adoptSession = useCallback(
+    (next: QuickSetSessionDto | null) => {
+      setSession(next);
+      setRuleName(next?.proposedName ?? "");
+      resetInteraction();
+    },
+    [resetInteraction]
+  );
+
   const loadSession = useCallback(async () => {
     try {
       const next = await getQuickSetSession();
-      setSession(next);
-      resetInteraction();
+      adoptSession(next);
     } catch {
       setError(t("quickSet.loadFailed"));
     }
-  }, [resetInteraction, t]);
+  }, [adoptSession, t]);
 
   useEffect(() => {
     void loadSession();
@@ -85,8 +97,7 @@ export function QuickSetPage() {
     // emit_to(quick-set) と対になる webview 専用 listen
     void getCurrentWebviewWindow()
       .listen<QuickSetSessionDto>(QUICK_SET_EVENT, (event) => {
-        setSession(event.payload);
-        resetInteraction();
+        adoptSession(event.payload);
       })
       .then((fn) => {
         unlisten = fn;
@@ -94,7 +105,7 @@ export function QuickSetPage() {
     return () => {
       unlisten?.();
     };
-  }, [loadSession, resetInteraction]);
+  }, [adoptSession, loadSession]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -131,7 +142,7 @@ export function QuickSetPage() {
     setPhase({ kind: "applying" });
     setError(null);
     try {
-      await applyQuickSetLanguage(language);
+      await applyQuickSetLanguage(language, ruleName);
       setPhase({ kind: "success", languageLabel: label });
     } catch {
       setError(t("quickSet.saveFailed"));
@@ -150,10 +161,23 @@ export function QuickSetPage() {
     ? [
         <div key="header" className={headerBlock}>
           <BrandLogo />
-          <p className={targetLabel}>{targetHeading(session, t)}</p>
+          <p className={targetLabel}>{targetHeading(session)}</p>
           <p className={prompt}>
             {hasExisting ? t("quickSet.currentSetting") : t("quickSet.chooseLanguage")}
           </p>
+        </div>,
+        <div key="rule-name" className={nameField}>
+          <label className={nameLabel} htmlFor="quick-set-rule-name">
+            {t("quickSet.ruleName")}
+          </label>
+          <input
+            id="quick-set-rule-name"
+            className={nameInput}
+            type="text"
+            value={ruleName}
+            disabled={!isIdle}
+            onChange={(event) => setRuleName(event.target.value)}
+          />
         </div>,
         ...(options.length === 0
           ? [

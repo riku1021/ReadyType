@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 
-import type { RuleConditionDto, RuleDto, RuleTarget } from "@/features/inputSource";
+import type { RuleDto, RuleTarget } from "@/features/inputSource";
 import i18n from "@/locales/i18n";
 
 /** OS 表示名が取れないときだけ使う（ブラウザ単体 / ネイティブ未接続）。 */
@@ -15,7 +15,6 @@ export type RuleKind = "chat" | "editor" | "terminal" | "rename" | "default" | "
 export type RuleDisplay = {
   rule: RuleDto;
   title: string;
-  subtitle: string;
   kind: RuleKind;
 };
 
@@ -37,74 +36,54 @@ export function appDisplayName(appId: string, osDisplayName?: string | null): st
   return FALLBACK_APP_LABELS[appId] ?? appId;
 }
 
-export function summarizeConditions(conditions: readonly RuleConditionDto[], t: TFunction): string {
-  if (conditions.length === 0) {
-    return t("rules.conditionsNone");
-  }
-  return conditions
-    .map((condition) => `${condition.attribute} ${condition.operator} ${condition.value}`)
-    .join(" / ");
-}
-
-export function displayRuleLabel(rule: RuleDto, t: TFunction): Omit<RuleDisplay, "rule"> {
-  const id = rule.id.toLowerCase();
+function ruleKind(rule: RuleDto): RuleKind {
   if (rule.conditions.length === 0) {
-    return {
-      title: t("rules.defaultTitle"),
-      subtitle: t("rules.defaultSubtitle"),
-      kind: "default",
-    };
+    return "default";
   }
+  const id = rule.id.toLowerCase();
   if (id.includes("chat") || id.includes("composer") || id.includes("ai-input")) {
-    return {
-      title: t("rules.chatTitle"),
-      subtitle: t("rules.chatSubtitle"),
-      kind: "chat",
-    };
+    return "chat";
   }
   if (id.includes("editor")) {
-    return {
-      title: t("rules.editorTitle"),
-      subtitle: t("rules.editorSubtitle"),
-      kind: "editor",
-    };
+    return "editor";
   }
   if (id.includes("terminal")) {
-    return {
-      title: t("rules.terminalTitle"),
-      subtitle: t("rules.terminalSubtitle"),
-      kind: "terminal",
-    };
+    return "terminal";
   }
   if (id.includes("rename")) {
+    return "rename";
+  }
+  return "other";
+}
+
+/** Contextual rules use persisted `rule.name` (user edit is truth). Defaults stay i18n. */
+export function displayRuleLabel(rule: RuleDto, t: TFunction): Omit<RuleDisplay, "rule"> {
+  const kind = ruleKind(rule);
+  if (kind === "default") {
     return {
-      title: t("rules.renameTitle"),
-      subtitle: t("rules.renameSubtitle"),
-      kind: "rename",
+      title: t("rules.defaultTitle"),
+      kind,
     };
   }
   return {
     title: rule.name,
-    subtitle: summarizeConditions(rule.conditions, t),
-    kind: "other",
+    kind,
   };
 }
 
 function contextSortKey(rule: RuleDto): number {
-  const id = rule.id.toLowerCase();
-  if (id.includes("chat") || id.includes("composer") || id.includes("ai-input")) {
-    return 0;
+  switch (ruleKind(rule)) {
+    case "chat":
+      return 0;
+    case "editor":
+      return 1;
+    case "terminal":
+      return 2;
+    case "rename":
+      return 3;
+    default:
+      return 10 + rule.priority;
   }
-  if (id.includes("editor")) {
-    return 1;
-  }
-  if (id.includes("terminal")) {
-    return 2;
-  }
-  if (id.includes("rename")) {
-    return 3;
-  }
-  return 10 + rule.priority;
 }
 
 export function groupRulesByApp(rules: readonly RuleDto[], t: TFunction): AppRuleGroup[] {

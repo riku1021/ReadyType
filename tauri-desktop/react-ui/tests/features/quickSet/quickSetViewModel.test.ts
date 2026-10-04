@@ -12,7 +12,6 @@ const baseSession = (): QuickSetSessionDto => ({
   appDisplayName: "cursor",
   platform: "macOs",
   pid: 1,
-  fieldLabel: "AI Chat",
   proposedName: "AI Chat",
   proposedConditions: [],
   matchedRuleId: null,
@@ -36,13 +35,8 @@ describe("quickSetViewModel", () => {
     await i18n.changeLanguage("ja");
   });
 
-  it("builds target heading", () => {
-    expect(targetHeading(baseSession(), i18n.t.bind(i18n))).toBe("cursor › AI Chat");
-  });
-
-  it("uses localized field fallback when label is empty", () => {
-    const session = { ...baseSession(), fieldLabel: "  " };
-    expect(targetHeading(session, i18n.t.bind(i18n))).toBe("cursor › 入力欄");
+  it("builds target heading from app display name only", () => {
+    expect(targetHeading(baseSession())).toBe("cursor");
   });
 
   it("marks current language when matched preferredLanguage", () => {

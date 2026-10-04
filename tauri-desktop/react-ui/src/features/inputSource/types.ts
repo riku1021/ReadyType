@@ -48,7 +48,8 @@ export type AxAttribute =
   | "identifier"
   | "domIdentifier"
   | "domClassList"
-  | "help";
+  | "help"
+  | "placeholder";
 export type MatchOperator = "equals" | "contains";
 export type SearchScope = "focusedOnly" | "focusedAndAncestors";
 
@@ -111,6 +112,7 @@ export interface AxElementDto {
   domIdentifier: string;
   domClassList: string;
   help: string;
+  placeholder: string;
 }
 
 export interface FocusSnapshotDto {

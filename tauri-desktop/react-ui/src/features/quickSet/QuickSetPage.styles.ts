@@ -86,6 +86,44 @@ export const prompt = css({
   color: "text.secondary",
 });
 
+export const nameField = css({
+  display: "flex",
+  flexDirection: "column",
+  gap: "xs",
+  paddingInline: "sm",
+  paddingBottom: "sm",
+});
+
+export const nameLabel = css({
+  margin: "0",
+  fontSize: "xs",
+  color: "text.secondary",
+});
+
+export const nameInput = css({
+  width: "100%",
+  boxSizing: "border-box",
+  paddingBlock: "xs",
+  paddingInline: "sm",
+  borderWidth: "1px",
+  borderStyle: "solid",
+  borderColor: "border.primary",
+  borderRadius: "8px",
+  backgroundColor: "background.main",
+  color: "text.main",
+  font: "inherit",
+  fontSize: "base",
+  _focusVisible: {
+    outline: "2px solid",
+    outlineColor: "border.focus",
+    outlineOffset: "2px",
+  },
+  _disabled: {
+    opacity: 0.5,
+    cursor: "not-allowed",
+  },
+});
+
 export const optionButton = css({
   display: "flex",
   alignItems: "flex-start",

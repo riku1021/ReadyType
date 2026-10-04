@@ -232,6 +232,7 @@ enum AttributeDto {
     DomIdentifier,
     DomClassList,
     Help,
+    Placeholder,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -454,6 +455,7 @@ impl From<AxAttribute> for AttributeDto {
             AxAttribute::DomIdentifier => Self::DomIdentifier,
             AxAttribute::DomClassList => Self::DomClassList,
             AxAttribute::Help => Self::Help,
+            AxAttribute::Placeholder => Self::Placeholder,
         }
     }
 }
@@ -470,6 +472,7 @@ impl From<AttributeDto> for AxAttribute {
             AttributeDto::DomIdentifier => Self::DomIdentifier,
             AttributeDto::DomClassList => Self::DomClassList,
             AttributeDto::Help => Self::Help,
+            AttributeDto::Placeholder => Self::Placeholder,
         }
     }
 }

@@ -290,6 +290,7 @@ wire_enum!(AxAttributeDto, AxAttribute, {
     DomIdentifier,
     DomClassList,
     Help,
+    Placeholder,
 });
 wire_enum!(MatchOperatorDto, MatchOperator, { Equals, Contains });
 wire_enum!(SearchScopeDto, SearchScope, {
@@ -442,6 +443,7 @@ pub struct AxElementDto {
     pub dom_identifier: String,
     pub dom_class_list: String,
     pub help: String,
+    pub placeholder: String,
 }
 
 impl From<&AxElementSnapshot> for AxElementDto {
@@ -456,6 +458,7 @@ impl From<&AxElementSnapshot> for AxElementDto {
             dom_identifier: element.value(AxAttribute::DomIdentifier).to_owned(),
             dom_class_list: element.value(AxAttribute::DomClassList).to_owned(),
             help: element.value(AxAttribute::Help).to_owned(),
+            placeholder: element.value(AxAttribute::Placeholder).to_owned(),
         }
     }
 }
@@ -475,7 +478,6 @@ pub struct QuickSetSessionDto {
     pub app_display_name: String,
     pub platform: PlatformDto,
     pub pid: i32,
-    pub field_label: String,
     pub proposed_name: String,
     pub proposed_conditions: Vec<ConditionDto>,
     pub matched_rule_id: Option<String>,
@@ -490,7 +492,6 @@ impl From<&crate::application::quick_set::QuickSetSession> for QuickSetSessionDt
             app_display_name: session.app_display_name.clone(),
             platform: PlatformDto::from(session.platform),
             pid: session.pid,
-            field_label: session.field_label.clone(),
             proposed_name: session.proposed_name.clone(),
             proposed_conditions: session
                 .proposed_conditions

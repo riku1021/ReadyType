@@ -34,7 +34,7 @@ describe("appRulesViewModel", () => {
     expect(appDisplayName("com.google.Chrome", "  ")).toBe("com.google.Chrome");
   });
 
-  it("labels chat/editor/terminal presets like the settings mock", () => {
+  it("uses persisted rule names for contextual rules and i18n for defaults", () => {
     const ax = [
       {
         attribute: "domClassList" as const,
@@ -44,15 +44,38 @@ describe("appRulesViewModel", () => {
       },
     ];
     expect(
-      displayRuleLabel(rule({ id: "preset-cursor-composer", appId: "x", conditions: ax }), t)
-    ).toMatchObject({ title: "rules.chatTitle", kind: "chat" });
+      displayRuleLabel(
+        rule({
+          id: "preset-cursor-composer",
+          name: "Cursor Composer",
+          appId: "x",
+          conditions: ax,
+        }),
+        t
+      )
+    ).toMatchObject({ title: "Cursor Composer", kind: "chat" });
     expect(
-      displayRuleLabel(rule({ id: "preset-cursor-editor", appId: "x", conditions: ax }), t).title
-    ).toBe("rules.editorTitle");
+      displayRuleLabel(
+        rule({
+          id: "preset-cursor-editor",
+          name: "My Editor",
+          appId: "x",
+          conditions: ax,
+        }),
+        t
+      ).title
+    ).toBe("My Editor");
     expect(
-      displayRuleLabel(rule({ id: "preset-cursor-terminal-ja", appId: "x", conditions: ax }), t)
-        .title
-    ).toBe("rules.terminalTitle");
+      displayRuleLabel(
+        rule({
+          id: "preset-cursor-terminal-ja",
+          name: "Terminal JA",
+          appId: "x",
+          conditions: ax,
+        }),
+        t
+      )
+    ).toMatchObject({ title: "Terminal JA", kind: "terminal" });
     expect(
       displayRuleLabel(rule({ id: "preset-terminal", appId: "x", conditions: [] }), t).title
     ).toBe("rules.defaultTitle");
@@ -63,6 +86,7 @@ describe("appRulesViewModel", () => {
       [
         rule({
           id: "preset-cursor-composer",
+          name: "Cursor Composer",
           appId: "com.todesktop.230313mzl4w4u92",
           priority: 111,
           conditions: [
@@ -77,6 +101,7 @@ describe("appRulesViewModel", () => {
         }),
         rule({
           id: "preset-cursor-editor",
+          name: "Cursor Editor",
           appId: "com.todesktop.230313mzl4w4u92",
           priority: 130,
           conditions: [
@@ -100,8 +125,8 @@ describe("appRulesViewModel", () => {
 
     expect(groups.map((group) => group.label)).toEqual(["Cursor", "Terminal"]);
     expect(groups[0]?.contextualRules.map((item) => item.title)).toEqual([
-      "rules.chatTitle",
-      "rules.editorTitle",
+      "Cursor Composer",
+      "Cursor Editor",
     ]);
     expect(groups[0]?.defaultRule).toBeNull();
     expect(groups[1]?.defaultRule?.id).toBe("preset-terminal");

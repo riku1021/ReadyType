@@ -28,7 +28,7 @@ use super::{
     },
     quick_set::{
         build_created_rule, build_quick_set_session, build_updated_rule, next_quick_set_priority,
-        QuickSetSession,
+        resolve_quick_set_name, QuickSetSession,
     },
     settings::SwitcherSettings,
     switcher_state::{SwitchLogEntry, SwitcherState},
@@ -422,6 +422,7 @@ impl SwitcherController {
     pub fn apply_quick_set_language(
         self: &Arc<Self>,
         language: &str,
+        name: &str,
     ) -> Result<SwitcherState, ControllerError> {
         let tag = LanguageTag::parse(language)
             .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
@@ -439,6 +440,7 @@ impl SwitcherController {
             })?;
         let source_id = InputSourceId::parse(&option.preferred_source_id)
             .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
+        let rule_name = resolve_quick_set_name(&session, name);
 
         let next_rules = if let Some(rule_id) = session.matched_rule_id.as_deref() {
             let mut rules = self.rules()?;
@@ -446,7 +448,7 @@ impl SwitcherController {
                 .iter()
                 .position(|rule| rule.id() == rule_id)
                 .ok_or_else(|| ControllerError::InvalidRequest("rule not found".to_owned()))?;
-            let updated = build_updated_rule(&rules[index], tag.clone())
+            let updated = build_updated_rule(&rules[index], tag.clone(), &rule_name)
                 .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
             rules[index] = updated;
             rules
@@ -458,7 +460,7 @@ impl SwitcherController {
                 sanitize_id_part(&session.app_id),
                 self.lock_switcher()?.state().version
             );
-            let created = build_created_rule(&session, tag.clone(), priority, &rule_id)
+            let created = build_created_rule(&session, tag.clone(), priority, &rule_id, &rule_name)
                 .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
             rules.push(created);
             rules
@@ -715,13 +717,33 @@ fn run_worker(
 
 fn required_attributes(rules: &[FocusRule]) -> Vec<AxAttribute> {
     let mut seen = HashSet::new();
-    rules
+    let mut attributes = Vec::new();
+    // Always read AccName / placeholder sources so Quick Set can draft a label.
+    for attribute in [
+        AxAttribute::Role,
+        AxAttribute::Title,
+        AxAttribute::Description,
+        AxAttribute::RoleDescription,
+        AxAttribute::Placeholder,
+        AxAttribute::Identifier,
+        AxAttribute::DomIdentifier,
+        AxAttribute::DomClassList,
+    ] {
+        if seen.insert(attribute) {
+            attributes.push(attribute);
+        }
+    }
+    for attribute in rules
         .iter()
         .filter(|rule| rule.enabled())
         .flat_map(|rule| rule.conditions())
         .map(|condition| condition.attribute())
-        .filter(|attribute| seen.insert(*attribute))
-        .collect()
+    {
+        if seen.insert(attribute) {
+            attributes.push(attribute);
+        }
+    }
+    attributes
 }
 
 fn with_priority(rule: FocusRule, priority: u32) -> Result<FocusRule, ControllerError> {

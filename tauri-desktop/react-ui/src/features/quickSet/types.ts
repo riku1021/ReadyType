@@ -11,7 +11,6 @@ export type QuickSetSessionDto = {
   appDisplayName: string;
   platform: "macOs" | "windows" | "linux";
   pid: number;
-  fieldLabel: string;
   proposedName: string;
   proposedConditions: RuleConditionDto[];
   matchedRuleId: string | null;

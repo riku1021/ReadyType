@@ -1,5 +1,3 @@
-import type { TFunction } from "i18next";
-
 import { languageDisplayName } from "@/features/inputSource";
 import type { QuickSetLanguageDto, QuickSetSessionDto } from "./types";
 
@@ -38,7 +36,7 @@ export function buildQuickSetOptions(session: QuickSetSessionDto): QuickSetOptio
   }));
 }
 
-export function targetHeading(session: QuickSetSessionDto, t: TFunction): string {
-  const field = session.fieldLabel.trim() || t("quickSet.fieldFallback");
-  return `${session.appDisplayName} › ${field}`;
+/** App name only — rule name lives in the editable field. */
+export function targetHeading(session: QuickSetSessionDto): string {
+  return session.appDisplayName;
 }

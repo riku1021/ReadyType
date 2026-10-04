@@ -98,6 +98,7 @@ fn attribute_name(attribute: AxAttribute) -> &'static str {
         AxAttribute::DomIdentifier => "AXDOMIdentifier",
         AxAttribute::DomClassList => "AXDOMClassList",
         AxAttribute::Help => "AXHelp",
+        AxAttribute::Placeholder => "AXPlaceholderValue",
     }
 }
 

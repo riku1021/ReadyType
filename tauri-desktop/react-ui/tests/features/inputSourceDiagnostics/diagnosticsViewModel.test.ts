@@ -46,6 +46,7 @@ describe("diagnosticsViewModel", () => {
           domIdentifier: "",
           domClassList: "",
           help: "",
+          placeholder: "",
         },
       ])
     ).toEqual([{ depth: 0, attribute: "role", value: "AXTextArea" }]);

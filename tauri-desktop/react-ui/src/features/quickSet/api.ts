@@ -4,8 +4,8 @@ import type { QuickSetSessionDto } from "./types";
 
 export const getQuickSetSession = () => invoke<QuickSetSessionDto | null>("get_quick_set_session");
 
-export const applyQuickSetLanguage = (language: string) =>
-  invoke<SwitcherStateDto>("apply_quick_set_language", { language });
+export const applyQuickSetLanguage = (language: string, name: string) =>
+  invoke<SwitcherStateDto>("apply_quick_set_language", { language, name });
 
 export const hideQuickSet = () => invoke<void>("hide_quick_set");
 

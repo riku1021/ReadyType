@@ -173,6 +173,7 @@ pub enum AxAttribute {
     DomIdentifier,
     DomClassList,
     Help,
+    Placeholder,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -186,6 +187,7 @@ pub struct AxElementSnapshot {
     dom_identifier: String,
     dom_class_list: String,
     help: String,
+    placeholder: String,
 }
 
 impl AxElementSnapshot {
@@ -204,6 +206,7 @@ impl AxElementSnapshot {
             AxAttribute::DomIdentifier => &mut self.dom_identifier,
             AxAttribute::DomClassList => &mut self.dom_class_list,
             AxAttribute::Help => &mut self.help,
+            AxAttribute::Placeholder => &mut self.placeholder,
         };
         *target = value.into();
         self
@@ -220,6 +223,7 @@ impl AxElementSnapshot {
             AxAttribute::DomIdentifier => &self.dom_identifier,
             AxAttribute::DomClassList => &self.dom_class_list,
             AxAttribute::Help => &self.help,
+            AxAttribute::Placeholder => &self.placeholder,
         }
     }
 }

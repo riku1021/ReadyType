@@ -96,12 +96,16 @@ pub fn propose_conditions(snapshot: &FocusSnapshot) -> Vec<RuleCondition> {
 }
 
 /// Field label from AX text when available. UI locale fallback is the caller's job.
+///
+/// Order: Accessible Name (Description / Title) → Placeholder → RoleDescription →
+/// DomIdentifier tail. TitleUIElement resolution is intentionally out of scope.
 pub fn propose_field_label(snapshot: &FocusSnapshot) -> Option<String> {
     let focused = snapshot.elements().first()?;
 
     for attribute in [
         AxAttribute::Description,
         AxAttribute::Title,
+        AxAttribute::Placeholder,
         AxAttribute::RoleDescription,
     ] {
         if let Some(text) = meaningful_text(focused.value(attribute)) {
@@ -262,6 +266,18 @@ mod tests {
             .with(AxAttribute::Role, "AXTextArea")
             .with(AxAttribute::Description, "AI Chat")]);
         assert_eq!(propose_field_label(&snap).as_deref(), Some("AI Chat"));
+    }
+
+    #[test]
+    fn field_label_uses_placeholder_before_role_description() {
+        let snap = snapshot(vec![AxElementSnapshot::new()
+            .with(AxAttribute::Role, "AXTextField")
+            .with(AxAttribute::Placeholder, "Search Google or type a URL")
+            .with(AxAttribute::RoleDescription, "text field")]);
+        assert_eq!(
+            propose_field_label(&snap).as_deref(),
+            Some("Search Google or type a URL")
+        );
     }
 
     #[test]

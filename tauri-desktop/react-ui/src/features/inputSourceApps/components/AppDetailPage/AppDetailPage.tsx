@@ -110,7 +110,6 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
           <RuleKindIcon kind={item.kind} />
           <div className={styles.ruleText}>
             <p className={styles.ruleTitle}>{item.title}</p>
-            <p className={styles.appMeta}>{item.subtitle}</p>
           </div>
         </div>
       ),
