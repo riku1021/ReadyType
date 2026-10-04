@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { MdSettings } from "react-icons/md";
+import { MdClose, MdSettings } from "react-icons/md";
 
 import { SuccessDialog } from "@/components/Dialog";
 import { SettingItem } from "@/components/SettingItem";
@@ -23,6 +23,7 @@ import {
 } from "./api";
 import {
   brand,
+  closeButton,
   divider,
   emptyState,
   headerBlock,
@@ -110,6 +111,13 @@ export function QuickSetPage() {
     setPhase({ kind: "idle" });
     void hideQuickSet();
   }, []);
+
+  const onClose = useCallback(() => {
+    if (phase.kind === "applying") {
+      return;
+    }
+    void hideQuickSet();
+  }, [phase.kind]);
 
   const options = useMemo(() => (session ? buildQuickSetOptions(session) : []), [session]);
   const hasExisting = Boolean(session?.matchedRuleId);
@@ -199,6 +207,15 @@ export function QuickSetPage() {
 
   return (
     <div className={shell}>
+      <button
+        type="button"
+        className={closeButton}
+        onClick={onClose}
+        disabled={phase.kind === "applying"}
+        aria-label={t("common.closeAria")}
+      >
+        <MdClose />
+      </button>
       {withDividers(rows)}
       <SuccessDialog
         isOpen={successLabel !== null}

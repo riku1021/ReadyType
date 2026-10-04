@@ -3,6 +3,7 @@ import { surfaceSub } from "@/styles/objects/surface";
 
 /** 窓そのものがセクションカード（外側の板・余白なし） */
 export const shell = css(surfaceSub, {
+  position: "relative",
   display: "flex",
   flexDirection: "column",
   height: "100vh",
@@ -14,6 +15,42 @@ export const shell = css(surfaceSub, {
   // SettingsSection.card と同じ枠線＋影＋角丸
   boxShadow: "inset 0 0 0 1px {colors.border.primary}, 0 2px 8px {colors.shadow.primary}",
   borderRadius: "12px",
+});
+
+/** Flutter SelectionBottomModal の円形 ✗ に準拠 */
+export const closeButton = css({
+  position: "absolute",
+  top: "sm",
+  right: "sm",
+  zIndex: "front",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "32px",
+  height: "32px",
+  padding: "0",
+  borderWidth: "0",
+  borderRadius: "999px",
+  backgroundColor: "background.hover",
+  color: "icon.primary",
+  cursor: "pointer",
+  fontSize: "24px",
+  lineHeight: "1",
+  transitionProperty: "background-color, color",
+  transitionDuration: "150ms",
+  transitionTimingFunction: "ease",
+  _hover: {
+    color: "status.error.main",
+  },
+  _focusVisible: {
+    outline: "2px solid",
+    outlineColor: "border.focus",
+    outlineOffset: "2px",
+  },
+  _disabled: {
+    opacity: 0.5,
+    cursor: "not-allowed",
+  },
 });
 
 export const divider = css({
@@ -30,6 +67,8 @@ export const headerBlock = css({
   gap: "xs",
   paddingBlock: "sm",
   paddingInline: "sm",
+  // 右上バツボタン（32px + sm）と被らないよう余白を確保
+  paddingRight: "48px",
 });
 
 export const brand = css({
