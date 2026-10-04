@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { IoAdd, IoEllipsisHorizontal, IoInformationCircle } from "react-icons/io5";
 
 import { Button } from "@/components/Button";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
+import { AlertDialog, SuccessDialog } from "@/components/Dialog";
+import { SelectionMenu } from "@/components/SelectionMenu";
 import { Toggle } from "@/components/Toggle";
 import {
   buildInputSourceOptions,
@@ -32,9 +34,46 @@ type AppDetailPageProps = {
   appId: string;
 };
 
+function RuleActionsMenu({ title, onDelete }: { title: string; onDelete: () => void }) {
+  const { t } = useTranslation();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  const deleteLabel = t("apps.deleteRule");
+  const menuLabel = t("apps.ruleMenuAria", { title });
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        className={styles.iconButton}
+        aria-label={menuLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <IoEllipsisHorizontal aria-hidden="true" />
+      </button>
+      <SelectionMenu
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        anchorRef={triggerRef}
+        label={menuLabel}
+        options={[deleteLabel]}
+        currentSelection=""
+        onSelectionChanged={(value) => {
+          if (value === deleteLabel) {
+            onDelete();
+          }
+        }}
+      />
+    </>
+  );
+}
+
 export function AppDetailPage({ appId }: AppDetailPageProps) {
   const { t } = useTranslation();
-  const { state, updateRule, fetchInputSources } = useInputSourceState();
+  const { state, updateRule, deleteRule, fetchInputSources } = useInputSourceState();
   const rules = state?.rules ?? [];
   const groups = useMemo(() => groupRulesByApp(rules, t), [rules, t]);
   const selectedBase = groups.find((group) => group.appId === appId) ?? null;
@@ -49,6 +88,8 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
     };
   }, [presentations, selectedBase]);
   const [sources, setSources] = useState<InputSourceDto[]>([]);
+  const [pendingDelete, setPendingDelete] = useState<RuleDisplay | null>(null);
+  const [deletedTitle, setDeletedTitle] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -140,14 +181,7 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
       cellClassName: styles.tdActions,
       stopPropagation: true,
       cell: (item) => (
-        <button
-          type="button"
-          className={styles.iconButton}
-          aria-label={t("apps.ruleMenuAria", { title: item.title })}
-          disabled
-        >
-          <IoEllipsisHorizontal aria-hidden="true" />
-        </button>
+        <RuleActionsMenu title={item.title} onDelete={() => setPendingDelete(item)} />
       ),
     },
   ];
@@ -223,6 +257,28 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
         <IoInformationCircle className={styles.infoIcon} aria-hidden="true" />
         <span>{t("apps.kindDisplayNote")}</span>
       </div>
+
+      <AlertDialog
+        isOpen={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        title={t("apps.deleteRuleConfirmTitle")}
+        text={t("apps.deleteRuleConfirmText", { title: pendingDelete?.title ?? "" })}
+        confirmButtonText={t("apps.deleteRuleConfirmButton")}
+        onConfirm={() => {
+          if (!pendingDelete) {
+            return;
+          }
+          const title = pendingDelete.title;
+          void deleteRule(pendingDelete.rule.id).then(() => {
+            setDeletedTitle(title);
+          });
+        }}
+      />
+      <SuccessDialog
+        isOpen={deletedTitle !== null}
+        onClose={() => setDeletedTitle(null)}
+        title={deletedTitle ? t("apps.deleteRuleSuccess", { title: deletedTitle }) : ""}
+      />
     </section>
   );
 }

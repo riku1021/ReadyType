@@ -118,6 +118,11 @@
     "columnActions": "操作",
     "ruleLanguageAria": "{{title}} の入力言語",
     "ruleMenuAria": "{{title}} の詳細メニュー",
+    "deleteRule": "削除",
+    "deleteRuleConfirmTitle": "このルールを削除しますか？",
+    "deleteRuleConfirmText": "「{{title}}」を削除します。この操作は取り消せません。",
+    "deleteRuleConfirmButton": "削除",
+    "deleteRuleSuccess": "「{{title}}」を削除しました",
     "emptyContextualRules": "個別ルールはありません。",
     "kindDisplayNote": "Chat / Editor / Terminal は分かりやすさのための表示で、実際の判定は各ルールの条件（AX）で行います。"
   },

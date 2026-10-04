@@ -118,6 +118,11 @@
     "columnActions": "Actions",
     "ruleLanguageAria": "Input language for {{title}}",
     "ruleMenuAria": "More options for {{title}}",
+    "deleteRule": "Delete",
+    "deleteRuleConfirmTitle": "Delete this rule?",
+    "deleteRuleConfirmText": "“{{title}}” will be deleted. This cannot be undone.",
+    "deleteRuleConfirmButton": "Delete",
+    "deleteRuleSuccess": "Deleted “{{title}}”",
     "emptyContextualRules": "No field rules.",
     "kindDisplayNote": "Chat / Editor / Terminal labels are for readability; matching uses each rule's AX conditions."
   },
