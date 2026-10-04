@@ -7,6 +7,7 @@ use objc2_foundation::{NSDictionary, NSString};
 use crate::infrastructure::platform::app_icon_cache::{
     file_mtime_secs, AppIconSource, FetchedIcon,
 };
+use crate::infrastructure::platform::macos::application_path;
 
 /// Resolves the OS icon for a bundle id into PNG bytes + mtime token.
 pub struct MacOsAppIconSource;
@@ -23,13 +24,6 @@ impl AppIconSource for MacOsAppIconSource {
         let png = icon_png_bytes_for_path(&path)?;
         Some(FetchedIcon { png, mtime_secs })
     }
-}
-
-fn application_path(bundle_id: &str) -> Option<String> {
-    let workspace = NSWorkspace::sharedWorkspace();
-    let bundle = NSString::from_str(bundle_id);
-    let url = workspace.URLForApplicationWithBundleIdentifier(&bundle)?;
-    Some(url.path()?.to_string())
 }
 
 fn icon_png_bytes_for_path(path: &str) -> Option<Vec<u8>> {

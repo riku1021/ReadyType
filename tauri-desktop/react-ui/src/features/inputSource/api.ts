@@ -49,9 +49,16 @@ export const clearSwitchLogs = () => invoke<SwitcherStateDto>("clear_switch_logs
 export const getAutostartEnabled = () => invoke<boolean>("get_autostart_enabled");
 export const setAutostartEnabled = (enabled: boolean) =>
   invoke<boolean>("set_autostart_enabled", { enabled });
-/** bundle id ごとの PNG data URL（解決不可は null）。 */
-export const getAppIcons = (bundleIds: readonly string[]) =>
-  invoke<Record<string, string | null>>("get_app_icons", { bundleIds: [...bundleIds] });
+export type AppPresentationDto = {
+  icon: string | null;
+  displayName: string | null;
+};
+
+/** bundle id ごとのアイコン + Finder 表示名（解決不可フィールドは null）。 */
+export const getAppPresentations = (bundleIds: readonly string[]) =>
+  invoke<Record<string, AppPresentationDto>>("get_app_presentations", {
+    bundleIds: [...bundleIds],
+  });
 
 export function applyNewerStateEvent(
   current: SwitcherStateDto | null,

@@ -14,12 +14,18 @@ import {
 
 import {
   type AppRuleGroup,
+  appDisplayName,
   groupRulesByApp,
   type RuleDisplay,
   resolvedInputSourceId,
   ruleTargetFromInputSourceId,
 } from "../../appRulesViewModel";
-import { AppIconView, LanguageSelect, RuleKindIcon, useAppIcons } from "../appSettingsShared";
+import {
+  AppIconView,
+  LanguageSelect,
+  RuleKindIcon,
+  useAppPresentations,
+} from "../appSettingsShared";
 import * as styles from "./AppDetailPage.styles";
 
 type AppDetailPageProps = {
@@ -31,8 +37,17 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
   const { state, updateRule, fetchInputSources } = useInputSourceState();
   const rules = state?.rules ?? [];
   const groups = useMemo(() => groupRulesByApp(rules, t), [rules, t]);
-  const selected = groups.find((group) => group.appId === appId) ?? null;
-  const icons = useAppIcons(selected ? [selected.appId] : []);
+  const selectedBase = groups.find((group) => group.appId === appId) ?? null;
+  const presentations = useAppPresentations(selectedBase ? [selectedBase.appId] : []);
+  const selected = useMemo(() => {
+    if (!selectedBase) {
+      return null;
+    }
+    return {
+      ...selectedBase,
+      label: appDisplayName(selectedBase.appId, presentations[selectedBase.appId]?.displayName),
+    };
+  }, [presentations, selectedBase]);
   const [sources, setSources] = useState<InputSourceDto[]>([]);
 
   useEffect(() => {
@@ -150,7 +165,7 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
     <section className={styles.page} aria-label={t("apps.detailAria")}>
       <div className={styles.detailHeader}>
         <div className={styles.detailIdentity}>
-          <AppIconView src={icons[selected.appId]} label={selected.label} large />
+          <AppIconView src={presentations[selected.appId]?.icon} label={selected.label} large />
           <div className={styles.detailTitleBlock}>
             <h2 className={styles.detailName}>{selected.label}</h2>
             <p className={styles.detailPath}>{selected.appId}</p>

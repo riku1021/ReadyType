@@ -19,6 +19,7 @@ use super::{
         switch_input_source, ApplicationError, InputSourceSwitcher, PreparedFocus,
     },
     ports::{
+        app_display_name::AppDisplayNameResolver,
         clock::Clock,
         focus_monitor::{AccessibilityPermission, FocusMonitor, FocusMonitorError},
         input_source::{AvailableInputSource, InputSourceGateway},
@@ -105,6 +106,7 @@ pub struct SwitcherController {
     quick_set_session: Mutex<Option<QuickSetSession>>,
     publisher: Arc<dyn SwitcherEventPublisher>,
     ui_locale: Arc<UiLocaleCache>,
+    app_display_names: Arc<dyn AppDisplayNameResolver>,
 }
 
 impl SwitcherController {
@@ -115,6 +117,7 @@ impl SwitcherController {
         clock: Arc<dyn Clock>,
         publisher: Arc<dyn SwitcherEventPublisher>,
         monitor: Box<dyn FocusMonitor>,
+        app_display_names: Arc<dyn AppDisplayNameResolver>,
     ) -> Result<Arc<Self>, ControllerError> {
         let resolved = SwitcherSettings::resolve_ui_locale(&settings.ui_locale);
         let ui_locale = Arc::new(UiLocaleCache::new(&resolved));
@@ -138,6 +141,7 @@ impl SwitcherController {
             quick_set_session: Mutex::new(None),
             publisher: Arc::clone(&publisher),
             ui_locale: Arc::clone(&ui_locale),
+            app_display_names,
         });
         let worker = thread::Builder::new()
             .name("readytype-switcher".to_owned())
@@ -399,7 +403,9 @@ impl SwitcherController {
         let rules = self.rules()?;
         let settings = self.settings()?;
         let sources = self.list_input_sources(false)?;
-        let session = build_quick_set_session(&snapshot, &rules, &settings, &sources);
+        let app_display_name = self.app_display_names.resolve(snapshot.app().app_id());
+        let session =
+            build_quick_set_session(&snapshot, &rules, &settings, &sources, app_display_name);
         *self.lock_quick_set_session()? = Some(session.clone());
         Ok(session)
     }
@@ -743,6 +749,7 @@ mod tests {
     use crate::{
         application::{
             ports::{
+                app_display_name::AppDisplayNameResolver,
                 clock::Clock,
                 focus_monitor::{
                     AccessibilityPermission, FocusEventSink, FocusMonitor, FocusMonitorError,
@@ -846,6 +853,14 @@ mod tests {
         }
     }
 
+    struct NoopDisplayNames;
+
+    impl AppDisplayNameResolver for NoopDisplayNames {
+        fn resolve(&self, _bundle_id: &str) -> Option<String> {
+            None
+        }
+    }
+
     fn controller(monitor: Arc<MonitorData>) -> Arc<SwitcherController> {
         SwitcherController::new(
             SwitcherSettings::defaults(),
@@ -854,6 +869,7 @@ mod tests {
             Arc::new(FakeClock(AtomicU64::new(1_000))),
             Arc::new(NoopPublisher),
             Box::new(FakeMonitor(monitor)),
+            Arc::new(NoopDisplayNames),
         )
         .expect("controller")
     }

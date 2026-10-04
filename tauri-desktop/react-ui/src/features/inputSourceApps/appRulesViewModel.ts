@@ -3,7 +3,8 @@ import type { TFunction } from "i18next";
 import type { RuleConditionDto, RuleDto, RuleTarget } from "@/features/inputSource";
 import i18n from "@/locales/i18n";
 
-const APP_LABELS: Record<string, string> = {
+/** OS 表示名が取れないときだけ使う（ブラウザ単体 / ネイティブ未接続）。 */
+const FALLBACK_APP_LABELS: Record<string, string> = {
   "com.todesktop.230313mzl4w4u92": "Cursor",
   "com.microsoft.VSCode": "Visual Studio Code",
   "com.apple.Terminal": "Terminal",
@@ -27,8 +28,13 @@ export type AppRuleGroup = {
   contextualRules: RuleDisplay[];
 };
 
-export function appDisplayName(appId: string): string {
-  return APP_LABELS[appId] ?? appId;
+/** OS 表示名 → オフライン用フォールバック → bundle id。 */
+export function appDisplayName(appId: string, osDisplayName?: string | null): string {
+  const trimmed = osDisplayName?.trim();
+  if (trimmed) {
+    return trimmed;
+  }
+  return FALLBACK_APP_LABELS[appId] ?? appId;
 }
 
 export function summarizeConditions(conditions: readonly RuleConditionDto[], t: TFunction): string {

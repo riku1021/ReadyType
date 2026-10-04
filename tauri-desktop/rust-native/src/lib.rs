@@ -81,6 +81,20 @@ pub fn run() {
                     app.handle().clone(),
                 ),
             );
+            let app_display_name_resolver: Arc<
+                dyn application::ports::app_display_name::AppDisplayNameResolver,
+            > = {
+                #[cfg(target_os = "macos")]
+                {
+                    Arc::new(infrastructure::platform::macos::MacOsAppDisplayNameResolver)
+                }
+                #[cfg(not(target_os = "macos"))]
+                {
+                    Arc::new(
+                        infrastructure::platform::app_display_name::UnsupportedAppDisplayNameResolver,
+                    )
+                }
+            };
             let controller = application::switcher_controller::SwitcherController::new(
                 settings,
                 gateway,
@@ -88,10 +102,12 @@ pub fn run() {
                 Arc::new(application::switcher_controller::SystemClock),
                 publisher,
                 monitor,
+                Arc::clone(&app_display_name_resolver),
             )?;
             controller.refresh_permission()?;
             let initial_state = controller.state()?;
             app.manage(controller);
+            app.manage(app_display_name_resolver);
 
             let icon_cache_dir = app.path().app_cache_dir()?.join("app-icons");
             std::fs::create_dir_all(&icon_cache_dir)?;
@@ -199,7 +215,7 @@ pub fn run() {
             _ => {}
         })
         .invoke_handler(tauri::generate_handler![
-            presentation::commands::app_icons::get_app_icons,
+            presentation::commands::app_presentations::get_app_presentations,
             presentation::commands::autostart::get_autostart_enabled,
             presentation::commands::autostart::set_autostart_enabled,
             presentation::commands::autostart::should_show_main_window_on_launch,

@@ -37,6 +37,8 @@ pub fn build_quick_set_session(
     rules: &[FocusRule],
     settings: &SwitcherSettings,
     sources: &[AvailableInputSource],
+    // Finder-style OS name when available; otherwise falls back to a short bundle id slug.
+    app_display_name: Option<String>,
 ) -> QuickSetSession {
     let app_id = snapshot.app().app_id().to_owned();
     // Empty when AX has no label; FE localizes the display fallback.
@@ -57,10 +59,14 @@ pub fn build_quick_set_session(
     };
 
     let languages = build_quick_set_languages(rules, settings, sources);
+    let app_display_name = app_display_name
+        .map(|name| name.trim().to_owned())
+        .filter(|name| !name.is_empty())
+        .unwrap_or_else(|| short_app_display_name(&app_id));
 
     QuickSetSession {
         app_id: app_id.clone(),
-        app_display_name: short_app_display_name(&app_id),
+        app_display_name,
         platform: snapshot.app().platform(),
         pid: snapshot.app().pid(),
         field_label,
@@ -258,7 +264,7 @@ mod tests {
             LanguageTag::ja(),
             Some(InputSourceId::parse("com.apple.inputmethod.Kotoeri.Japanese").expect("id")),
         );
-        let session = build_quick_set_session(&snapshot, &[app_wide], &settings, &[]);
+        let session = build_quick_set_session(&snapshot, &[app_wide], &settings, &[], None);
         assert!(session.matched_rule_id.is_none());
         assert!(!session.proposed_conditions.is_empty());
         assert_eq!(session.languages.len(), 1);
@@ -288,8 +294,15 @@ mod tests {
         )
         .expect("rule");
         let settings = SwitcherSettings::defaults();
-        let session = build_quick_set_session(&snapshot, &[contextual], &settings, &[]);
+        let session = build_quick_set_session(
+            &snapshot,
+            &[contextual],
+            &settings,
+            &[],
+            Some("Cursor".to_owned()),
+        );
         assert_eq!(session.matched_rule_id.as_deref(), Some("field-rule"));
+        assert_eq!(session.app_display_name, "Cursor");
     }
 
     #[test]

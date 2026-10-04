@@ -9,7 +9,8 @@ import {
 } from "react-icons/io5";
 
 import {
-  getAppIcons,
+  type AppPresentationDto,
+  getAppPresentations,
   type InputSourceOption,
   visibleInputSourceOptions,
 } from "@/features/inputSource";
@@ -58,8 +59,9 @@ export function AppIconView({
   );
 }
 
-export function useAppIcons(appIds: readonly string[]): Record<string, string | null> {
-  const [icons, setIcons] = useState<Record<string, string | null>>({});
+/** アイコンと表示名を 1 IPC で取得する。 */
+export function useAppPresentations(appIds: readonly string[]): Record<string, AppPresentationDto> {
+  const [values, setValues] = useState<Record<string, AppPresentationDto>>({});
   const key = [...appIds].sort().join("\n");
 
   useEffect(() => {
@@ -68,10 +70,10 @@ export function useAppIcons(appIds: readonly string[]): Record<string, string | 
       return;
     }
     let cancelled = false;
-    getAppIcons(ids)
+    getAppPresentations(ids)
       .then((result) => {
         if (!cancelled) {
-          setIcons(result);
+          setValues(result);
         }
       })
       .catch(() => {
@@ -82,7 +84,7 @@ export function useAppIcons(appIds: readonly string[]): Record<string, string | 
     };
   }, [key]);
 
-  return icons;
+  return values;
 }
 
 export function LanguageSelect({

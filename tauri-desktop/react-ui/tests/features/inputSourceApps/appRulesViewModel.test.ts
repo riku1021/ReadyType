@@ -30,6 +30,8 @@ describe("appRulesViewModel", () => {
   it("maps known bundle ids to display names", () => {
     expect(appDisplayName("com.todesktop.230313mzl4w4u92")).toBe("Cursor");
     expect(appDisplayName("com.unknown.app")).toBe("com.unknown.app");
+    expect(appDisplayName("com.google.Chrome", "Google Chrome")).toBe("Google Chrome");
+    expect(appDisplayName("com.google.Chrome", "  ")).toBe("com.google.Chrome");
   });
 
   it("labels chat/editor/terminal presets like the settings mock", () => {

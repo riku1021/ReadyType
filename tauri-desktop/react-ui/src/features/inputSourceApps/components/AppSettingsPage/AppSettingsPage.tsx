@@ -9,8 +9,8 @@ import { AlertDialog } from "@/components/Dialog";
 import { Toggle } from "@/components/Toggle";
 import { useInputSourceState } from "@/features/inputSource";
 
-import { type AppRuleGroup, groupRulesByApp } from "../../appRulesViewModel";
-import { AppIconView, useAppIcons } from "../appSettingsShared";
+import { type AppRuleGroup, appDisplayName, groupRulesByApp } from "../../appRulesViewModel";
+import { AppIconView, useAppPresentations } from "../appSettingsShared";
 import * as styles from "./AppSettingsPage.styles";
 
 type AppListRow = AppRuleGroup & {
@@ -24,12 +24,20 @@ export function AppSettingsPage() {
   const rules = state?.rules ?? [];
   const groups = useMemo(() => groupRulesByApp(rules, t), [rules, t]);
   const appIds = useMemo(() => groups.map((group) => group.appId), [groups]);
-  const icons = useAppIcons(appIds);
+  const presentations = useAppPresentations(appIds);
   const [resetOpen, setResetOpen] = useState(false);
 
   const rows: AppListRow[] = useMemo(
-    () => groups.map((group) => ({ ...group, iconSrc: icons[group.appId] })),
-    [groups, icons]
+    () =>
+      groups.map((group) => {
+        const presentation = presentations[group.appId];
+        return {
+          ...group,
+          label: appDisplayName(group.appId, presentation?.displayName),
+          iconSrc: presentation?.icon,
+        };
+      }),
+    [groups, presentations]
   );
 
   const setAppEnabled = async (group: AppRuleGroup, enabled: boolean) => {
