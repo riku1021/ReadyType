@@ -167,24 +167,6 @@ export const optionText = css({
   flex: "1",
 });
 
-export const radio = css({
-  width: "16px",
-  height: "16px",
-  marginTop: "2px",
-  borderRadius: "999px",
-  borderWidth: "2px",
-  borderStyle: "solid",
-  borderColor: "border.primary",
-  flexShrink: "0",
-  boxSizing: "border-box",
-});
-
-export const radioChecked = css({
-  borderColor: "brand.main",
-  backgroundColor: "brand.main",
-  boxShadow: "inset 0 0 0 3px {colors.background.sub}",
-});
-
 export const optionTitle = css({
   fontSize: "base",
   color: "text.main",

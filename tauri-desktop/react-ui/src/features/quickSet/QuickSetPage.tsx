@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { MdClose, MdSettings } from "react-icons/md";
 
 import { BrandLogo } from "@/components/BrandLogo";
+import { CompletionCheckbox } from "@/components/CompletionCheckbox";
 import { SuccessDialog } from "@/components/Dialog";
 import { SettingItem } from "@/components/SettingItem";
 import { cx } from "@/styled-system/css";
@@ -36,8 +37,6 @@ import {
   optionText,
   optionTitle,
   prompt,
-  radio,
-  radioChecked,
   shell,
   targetLabel,
 } from "./QuickSetPage.styles";
@@ -194,10 +193,7 @@ export function QuickSetPage() {
                 aria-pressed={option.isCurrent}
                 onClick={() => void onSelect(option.language, option.label)}
               >
-                <span
-                  className={cx(radio, option.isCurrent ? radioChecked : undefined)}
-                  aria-hidden
-                />
+                <CompletionCheckbox checked={option.isCurrent} />
                 <span className={optionText}>
                   <span className={optionTitle}>
                     {hasExisting && !option.isCurrent
