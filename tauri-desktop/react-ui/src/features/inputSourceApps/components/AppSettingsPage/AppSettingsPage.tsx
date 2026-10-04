@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { IoAdd, IoSearch } from "react-icons/io5";
+import { IoAdd, IoChevronForward, IoSearch } from "react-icons/io5";
 
 import { Button } from "@/components/Button";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
@@ -89,6 +89,18 @@ export function AppSettingsPage() {
             void setAppEnabled(group, enabled);
           }}
         />
+      ),
+    },
+    {
+      id: "navigate",
+      header: "",
+      width: "2.5rem",
+      headerClassName: styles.thChevron,
+      cellClassName: (_row, selected) => styles.tdChevron({ selected }),
+      cell: () => (
+        <span className={styles.chevron} aria-hidden>
+          <IoChevronForward />
+        </span>
       ),
     },
   ];

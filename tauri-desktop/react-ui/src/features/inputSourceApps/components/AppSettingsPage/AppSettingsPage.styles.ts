@@ -130,6 +130,19 @@ export const thApp = css(surfaceSub, {
 export const thEnabled = css(surfaceSub, {
   paddingBlock: "sm",
   paddingInline: "xs",
+  fontSize: "xs",
+  fontWeight: "semibold",
+  color: "text.sub",
+  textAlign: "right",
+  borderBottomWidth: "1px",
+  borderBottomStyle: "solid",
+  borderBottomColor: "border.primary",
+  whiteSpace: "nowrap",
+});
+
+export const thChevron = css(surfaceSub, {
+  paddingBlock: "sm",
+  paddingInline: "xs",
   paddingInlineEnd: "sm",
   fontSize: "xs",
   fontWeight: "semibold",
@@ -191,6 +204,24 @@ export const tdEnabled = cva({
   base: {
     paddingBlock: "sm",
     paddingInline: "xs",
+    verticalAlign: "middle",
+    minWidth: "0",
+    backgroundColor: "transparent",
+    textAlign: "right",
+  },
+  variants: {
+    selected: {
+      true: {
+        backgroundColor: "background.hover",
+      },
+    },
+  },
+});
+
+export const tdChevron = cva({
+  base: {
+    paddingBlock: "sm",
+    paddingInline: "xs",
     paddingInlineEnd: "sm",
     verticalAlign: "middle",
     minWidth: "0",
@@ -203,5 +234,17 @@ export const tdEnabled = cva({
         backgroundColor: "background.hover",
       },
     },
+  },
+});
+
+export const chevron = css({
+  display: "inline-flex",
+  width: "24px",
+  height: "24px",
+  fontSize: "24px",
+  color: "icon.secondary",
+  "& > svg": {
+    width: "100%",
+    height: "100%",
   },
 });
