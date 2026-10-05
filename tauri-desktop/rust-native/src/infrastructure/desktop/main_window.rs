@@ -15,7 +15,8 @@ pub fn show_main_window(app: &AppHandle, route: Option<&str>) {
         let _ = window.show();
         let _ = window.set_focus();
         if let Some(route) = route {
-            let _ = app.emit(NAVIGATE_EVENT, route);
+            // main 専用（global emit だと quick-set 副窓も SPA ナビしてしまう）
+            let _ = app.emit_to(MAIN_WINDOW_LABEL, NAVIGATE_EVENT, route);
         }
     }
 }

@@ -1,8 +1,8 @@
 import { useRouter } from "@tanstack/react-router";
-import { listen } from "@tauri-apps/api/event";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { type ReactNode, useEffect, useState } from "react";
-import { NAVIGATE_EVENT } from "@/features/quickSet";
+import { NAVIGATE_EVENT, QUICK_SET_EVENT } from "@/features/quickSet";
 import { RootLayout } from "@/layouts/RootLayout";
 
 type AppShellProps = {
@@ -21,11 +21,18 @@ export function AppShell({ children }: AppShellProps) {
     }
   }, []);
 
+  // quick-set: 起動時および毎回の open（QUICK_SET_EVENT）でルートを固定
   useEffect(() => {
     if (windowLabel !== "quick-set") {
       return;
     }
     void router.navigate({ to: "/quick-set" });
+    const unlistenPromise = getCurrentWebviewWindow().listen(QUICK_SET_EVENT, () => {
+      void router.navigate({ to: "/quick-set" });
+    });
+    return () => {
+      void unlistenPromise.then((unlisten) => unlisten());
+    };
   }, [router, windowLabel]);
 
   useEffect(() => {
@@ -39,21 +46,19 @@ export function AppShell({ children }: AppShellProps) {
     };
   }, [windowLabel]);
 
+  // main: emit_to("main") と対になる webview 専用 listen（公式パターン）
   useEffect(() => {
-    if (windowLabel === "quick-set") {
+    if (windowLabel === null || windowLabel === "quick-set") {
       return;
     }
-    let unlisten: (() => void) | undefined;
-    void listen<string>(NAVIGATE_EVENT, (event) => {
+    const unlistenPromise = getCurrentWebviewWindow().listen<string>(NAVIGATE_EVENT, (event) => {
       const route = event.payload;
       if (typeof route === "string" && route.startsWith("/")) {
         router.history.push(route);
       }
-    }).then((fn) => {
-      unlisten = fn;
     });
     return () => {
-      unlisten?.();
+      void unlistenPromise.then((unlisten) => unlisten());
     };
   }, [router, windowLabel]);
 

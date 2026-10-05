@@ -65,6 +65,7 @@ export const headerBlock = css({
   display: "flex",
   flexDirection: "column",
   gap: "xs",
+  flexShrink: "0",
   // ロゴ行は Drawer と同じ 60px。下の文言だけ横パディング
   paddingBottom: "sm",
   // 右上バツボタン（32px + sm）とロゴ文字が被らないよう余白を確保
@@ -101,8 +102,21 @@ export const nameField = css({
   display: "flex",
   flexDirection: "column",
   gap: "xs",
+  flexShrink: "0",
   paddingInline: "sm",
   paddingBottom: "sm",
+});
+
+/** 固定窓内で選択肢だけ縦スクロール */
+export const optionsScroll = css({
+  flex: "1",
+  minHeight: "0",
+  overflowY: "auto",
+  overscrollBehavior: "contain",
+});
+
+export const footerBlock = css({
+  flexShrink: "0",
 });
 
 export const nameLabel = css({

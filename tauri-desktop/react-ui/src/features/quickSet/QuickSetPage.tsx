@@ -25,12 +25,14 @@ import {
   closeButton,
   divider,
   emptyState,
+  footerBlock,
   headerBlock,
   nameField,
   nameInput,
   nameLabel,
   optionButton,
   optionButtonCurrent,
+  optionsScroll,
   optionText,
   optionTitle,
   prompt,
@@ -88,17 +90,15 @@ export function QuickSetPage() {
 
   useEffect(() => {
     void loadSession();
-    let unlisten: (() => void) | undefined;
     // emit_to(quick-set) と対になる webview 専用 listen
-    void getCurrentWebviewWindow()
-      .listen<QuickSetSessionDto>(QUICK_SET_EVENT, (event) => {
+    const unlistenPromise = getCurrentWebviewWindow().listen<QuickSetSessionDto>(
+      QUICK_SET_EVENT,
+      (event) => {
         adoptSession(event.payload);
-      })
-      .then((fn) => {
-        unlisten = fn;
-      });
+      }
+    );
     return () => {
-      unlisten?.();
+      void unlistenPromise.then((unlisten) => unlisten());
     };
   }, [adoptSession, loadSession]);
 
@@ -159,76 +159,32 @@ export function QuickSetPage() {
     void openQuickSetAdvanced(session.appId);
   };
 
-  const rows: ReactNode[] = session
-    ? [
-        <div key="header" className={headerBlock}>
-          <BrandLogo />
-          <div className={appIdentity}>
-            <AppIconView src={presentations[session.appId]?.icon} label={appLabel} />
-            <p className={appName}>{appLabel}</p>
-          </div>
-          <p className={prompt}>
-            {hasExisting ? t("quickSet.currentSetting") : t("quickSet.chooseLanguage")}
-          </p>
-        </div>,
-        <div key="rule-name" className={nameField}>
-          <label className={nameLabel} htmlFor="quick-set-rule-name">
-            {t("quickSet.ruleName")}
-          </label>
-          <input
-            id="quick-set-rule-name"
-            className={nameInput}
-            type="text"
-            value={ruleName}
+  const optionItems: ReactNode[] =
+    options.length === 0
+      ? [
+          <p key="empty" className={emptyState}>
+            {t("quickSet.noLanguages")}
+          </p>,
+        ]
+      : options.map((option) => (
+          <button
+            key={option.sourceId}
+            type="button"
+            className={cx(optionButton, option.isCurrent ? optionButtonCurrent : undefined)}
             disabled={!isIdle}
-            onChange={(event) => setRuleName(event.target.value)}
-          />
-        </div>,
-        ...(options.length === 0
-          ? [
-              <p key="empty" className={emptyState}>
-                {t("quickSet.noLanguages")}
-              </p>,
-            ]
-          : options.map((option) => (
-              <button
-                key={option.sourceId}
-                type="button"
-                className={cx(optionButton, option.isCurrent ? optionButtonCurrent : undefined)}
-                disabled={!isIdle}
-                aria-pressed={option.isCurrent}
-                onClick={() => void onSelect(option.sourceId, option.label)}
-              >
-                <CompletionCheckbox checked={option.isCurrent} />
-                <span className={optionText}>
-                  <span className={optionTitle}>
-                    {hasExisting && !option.isCurrent
-                      ? t("quickSet.changeTo", { language: option.label })
-                      : option.label}
-                  </span>
-                </span>
-              </button>
-            ))),
-        ...(error
-          ? [
-              <p key="error" className={emptyState}>
-                {error}
-              </p>,
-            ]
-          : []),
-        <SettingItem
-          key="advanced"
-          icon={MdSettings}
-          title={hasExisting ? t("quickSet.editRule") : t("quickSet.advanced")}
-          type="navigation"
-          onClick={isIdle ? onAdvanced : undefined}
-        />,
-      ]
-    : [
-        <p key="waiting" className={emptyState}>
-          {error ?? t("quickSet.waiting")}
-        </p>,
-      ];
+            aria-pressed={option.isCurrent}
+            onClick={() => void onSelect(option.sourceId, option.label)}
+          >
+            <CompletionCheckbox checked={option.isCurrent} />
+            <span className={optionText}>
+              <span className={optionTitle}>
+                {hasExisting && !option.isCurrent
+                  ? t("quickSet.changeTo", { language: option.label })
+                  : option.label}
+              </span>
+            </span>
+          </button>
+        ));
 
   return (
     <div className={shell}>
@@ -241,7 +197,53 @@ export function QuickSetPage() {
       >
         <MdClose />
       </button>
-      {withDividers(rows)}
+      {session ? (
+        <>
+          <div className={headerBlock}>
+            <BrandLogo />
+            <div className={appIdentity}>
+              <AppIconView src={presentations[session.appId]?.icon} label={appLabel} />
+              <p className={appName}>{appLabel}</p>
+            </div>
+            <p className={prompt}>
+              {hasExisting ? t("quickSet.currentSetting") : t("quickSet.chooseLanguage")}
+            </p>
+          </div>
+          <hr className={divider} />
+          <div className={nameField}>
+            <label className={nameLabel} htmlFor="quick-set-rule-name">
+              {t("quickSet.ruleName")}
+            </label>
+            <input
+              id="quick-set-rule-name"
+              className={nameInput}
+              type="text"
+              value={ruleName}
+              disabled={!isIdle}
+              onChange={(event) => setRuleName(event.target.value)}
+            />
+          </div>
+          <hr className={divider} />
+          <div className={optionsScroll}>{withDividers(optionItems)}</div>
+          {error ? (
+            <>
+              <hr className={divider} />
+              <p className={emptyState}>{error}</p>
+            </>
+          ) : null}
+          <hr className={divider} />
+          <div className={footerBlock}>
+            <SettingItem
+              icon={MdSettings}
+              title={hasExisting ? t("quickSet.editRule") : t("quickSet.advanced")}
+              type="navigation"
+              onClick={isIdle ? onAdvanced : undefined}
+            />
+          </div>
+        </>
+      ) : (
+        <p className={emptyState}>{error ?? t("quickSet.waiting")}</p>
+      )}
       <SuccessDialog
         isOpen={successLabel !== null}
         onClose={closeAfterSuccess}
