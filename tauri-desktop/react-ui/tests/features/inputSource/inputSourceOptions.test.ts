@@ -22,7 +22,7 @@ describe("buildInputSourceOptions", () => {
     });
   });
 
-  it("uses localized language names when unique", () => {
+  it("uses OS localized names as labels", () => {
     const options = buildInputSourceOptions(
       [
         { id: "com.apple.keylayout.ABC", name: "ABC", languageCode: "en", available: true },
@@ -33,22 +33,29 @@ describe("buildInputSourceOptions", () => {
           available: true,
         },
         {
-          id: "com.apple.inputmethod.Korean.2SetKorean",
-          name: "2セット韓国語",
-          languageCode: "ko",
+          id: "com.google.inputmethod.Japanese.Roman",
+          name: "英数（Google）",
+          languageCode: "en",
+          available: true,
+        },
+        {
+          id: "com.apple.inputmethod.Kotoeri.Japanese",
+          name: "日本語",
+          languageCode: "ja",
           available: true,
         },
       ],
       []
     );
     expect(options.map((option) => ({ value: option.value, label: option.label }))).toEqual([
-      { value: "com.apple.keylayout.ABC", label: "英語" },
-      { value: "com.apple.inputmethod.Korean.2SetKorean", label: "韓国語" },
-      { value: "com.google.inputmethod.Japanese.base", label: "日本語" },
+      { value: "com.apple.keylayout.ABC", label: "ABC" },
+      { value: "com.google.inputmethod.Japanese.base", label: "ひらがな（Google）" },
+      { value: "com.google.inputmethod.Japanese.Roman", label: "英数（Google）" },
+      { value: "com.apple.inputmethod.Kotoeri.Japanese", label: "日本語" },
     ]);
   });
 
-  it("disambiguates colliding language codes with localized source names", () => {
+  it("keeps distinct OS names when language codes collide", () => {
     const options = buildInputSourceOptions(
       [
         {
@@ -67,8 +74,8 @@ describe("buildInputSourceOptions", () => {
       []
     );
     expect(options.map((option) => option.label).sort()).toEqual([
-      "韓国語（2セット韓国語）",
-      "韓国語（3セット韓国語）",
+      "2セット韓国語",
+      "3セット韓国語",
     ]);
   });
 
@@ -91,9 +98,9 @@ describe("buildInputSourceOptions", () => {
 
 describe("visibleInputSourceOptions", () => {
   const options = [
-    { value: "en", label: "英語", available: true },
+    { value: "en", label: "ABC", available: true },
     { value: "removed", label: "removed（利用不可）", available: false },
-    { value: "ja", label: "日本語", available: true },
+    { value: "ja", label: "ひらがな（Google）", available: true },
   ];
 
   it("hides unavailable options that are not the current value", () => {

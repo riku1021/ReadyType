@@ -35,6 +35,16 @@ use super::{
     ui_locale_cache::UiLocaleCache,
 };
 
+pub struct SwitcherControllerDeps {
+    pub settings: SwitcherSettings,
+    pub gateway: Box<dyn InputSourceGateway>,
+    pub repository: Arc<dyn SettingsRepository>,
+    pub clock: Arc<dyn Clock>,
+    pub publisher: Arc<dyn SwitcherEventPublisher>,
+    pub monitor: Box<dyn FocusMonitor>,
+    pub app_display_names: Arc<dyn AppDisplayNameResolver>,
+}
+
 type RuntimeSwitcher = InputSourceSwitcher<
     Box<dyn InputSourceGateway>,
     Arc<dyn SettingsRepository>,
@@ -110,15 +120,16 @@ pub struct SwitcherController {
 }
 
 impl SwitcherController {
-    pub fn new(
-        settings: SwitcherSettings,
-        gateway: Box<dyn InputSourceGateway>,
-        repository: Arc<dyn SettingsRepository>,
-        clock: Arc<dyn Clock>,
-        publisher: Arc<dyn SwitcherEventPublisher>,
-        monitor: Box<dyn FocusMonitor>,
-        app_display_names: Arc<dyn AppDisplayNameResolver>,
-    ) -> Result<Arc<Self>, ControllerError> {
+    pub fn new(deps: SwitcherControllerDeps) -> Result<Arc<Self>, ControllerError> {
+        let SwitcherControllerDeps {
+            settings,
+            gateway,
+            repository,
+            clock,
+            publisher,
+            monitor,
+            app_display_names,
+        } = deps;
         let resolved = SwitcherSettings::resolve_ui_locale(&settings.ui_locale);
         let ui_locale = Arc::new(UiLocaleCache::new(&resolved));
         let switcher = Arc::new(Mutex::new(InputSourceSwitcher::new(
@@ -173,6 +184,7 @@ impl SwitcherController {
             return Ok(None);
         }
         self.ui_locale.store(&resolved);
+        self.refresh_localized_sources()?;
         self.publisher.publish(&state, &resolved);
         Ok(Some(state))
     }
@@ -286,11 +298,14 @@ impl SwitcherController {
         &self,
         refresh: bool,
     ) -> Result<Vec<AvailableInputSource>, ControllerError> {
+        let locale = self.ui_locale.load();
         let gateway = self.lock_switcher()?.gateway_handle();
         let mut gateway = gateway
             .lock()
             .map_err(|_| ControllerError::InvalidRequest("gateway lock poisoned".to_owned()))?;
-        Ok(gateway.list(refresh).map_err(ApplicationError::from)?)
+        Ok(gateway
+            .list(refresh, &locale)
+            .map_err(ApplicationError::from)?)
     }
 
     pub fn rules(&self) -> Result<Vec<FocusRule>, ControllerError> {
@@ -379,10 +394,12 @@ impl SwitcherController {
     }
 
     pub fn set_ui_locale(&self, locale: &str) -> Result<SwitcherState, ControllerError> {
-        self.mutate_switcher(|switcher| {
+        let state = self.mutate_switcher(|switcher| {
             switcher.set_ui_locale(locale)?;
             Ok(switcher.state().clone())
-        })
+        })?;
+        self.refresh_localized_sources()?;
+        Ok(state)
     }
 
     pub fn focus_snapshot(&self) -> Result<Option<FocusSnapshot>, ControllerError> {
@@ -543,6 +560,12 @@ impl SwitcherController {
         }
     }
 
+    /// Refresh input-source display names for the current UI locale.
+    fn refresh_localized_sources(&self) -> Result<(), ControllerError> {
+        let _ = self.list_input_sources(true)?;
+        Ok(())
+    }
+
     fn wake_worker(&self) -> Result<(), ControllerError> {
         self.sender
             .send(WorkerMessage::SettingsChanged)
@@ -674,8 +697,9 @@ fn run_worker(
                         rule,
                         target,
                     } => {
+                        let locale = ui_locale.load();
                         let switch_result = match gateway.lock() {
-                            Ok(mut gateway) => switch_input_source(&mut *gateway, &target),
+                            Ok(mut gateway) => switch_input_source(&mut *gateway, &target, &locale),
                             Err(_) => Err(ApplicationError::InvalidSettings(
                                 "gateway lock poisoned".to_owned(),
                             )),
@@ -781,7 +805,7 @@ mod tests {
         Arc,
     };
 
-    use super::SwitcherController;
+    use super::{SwitcherController, SwitcherControllerDeps};
     use crate::{
         application::{
             ports::{
@@ -803,7 +827,11 @@ mod tests {
     struct FakeGateway;
 
     impl InputSourceGateway for FakeGateway {
-        fn list(&mut self, _refresh: bool) -> Result<Vec<AvailableInputSource>, GatewayError> {
+        fn list(
+            &mut self,
+            _refresh: bool,
+            _locale: &str,
+        ) -> Result<Vec<AvailableInputSource>, GatewayError> {
             Ok(Vec::new())
         }
 
@@ -898,15 +926,15 @@ mod tests {
     }
 
     fn controller(monitor: Arc<MonitorData>) -> Arc<SwitcherController> {
-        SwitcherController::new(
-            SwitcherSettings::defaults(),
-            Box::new(FakeGateway),
-            Arc::new(FakeRepository),
-            Arc::new(FakeClock(AtomicU64::new(1_000))),
-            Arc::new(NoopPublisher),
-            Box::new(FakeMonitor(monitor)),
-            Arc::new(NoopDisplayNames),
-        )
+        SwitcherController::new(SwitcherControllerDeps {
+            settings: SwitcherSettings::defaults(),
+            gateway: Box::new(FakeGateway),
+            repository: Arc::new(FakeRepository),
+            clock: Arc::new(FakeClock(AtomicU64::new(1_000))),
+            publisher: Arc::new(NoopPublisher),
+            monitor: Box::new(FakeMonitor(monitor)),
+            app_display_names: Arc::new(NoopDisplayNames),
+        })
         .expect("controller")
     }
 

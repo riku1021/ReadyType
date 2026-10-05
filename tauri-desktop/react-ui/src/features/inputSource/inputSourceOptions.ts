@@ -26,20 +26,11 @@ export function buildInputSourceOptions(
       unique.set(source.id, source);
     }
   }
-  const uniqueSources = [...unique.values()];
-  const languageCounts = new Map<string, number>();
-  for (const source of uniqueSources) {
-    const code = source.languageCode;
-    if (!code) {
-      continue;
-    }
-    languageCounts.set(code, (languageCounts.get(code) ?? 0) + 1);
-  }
 
-  return uniqueSources
+  return [...unique.values()]
     .map((source) => ({
       value: source.id,
-      label: displayLabelForSource(source, languageCounts),
+      label: displayLabelForSource(source),
       available: source.available,
     }))
     .sort((left, right) => left.label.localeCompare(right.label, i18n.language));
@@ -53,32 +44,10 @@ export function visibleInputSourceOptions(
   return options.filter((option) => option.available || option.value === currentValue);
 }
 
-export function languageDisplayName(languageCode: string): string {
-  try {
-    const languageNames = new Intl.DisplayNames([i18n.language], { type: "language" });
-    return languageNames.of(languageCode) ?? languageCode;
-  } catch {
-    return languageCode;
-  }
-}
-
-function displayLabelForSource(
-  source: InputSourceDto,
-  languageCounts: ReadonlyMap<string, number>
-): string {
+/** OS の LocalizedName（`source.name`）をそのまま使う。メニューバー表示に合わせる。 */
+function displayLabelForSource(source: InputSourceDto): string {
   if (!source.available) {
     return i18n.t("common.inputSourceUnavailable", { id: source.id });
   }
-  const code = source.languageCode;
-  if (!code) {
-    return source.name;
-  }
-  const languageLabel = languageDisplayName(code);
-  if ((languageCounts.get(code) ?? 0) > 1) {
-    return i18n.t("common.inputSourceWithVariant", {
-      language: languageLabel,
-      name: source.name,
-    });
-  }
-  return languageLabel;
+  return source.name;
 }

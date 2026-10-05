@@ -23,7 +23,6 @@
     "resetFailed": "リセットに失敗しました",
     "initSwitcherFailed": "入力ソース切替の初期化に失敗しました",
     "inputSourceUnavailable": "{{id}}（利用不可）",
-    "inputSourceWithVariant": "{{language}}（{{name}}）",
     "enableAppAria": "{{label}} を有効化",
     "ruleCount": "{{count}}個",
     "requestPermission": "権限を要求",

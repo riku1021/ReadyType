@@ -31,14 +31,23 @@ impl fmt::Display for GatewayError {
 impl std::error::Error for GatewayError {}
 
 pub trait InputSourceGateway: Send {
-    fn list(&mut self, refresh: bool) -> Result<Vec<AvailableInputSource>, GatewayError>;
+    /// `locale` は UI 表示言語（`ja` / `en` / `zh`）。表示名解決に使う。
+    fn list(
+        &mut self,
+        refresh: bool,
+        locale: &str,
+    ) -> Result<Vec<AvailableInputSource>, GatewayError>;
     fn current(&self) -> Result<InputSourceId, GatewayError>;
     fn select(&mut self, id: &InputSourceId) -> Result<(), GatewayError>;
 }
 
 impl<T: InputSourceGateway + ?Sized> InputSourceGateway for Box<T> {
-    fn list(&mut self, refresh: bool) -> Result<Vec<AvailableInputSource>, GatewayError> {
-        (**self).list(refresh)
+    fn list(
+        &mut self,
+        refresh: bool,
+        locale: &str,
+    ) -> Result<Vec<AvailableInputSource>, GatewayError> {
+        (**self).list(refresh, locale)
     }
 
     fn current(&self) -> Result<InputSourceId, GatewayError> {

@@ -72,7 +72,7 @@ function RuleActionsMenu({ title, onDelete }: { title: string; onDelete: () => v
 }
 
 export function AppDetailPage({ appId }: AppDetailPageProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { state, updateRule, deleteRule, fetchInputSources } = useInputSourceState();
   const rules = state?.rules ?? [];
   const groups = useMemo(() => groupRulesByApp(rules, t), [rules, t]);
@@ -90,12 +90,15 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
   const [sources, setSources] = useState<InputSourceDto[]>([]);
   const [pendingDelete, setPendingDelete] = useState<RuleDisplay | null>(null);
   const [deletedTitle, setDeletedTitle] = useState<string | null>(null);
+  const uiLanguage = i18n.language;
 
+  // UI 言語変更時にネイティブ側の locale 付き list を取り直す
   useEffect(() => {
     let cancelled = false;
+    const requestedLanguage = uiLanguage;
     void fetchInputSources(true)
       .then((next) => {
-        if (!cancelled) {
+        if (!cancelled && requestedLanguage === uiLanguage) {
           setSources(next);
         }
       })
@@ -105,7 +108,7 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
     return () => {
       cancelled = true;
     };
-  }, [fetchInputSources]);
+  }, [fetchInputSources, uiLanguage]);
 
   const languagePreferences = state?.languagePreferences ?? {};
   const preferredIds = useMemo(

@@ -58,7 +58,9 @@ pub fn run() {
                 #[cfg(target_os = "macos")]
                 {
                     Box::new(
-                        infrastructure::platform::input_source::MacOsInputSourceGateway::new()?,
+                        infrastructure::platform::input_source::MacOsInputSourceGateway::new(
+                            &resolved_ui_locale,
+                        )?,
                     )
                 }
                 #[cfg(not(target_os = "macos"))]
@@ -96,13 +98,15 @@ pub fn run() {
                 }
             };
             let controller = application::switcher_controller::SwitcherController::new(
-                settings,
-                gateway,
-                Arc::clone(&repository),
-                Arc::new(application::switcher_controller::SystemClock),
-                publisher,
-                monitor,
-                Arc::clone(&app_display_name_resolver),
+                application::switcher_controller::SwitcherControllerDeps {
+                    settings,
+                    gateway,
+                    repository: Arc::clone(&repository),
+                    clock: Arc::new(application::switcher_controller::SystemClock),
+                    publisher,
+                    monitor,
+                    app_display_names: Arc::clone(&app_display_name_resolver),
+                },
             )?;
             controller.refresh_permission()?;
             let initial_state = controller.state()?;

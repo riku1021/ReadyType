@@ -28,7 +28,7 @@ impl<H: Clone> Clone for NativeInputSource<H> {
 pub trait TisBackend: Send {
     type Handle: Clone + Send;
 
-    fn list(&mut self) -> Result<Vec<NativeInputSource<Self::Handle>>, GatewayError>;
+    fn list(&mut self, locale: &str) -> Result<Vec<NativeInputSource<Self::Handle>>, GatewayError>;
     fn current(&self) -> Result<InputSourceId, GatewayError>;
     fn select(&mut self, handle: &Self::Handle) -> Result<(), GatewayError>;
 }
@@ -36,24 +36,32 @@ pub trait TisBackend: Send {
 pub struct MacOsInputSourceGateway<B: TisBackend> {
     backend: B,
     cache: Vec<NativeInputSource<B::Handle>>,
+    locale: String,
 }
 
 impl<B: TisBackend> MacOsInputSourceGateway<B> {
-    pub fn with_backend(mut backend: B) -> Result<Self, GatewayError> {
-        let cache = Self::load_cache(&mut backend)?;
-        Ok(Self { backend, cache })
+    pub fn with_backend(mut backend: B, locale: &str) -> Result<Self, GatewayError> {
+        let cache = Self::load_cache(&mut backend, locale)?;
+        Ok(Self {
+            backend,
+            cache,
+            locale: locale.to_owned(),
+        })
     }
 
-    fn load_cache(backend: &mut B) -> Result<Vec<NativeInputSource<B::Handle>>, GatewayError> {
+    fn load_cache(
+        backend: &mut B,
+        locale: &str,
+    ) -> Result<Vec<NativeInputSource<B::Handle>>, GatewayError> {
         Ok(backend
-            .list()?
+            .list(locale)?
             .into_iter()
             .filter(|source| source.enabled && source.selectable)
             .collect())
     }
 
     fn refresh(&mut self) -> Result<(), GatewayError> {
-        self.cache = Self::load_cache(&mut self.backend)?;
+        self.cache = Self::load_cache(&mut self.backend, &self.locale)?;
         Ok(())
     }
 
@@ -71,8 +79,13 @@ impl<B: TisBackend> MacOsInputSourceGateway<B> {
 }
 
 impl<B: TisBackend> InputSourceGateway for MacOsInputSourceGateway<B> {
-    fn list(&mut self, refresh: bool) -> Result<Vec<AvailableInputSource>, GatewayError> {
-        if refresh {
+    fn list(
+        &mut self,
+        refresh: bool,
+        locale: &str,
+    ) -> Result<Vec<AvailableInputSource>, GatewayError> {
+        if refresh || self.locale != locale {
+            self.locale = locale.to_owned();
             self.refresh()?;
         }
         let mut entries = self
@@ -115,8 +128,8 @@ impl<B: TisBackend> InputSourceGateway for MacOsInputSourceGateway<B> {
 
 #[cfg(target_os = "macos")]
 impl MacOsInputSourceGateway<super::macos::SystemTisBackend> {
-    pub fn new() -> Result<Self, GatewayError> {
-        Self::with_backend(super::macos::SystemTisBackend)
+    pub fn new(locale: &str) -> Result<Self, GatewayError> {
+        Self::with_backend(super::macos::SystemTisBackend, locale)
     }
 }
 
@@ -124,7 +137,11 @@ impl MacOsInputSourceGateway<super::macos::SystemTisBackend> {
 pub struct UnsupportedInputSourceGateway;
 
 impl InputSourceGateway for UnsupportedInputSourceGateway {
-    fn list(&mut self, _refresh: bool) -> Result<Vec<AvailableInputSource>, GatewayError> {
+    fn list(
+        &mut self,
+        _refresh: bool,
+        _locale: &str,
+    ) -> Result<Vec<AvailableInputSource>, GatewayError> {
         Err(GatewayError::UnsupportedPlatform)
     }
 
@@ -156,6 +173,7 @@ mod tests {
         list_calls: usize,
         select_calls: usize,
         selection_error: Option<GatewayError>,
+        last_locale: String,
     }
 
     impl FakeTis {
@@ -166,6 +184,7 @@ mod tests {
                 list_calls: 0,
                 select_calls: 0,
                 selection_error: None,
+                last_locale: String::new(),
             }
         }
     }
@@ -173,8 +192,12 @@ mod tests {
     impl TisBackend for FakeTis {
         type Handle = FakeHandle;
 
-        fn list(&mut self) -> Result<Vec<NativeInputSource<Self::Handle>>, GatewayError> {
+        fn list(
+            &mut self,
+            locale: &str,
+        ) -> Result<Vec<NativeInputSource<Self::Handle>>, GatewayError> {
             self.list_calls += 1;
+            self.last_locale = locale.to_owned();
             self.lists.pop_front().unwrap_or_else(|| Ok(Vec::new()))
         }
 
@@ -221,7 +244,8 @@ mod tests {
                 source("jp", "Japanese", true, true, 2),
             ],
         ]);
-        let mut gateway = MacOsInputSourceGateway::with_backend(backend).expect("initial list");
+        let mut gateway =
+            MacOsInputSourceGateway::with_backend(backend, "ja").expect("initial list");
 
         gateway
             .select(&input_id("jp"))
@@ -238,9 +262,10 @@ mod tests {
             source("disabled", "Disabled", false, true, 2),
             source("mode", "Mode", true, false, 3),
         ]]);
-        let mut gateway = MacOsInputSourceGateway::with_backend(backend).expect("initial list");
+        let mut gateway =
+            MacOsInputSourceGateway::with_backend(backend, "ja").expect("initial list");
 
-        let available = gateway.list(false).expect("cached list");
+        let available = gateway.list(false, "ja").expect("cached list");
 
         assert_eq!(available.len(), 1);
         assert_eq!(available[0].id.as_str(), "en");
@@ -249,9 +274,25 @@ mod tests {
     }
 
     #[test]
+    fn locale_change_refreshes_without_explicit_refresh_flag() {
+        let backend = FakeTis::with_lists(vec![
+            vec![source("en", "ABC", true, true, 1)],
+            vec![source("en", "ABC", true, true, 1)],
+        ]);
+        let mut gateway =
+            MacOsInputSourceGateway::with_backend(backend, "en").expect("initial list");
+        assert_eq!(gateway.backend().list_calls, 1);
+
+        gateway.list(false, "ja").expect("locale change");
+        assert_eq!(gateway.backend().list_calls, 2);
+        assert_eq!(gateway.backend().last_locale, "ja");
+    }
+
+    #[test]
     fn selecting_current_source_still_calls_native_select() {
         let backend = FakeTis::with_lists(vec![vec![source("en", "ABC", true, true, 1)]]);
-        let mut gateway = MacOsInputSourceGateway::with_backend(backend).expect("initial list");
+        let mut gateway =
+            MacOsInputSourceGateway::with_backend(backend, "ja").expect("initial list");
 
         gateway.select(&input_id("en")).expect("already selected");
 
@@ -262,7 +303,8 @@ mod tests {
     fn native_selection_error_is_propagated() {
         let mut backend = FakeTis::with_lists(vec![vec![source("jp", "Japanese", true, true, 2)]]);
         backend.selection_error = Some(GatewayError::Operation("OSStatus -50".to_owned()));
-        let mut gateway = MacOsInputSourceGateway::with_backend(backend).expect("initial list");
+        let mut gateway =
+            MacOsInputSourceGateway::with_backend(backend, "ja").expect("initial list");
 
         let error = gateway
             .select(&input_id("jp"))
@@ -278,7 +320,8 @@ mod tests {
             vec![source("en", "ABC", true, true, 1)],
             vec![source("en", "ABC", true, true, 1)],
         ]);
-        let mut gateway = MacOsInputSourceGateway::with_backend(backend).expect("initial list");
+        let mut gateway =
+            MacOsInputSourceGateway::with_backend(backend, "ja").expect("initial list");
 
         assert!(gateway.select(&input_id("jp")).is_err());
         assert_eq!(gateway.backend().list_calls, 2);

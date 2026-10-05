@@ -23,7 +23,6 @@
     "resetFailed": "重置失败",
     "initSwitcherFailed": "输入源切换初始化失败",
     "inputSourceUnavailable": "{{id}}（不可用）",
-    "inputSourceWithVariant": "{{language}}（{{name}}）",
     "enableAppAria": "启用 {{label}}",
     "ruleCount": "{{count}} 个",
     "requestPermission": "请求权限",

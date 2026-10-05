@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>com.apple.inputmethod.Japanese</key>
+	<string>ひらがな (Google)</string>
+	<key>com.apple.inputmethod.Roman</key>
+	<string>英数 (Google)</string>
+</dict>
+</plist>

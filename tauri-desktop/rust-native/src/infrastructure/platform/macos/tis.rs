@@ -10,7 +10,10 @@ use objc2::MainThreadMarker;
 use crate::{
     application::ports::input_source::GatewayError,
     domain::input_source::InputSourceId,
-    infrastructure::platform::input_source::{NativeInputSource, TisBackend},
+    infrastructure::platform::{
+        input_source::{NativeInputSource, TisBackend},
+        macos::input_source_display_name,
+    },
 };
 
 type CFIndex = isize;
@@ -26,6 +29,9 @@ static FOLLOWUP_EPOCH: AtomicU64 = AtomicU64::new(0);
 unsafe extern "C" {
     static kTISPropertyInputSourceID: *const c_void;
     static kTISPropertyLocalizedName: *const c_void;
+    static kTISPropertyBundleID: *const c_void;
+    static kTISPropertyInputModeID: *const c_void;
+    static kTISPropertyIconImageURL: *const c_void;
     static kTISPropertyInputSourceLanguages: *const c_void;
     static kTISPropertyInputSourceIsEnabled: *const c_void;
     static kTISPropertyInputSourceIsSelectCapable: *const c_void;
@@ -147,8 +153,9 @@ pub struct SystemTisBackend;
 impl TisBackend for SystemTisBackend {
     type Handle = OwnedTisInputSource;
 
-    fn list(&mut self) -> Result<Vec<NativeInputSource<Self::Handle>>, GatewayError> {
-        run_on_main_thread(list_on_main)
+    fn list(&mut self, locale: &str) -> Result<Vec<NativeInputSource<Self::Handle>>, GatewayError> {
+        let locale = locale.to_owned();
+        run_on_main_thread(move || list_on_main(&locale))
     }
 
     fn current(&self) -> Result<InputSourceId, GatewayError> {
@@ -161,7 +168,7 @@ impl TisBackend for SystemTisBackend {
     }
 }
 
-fn list_on_main() -> Result<Vec<NativeInputSource<OwnedTisInputSource>>, GatewayError> {
+fn list_on_main(locale: &str) -> Result<Vec<NativeInputSource<OwnedTisInputSource>>, GatewayError> {
     // SAFETY: null properties means no filter; false requests enabled sources only.
     let array =
         unsafe { OwnedCfArray::from_create_rule(TISCreateInputSourceList(std::ptr::null(), 0))? };
@@ -180,8 +187,22 @@ fn list_on_main() -> Result<Vec<NativeInputSource<OwnedTisInputSource>>, Gateway
         let Some(id) = property_string(raw, unsafe { kTISPropertyInputSourceID }) else {
             continue;
         };
-        let name = property_string(raw, unsafe { kTISPropertyLocalizedName })
+        let fallback_name = property_string(raw, unsafe { kTISPropertyLocalizedName })
             .unwrap_or_else(|| id.clone());
+        let bundle_id = property_string(raw, unsafe { kTISPropertyBundleID });
+        let mode_id = property_string(raw, unsafe { kTISPropertyInputModeID });
+        let icon_path = {
+            let url = unsafe { TISGetInputSourceProperty(raw, kTISPropertyIconImageURL) };
+            input_source_display_name::path_from_cfurl(url)
+        };
+        let name = input_source_display_name::resolve_display_name(
+            locale,
+            &id,
+            bundle_id.as_deref(),
+            mode_id.as_deref(),
+            icon_path.as_deref(),
+            &fallback_name,
+        );
         let language_code = primary_language_code(raw);
         let enabled =
             property_bool(raw, unsafe { kTISPropertyInputSourceIsEnabled }).unwrap_or(false);

@@ -23,7 +23,6 @@
     "resetFailed": "Failed to reset",
     "initSwitcherFailed": "Failed to initialize input source switching",
     "inputSourceUnavailable": "{{id}} (unavailable)",
-    "inputSourceWithVariant": "{{language}} ({{name}})",
     "enableAppAria": "Enable {{label}}",
     "ruleCount": "{{count}}",
     "requestPermission": "Request permission",

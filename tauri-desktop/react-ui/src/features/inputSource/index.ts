@@ -9,7 +9,6 @@ export {
 export {
   buildInputSourceOptions,
   type InputSourceOption,
-  languageDisplayName,
   visibleInputSourceOptions,
 } from "./inputSourceOptions";
 export type * from "./types";

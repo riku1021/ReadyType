@@ -110,8 +110,9 @@ where
             .validate()
             .map_err(|error| ApplicationError::InvalidSettings(error.to_string()))?;
         let mut settings = settings;
+        let list_locale = SwitcherSettings::resolve_ui_locale(&settings.ui_locale);
         if let Ok(mut guard) = gateway.lock() {
-            if let Ok(sources) = guard.list(false) {
+            if let Ok(sources) = guard.list(false, &list_locale) {
                 let next_preferences = if settings.language_preferences.is_empty() {
                     let current = guard.current().ok();
                     super::settings::seed_language_preferences_from_sources(
@@ -173,11 +174,12 @@ where
     pub fn list_input_sources(
         &mut self,
         refresh: bool,
+        locale: &str,
     ) -> Result<Vec<super::ports::input_source::AvailableInputSource>, ApplicationError> {
         self.gateway
             .lock()
             .map_err(|_| ApplicationError::InvalidSettings("gateway lock poisoned".to_owned()))?
-            .list(refresh)
+            .list(refresh, locale)
             .map_err(ApplicationError::from)
     }
 
@@ -479,7 +481,8 @@ where
                     let mut gateway = self.gateway.lock().map_err(|_| {
                         ApplicationError::InvalidSettings("gateway lock poisoned".to_owned())
                     })?;
-                    switch_input_source(&mut *gateway, &target)
+                    let locale = SwitcherSettings::resolve_ui_locale(&self.settings.ui_locale);
+                    switch_input_source(&mut *gateway, &target, &locale)
                 };
                 match switch_result {
                     Ok((current, select_result)) => {
@@ -681,12 +684,13 @@ where
 pub(crate) fn switch_input_source<G: InputSourceGateway>(
     gateway: &mut G,
     target: &InputSourceId,
+    locale: &str,
 ) -> Result<(InputSourceId, Result<(), GatewayError>), ApplicationError> {
     let current = gateway.current()?;
     let select_result = match gateway.select(target) {
         Ok(()) => Ok(()),
         Err(_) => {
-            gateway.list(true)?;
+            gateway.list(true, locale)?;
             gateway.select(target)
         }
     };
@@ -732,7 +736,11 @@ mod tests {
     struct FakeGateway(Arc<Mutex<GatewayData>>);
 
     impl InputSourceGateway for FakeGateway {
-        fn list(&mut self, refresh: bool) -> Result<Vec<AvailableInputSource>, GatewayError> {
+        fn list(
+            &mut self,
+            refresh: bool,
+            _locale: &str,
+        ) -> Result<Vec<AvailableInputSource>, GatewayError> {
             if refresh {
                 self.0.lock().expect("gateway lock").refreshes += 1;
             }

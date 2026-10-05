@@ -5,6 +5,7 @@ mod app_display_name;
 mod app_icon;
 mod application_path;
 mod focus_monitor;
+mod input_source_display_name;
 mod tis;
 mod window_chrome;
 
