@@ -245,7 +245,7 @@ pub fn run() {
             presentation::commands::input_source_switcher::list_switch_logs,
             presentation::commands::input_source_switcher::clear_switch_logs,
             presentation::commands::quick_set::get_quick_set_session,
-            presentation::commands::quick_set::apply_quick_set_language,
+            presentation::commands::quick_set::apply_quick_set_source,
             presentation::commands::quick_set::hide_quick_set,
             presentation::commands::quick_set::open_quick_set_advanced,
             presentation::commands::sync_window_chrome::sync_window_chrome_theme,

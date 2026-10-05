@@ -17,12 +17,7 @@ import { SuccessDialog } from "@/components/Dialog";
 import { SettingItem } from "@/components/SettingItem";
 import { cx } from "@/styled-system/css";
 
-import {
-  applyQuickSetLanguage,
-  getQuickSetSession,
-  hideQuickSet,
-  openQuickSetAdvanced,
-} from "./api";
+import { applyQuickSetSource, getQuickSetSession, hideQuickSet, openQuickSetAdvanced } from "./api";
 import {
   closeButton,
   divider,
@@ -33,7 +28,6 @@ import {
   nameLabel,
   optionButton,
   optionButtonCurrent,
-  optionSubtitle,
   optionText,
   optionTitle,
   prompt,
@@ -134,14 +128,14 @@ export function QuickSetPage() {
   const isIdle = phase.kind === "idle";
   const successLabel = phase.kind === "success" ? phase.languageLabel : null;
 
-  const onSelect = async (language: string, label: string) => {
+  const onSelect = async (sourceId: string, label: string) => {
     if (phase.kind !== "idle") {
       return;
     }
     setPhase({ kind: "applying" });
     setError(null);
     try {
-      await applyQuickSetLanguage(language, ruleName);
+      await applyQuickSetSource(sourceId, ruleName);
       setPhase({ kind: "success", languageLabel: label });
     } catch {
       setError(t("quickSet.saveFailed"));
@@ -186,12 +180,12 @@ export function QuickSetPage() {
             ]
           : options.map((option) => (
               <button
-                key={option.language}
+                key={option.sourceId}
                 type="button"
                 className={cx(optionButton, option.isCurrent ? optionButtonCurrent : undefined)}
                 disabled={!isIdle}
                 aria-pressed={option.isCurrent}
-                onClick={() => void onSelect(option.language, option.label)}
+                onClick={() => void onSelect(option.sourceId, option.label)}
               >
                 <CompletionCheckbox checked={option.isCurrent} />
                 <span className={optionText}>
@@ -200,7 +194,6 @@ export function QuickSetPage() {
                       ? t("quickSet.changeTo", { language: option.label })
                       : option.label}
                   </span>
-                  <span className={optionSubtitle}>{option.sourceName}</span>
                 </span>
               </button>
             ))),

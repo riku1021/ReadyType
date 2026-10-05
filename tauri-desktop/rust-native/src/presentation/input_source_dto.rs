@@ -465,14 +465,6 @@ impl From<&AxElementSnapshot> for AxElementDto {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct QuickSetLanguageDto {
-    pub language: String,
-    pub preferred_source_id: String,
-    pub preferred_source_name: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct QuickSetSessionDto {
     pub app_id: String,
     pub app_display_name: String,
@@ -482,7 +474,8 @@ pub struct QuickSetSessionDto {
     pub proposed_conditions: Vec<ConditionDto>,
     pub matched_rule_id: Option<String>,
     pub matched_target: Option<RuleTargetDto>,
-    pub languages: Vec<QuickSetLanguageDto>,
+    pub sources: Vec<InputSourceDto>,
+    pub language_preferences: std::collections::BTreeMap<String, Option<String>>,
 }
 
 impl From<&crate::application::quick_set::QuickSetSession> for QuickSetSessionDto {
@@ -500,13 +493,20 @@ impl From<&crate::application::quick_set::QuickSetSession> for QuickSetSessionDt
                 .collect(),
             matched_rule_id: session.matched_rule_id.clone(),
             matched_target: session.matched_target.as_ref().map(RuleTargetDto::from),
-            languages: session
-                .languages
+            sources: session
+                .sources
                 .iter()
-                .map(|language| QuickSetLanguageDto {
-                    language: language.language.as_str().to_owned(),
-                    preferred_source_id: language.preferred_source_id.clone(),
-                    preferred_source_name: language.preferred_source_name.clone(),
+                .cloned()
+                .map(InputSourceDto::from)
+                .collect(),
+            language_preferences: session
+                .language_preferences
+                .iter()
+                .map(|(tag, preferred)| {
+                    (
+                        tag.as_str().to_owned(),
+                        preferred.as_ref().map(|id| id.as_str().to_owned()),
+                    )
                 })
                 .collect(),
         }

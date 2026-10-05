@@ -1,10 +1,11 @@
-import { languageDisplayName } from "@/features/inputSource";
-import type { QuickSetLanguageDto, QuickSetSessionDto } from "./types";
+import { buildInputSourceOptions, visibleInputSourceOptions } from "@/features/inputSource";
+import { resolvedInputSourceId } from "@/features/inputSourceApps";
+
+import type { QuickSetSessionDto } from "./types";
 
 export type QuickSetOptionView = {
-  language: string;
+  sourceId: string;
   label: string;
-  sourceName: string;
   isCurrent: boolean;
 };
 
@@ -14,25 +15,26 @@ export type QuickSetUiPhase =
   | { kind: "applying" }
   | { kind: "success"; languageLabel: string };
 
-export function currentLanguageFromTarget(
-  target: QuickSetSessionDto["matchedTarget"]
-): string | null {
-  if (!target) {
-    return null;
-  }
-  if (target.kind === "preferredLanguage") {
-    return target.language;
-  }
-  return null;
-}
-
+/** Same option set as app-settings LanguageSelect. */
 export function buildQuickSetOptions(session: QuickSetSessionDto): QuickSetOptionView[] {
-  const current = currentLanguageFromTarget(session.matchedTarget);
-  return session.languages.map((language: QuickSetLanguageDto) => ({
-    language: language.language,
-    label: languageDisplayName(language.language),
-    sourceName: language.preferredSourceName,
-    isCurrent: current === language.language,
+  const preferences = session.languagePreferences;
+  const current = session.matchedTarget
+    ? resolvedInputSourceId(session.matchedTarget, preferences)
+    : "";
+  const configuredIds = [
+    ...Object.values(preferences).filter(
+      (id): id is string => typeof id === "string" && id.length > 0
+    ),
+    current,
+  ];
+  const options = visibleInputSourceOptions(
+    buildInputSourceOptions(session.sources, configuredIds),
+    current
+  );
+  return options.map((option) => ({
+    sourceId: option.value,
+    label: option.label,
+    isCurrent: current.length > 0 && option.value === current,
   }));
 }
 

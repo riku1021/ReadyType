@@ -11,7 +11,7 @@ use std::{
 };
 
 use crate::domain::input_source::{
-    default_rules, AxAttribute, FocusRule, FocusSnapshot, InputSourceId, LanguageTag, PlatformAppId,
+    default_rules, AxAttribute, FocusRule, FocusSnapshot, InputSourceId, PlatformAppId, RuleTarget,
 };
 
 use super::{
@@ -28,7 +28,7 @@ use super::{
     },
     quick_set::{
         build_created_rule, build_quick_set_session, build_updated_rule, next_quick_set_priority,
-        resolve_quick_set_name, QuickSetSession,
+        resolve_quick_set_name, rule_target_from_source_id, QuickSetSession,
     },
     settings::SwitcherSettings,
     switcher_state::{SwitchLogEntry, SwitcherState},
@@ -402,7 +402,8 @@ impl SwitcherController {
         }
         let rules = self.rules()?;
         let settings = self.settings()?;
-        let sources = self.list_input_sources(false)?;
+        // Match app-settings LanguageSelect: always refresh OS input sources.
+        let sources = self.list_input_sources(true)?;
         let app_display_name = self.app_display_names.resolve(snapshot.app().app_id());
         let session =
             build_quick_set_session(&snapshot, &rules, &settings, &sources, app_display_name);
@@ -419,27 +420,28 @@ impl SwitcherController {
         Ok(())
     }
 
-    pub fn apply_quick_set_language(
+    pub fn apply_quick_set_source(
         self: &Arc<Self>,
-        language: &str,
+        source_id: &str,
         name: &str,
     ) -> Result<SwitcherState, ControllerError> {
-        let tag = LanguageTag::parse(language)
+        let source_id = InputSourceId::parse(source_id)
             .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
         let session = self.lock_quick_set_session()?.clone().ok_or_else(|| {
             ControllerError::InvalidRequest("quick set session expired".to_owned())
         })?;
-        let option = session
-            .languages
-            .iter()
-            .find(|option| option.language == tag)
-            .ok_or_else(|| {
-                ControllerError::InvalidRequest(
-                    "language is not available for quick set".to_owned(),
-                )
-            })?;
-        let source_id = InputSourceId::parse(&option.preferred_source_id)
-            .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
+        let allowed = session.sources.iter().any(|source| source.id == source_id)
+            || session
+                .language_preferences
+                .values()
+                .any(|preferred| preferred.as_ref() == Some(&source_id));
+        if !allowed {
+            return Err(ControllerError::InvalidRequest(
+                "input source is not available for quick set".to_owned(),
+            ));
+        }
+        let settings = self.settings()?;
+        let target = rule_target_from_source_id(&source_id, &settings);
         let rule_name = resolve_quick_set_name(&session, name);
 
         let next_rules = if let Some(rule_id) = session.matched_rule_id.as_deref() {
@@ -448,7 +450,7 @@ impl SwitcherController {
                 .iter()
                 .position(|rule| rule.id() == rule_id)
                 .ok_or_else(|| ControllerError::InvalidRequest("rule not found".to_owned()))?;
-            let updated = build_updated_rule(&rules[index], tag.clone(), &rule_name)
+            let updated = build_updated_rule(&rules[index], target.clone(), &rule_name)
                 .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
             rules[index] = updated;
             rules
@@ -460,14 +462,26 @@ impl SwitcherController {
                 sanitize_id_part(&session.app_id),
                 self.lock_switcher()?.state().version
             );
-            let created = build_created_rule(&session, tag.clone(), priority, &rule_id, &rule_name)
-                .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
+            let created =
+                build_created_rule(&session, target.clone(), priority, &rule_id, &rule_name)
+                    .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
             rules.push(created);
             rules
         };
 
         let state = self.mutate_switcher(|switcher| {
-            switcher.replace_rules_with_language_preference(next_rules, &tag, source_id)?;
+            match &target {
+                RuleTarget::PreferredLanguage(tag) => {
+                    switcher.replace_rules_with_language_preference(
+                        next_rules,
+                        tag,
+                        source_id.clone(),
+                    )?;
+                }
+                RuleTarget::Exact(_) => {
+                    switcher.replace_rules(next_rules)?;
+                }
+            }
             Ok(switcher.state().clone())
         })?;
         if self.is_monitoring() {

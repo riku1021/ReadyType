@@ -1,10 +1,9 @@
-import type { RuleConditionDto, RuleTarget } from "@/features/inputSource";
-
-export type QuickSetLanguageDto = {
-  language: string;
-  preferredSourceId: string;
-  preferredSourceName: string;
-};
+import type {
+  InputSourceDto,
+  LanguageInputPreferences,
+  RuleConditionDto,
+  RuleTarget,
+} from "@/features/inputSource";
 
 export type QuickSetSessionDto = {
   appId: string;
@@ -15,7 +14,8 @@ export type QuickSetSessionDto = {
   proposedConditions: RuleConditionDto[];
   matchedRuleId: string | null;
   matchedTarget: RuleTarget | null;
-  languages: QuickSetLanguageDto[];
+  sources: InputSourceDto[];
+  languagePreferences: LanguageInputPreferences;
 };
 
 export const QUICK_SET_EVENT = "readytype://quick-set";

@@ -1,21 +1,12 @@
 //! Quick Set session: Level-1 hotkey popover data and apply logic helpers.
 
-use std::collections::BTreeSet;
-
 use crate::domain::input_source::{
-    propose_conditions, propose_rule_name, FocusRule, FocusSnapshot, LanguageTag, Platform,
-    RuleCondition, RuleTarget,
+    propose_conditions, propose_rule_name, FocusRule, FocusSnapshot, InputSourceId, LanguageTag,
+    Platform, RuleCondition, RuleTarget,
 };
 
 use super::ports::input_source::AvailableInputSource;
-use super::settings::{group_sources_by_language, pick_default_source_id, SwitcherSettings};
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct QuickSetLanguageOption {
-    pub language: LanguageTag,
-    pub preferred_source_id: String,
-    pub preferred_source_name: String,
-}
+use super::settings::SwitcherSettings;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct QuickSetSession {
@@ -28,7 +19,9 @@ pub struct QuickSetSession {
     /// Present only when an existing *contextual* (non-empty conditions) rule matched.
     pub matched_rule_id: Option<String>,
     pub matched_target: Option<RuleTarget>,
-    pub languages: Vec<QuickSetLanguageOption>,
+    /// Same input-source list the app-settings LanguageSelect uses (OS snapshot).
+    pub sources: Vec<AvailableInputSource>,
+    pub language_preferences: std::collections::BTreeMap<LanguageTag, Option<InputSourceId>>,
 }
 
 pub fn build_quick_set_session(
@@ -57,7 +50,6 @@ pub fn build_quick_set_session(
         _ => (None, None, propose_rule_name(snapshot)),
     };
 
-    let languages = build_quick_set_languages(rules, settings, sources);
     let app_display_name = app_display_name
         .map(|name| name.trim().to_owned())
         .filter(|name| !name.is_empty())
@@ -72,78 +64,23 @@ pub fn build_quick_set_session(
         proposed_conditions,
         matched_rule_id,
         matched_target,
-        languages,
+        sources: sources.to_vec(),
+        language_preferences: settings.language_preferences.clone(),
     }
 }
 
-/// Languages offered in Quick Set: OS available groups ∪ rule PreferredLanguage tags
-/// ∪ fixed preferences, each resolved to an available input source when possible.
-pub fn build_quick_set_languages(
-    rules: &[FocusRule],
+/// Map a chosen input source to a rule target the same way the app-settings UI does:
+/// preference hit → PreferredLanguage, otherwise Exact.
+pub fn rule_target_from_source_id(
+    source_id: &InputSourceId,
     settings: &SwitcherSettings,
-    sources: &[AvailableInputSource],
-) -> Vec<QuickSetLanguageOption> {
-    let by_language = group_sources_by_language(sources);
-    let mut tags = BTreeSet::new();
-
-    for (tag, group) in &by_language {
-        if group.iter().any(|source| source.available) {
-            tags.insert(tag.clone());
-        }
-    }
-    for rule in rules {
-        if let RuleTarget::PreferredLanguage(tag) = rule.target() {
-            tags.insert(tag.clone());
-        }
-    }
+) -> RuleTarget {
     for (tag, preferred) in &settings.language_preferences {
-        if preferred.is_some() {
-            tags.insert(tag.clone());
+        if preferred.as_ref() == Some(source_id) {
+            return RuleTarget::PreferredLanguage(tag.clone());
         }
     }
-
-    tags.into_iter()
-        .filter_map(|tag| resolve_language_option(&tag, settings, sources, &by_language))
-        .collect()
-}
-
-fn resolve_language_option(
-    tag: &LanguageTag,
-    settings: &SwitcherSettings,
-    sources: &[AvailableInputSource],
-    by_language: &std::collections::BTreeMap<LanguageTag, Vec<&AvailableInputSource>>,
-) -> Option<QuickSetLanguageOption> {
-    if let Some(preferred) = settings.preferred(tag) {
-        if let Some(source) = sources.iter().find(|source| &source.id == preferred) {
-            if source.available {
-                return Some(QuickSetLanguageOption {
-                    language: tag.clone(),
-                    preferred_source_id: preferred.as_str().to_owned(),
-                    preferred_source_name: source.name.clone(),
-                });
-            }
-        } else if sources.is_empty() {
-            // Unit tests / offline: keep configured preference when OS list is absent.
-            return Some(QuickSetLanguageOption {
-                language: tag.clone(),
-                preferred_source_id: preferred.as_str().to_owned(),
-                preferred_source_name: preferred.as_str().to_owned(),
-            });
-        }
-    }
-
-    let group = by_language.get(tag)?;
-    let source_id = pick_default_source_id(group)?;
-    let name = sources
-        .iter()
-        .find(|source| source.id == source_id)
-        .map(|source| source.name.clone())
-        .unwrap_or_else(|| source_id.as_str().to_owned());
-    Some(QuickSetLanguageOption {
-        language: tag.clone(),
-        preferred_source_id: source_id.as_str().to_owned(),
-        preferred_source_name: name,
-    })
+    RuleTarget::Exact(source_id.clone())
 }
 
 pub fn next_quick_set_priority(rules: &[FocusRule], app_id: &str) -> u32 {
@@ -171,7 +108,7 @@ pub fn resolve_quick_set_name(session: &QuickSetSession, name: &str) -> String {
 
 pub fn build_created_rule(
     session: &QuickSetSession,
-    language: LanguageTag,
+    target: RuleTarget,
     priority: u32,
     rule_id: &str,
     name: &str,
@@ -184,13 +121,13 @@ pub fn build_created_rule(
         &session.app_id,
         priority,
         session.proposed_conditions.clone(),
-        RuleTarget::PreferredLanguage(language),
+        target,
     )
 }
 
 pub fn build_updated_rule(
     existing: &FocusRule,
-    language: LanguageTag,
+    target: RuleTarget,
     name: &str,
 ) -> Result<FocusRule, crate::domain::errors::DomainError> {
     FocusRule::new(
@@ -201,7 +138,7 @@ pub fn build_updated_rule(
         existing.app_id(),
         existing.priority(),
         existing.conditions().to_vec(),
-        RuleTarget::PreferredLanguage(language),
+        target,
     )
 }
 
@@ -217,9 +154,8 @@ fn short_app_display_name(app_id: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::application::ports::input_source::AvailableInputSource;
     use crate::domain::input_source::{
-        AxAttribute, AxElementSnapshot, InputSourceId, MatchOperator, PlatformAppId, SearchScope,
+        AxAttribute, AxElementSnapshot, MatchOperator, PlatformAppId, SearchScope,
     };
 
     fn snap(elements: Vec<AxElementSnapshot>) -> FocusSnapshot {
@@ -239,20 +175,6 @@ mod tests {
         }
     }
 
-    fn rule_preferred(id: &str, tag: LanguageTag) -> FocusRule {
-        FocusRule::new(
-            id,
-            id,
-            true,
-            Platform::MacOs,
-            "com.example.app",
-            100,
-            Vec::new(),
-            RuleTarget::PreferredLanguage(tag),
-        )
-        .expect("rule")
-    }
-
     #[test]
     fn skips_app_wide_match_for_update() {
         let snapshot = snap(vec![AxElementSnapshot::new()
@@ -269,15 +191,12 @@ mod tests {
             RuleTarget::PreferredLanguage(LanguageTag::en()),
         )
         .expect("rule");
-        let mut settings = SwitcherSettings::defaults();
-        settings.language_preferences.insert(
-            LanguageTag::ja(),
-            Some(InputSourceId::parse("com.apple.inputmethod.Kotoeri.Japanese").expect("id")),
-        );
-        let session = build_quick_set_session(&snapshot, &[app_wide], &settings, &[], None);
+        let settings = SwitcherSettings::defaults();
+        let sources = vec![source("com.apple.keylayout.ABC", "ABC", "en")];
+        let session = build_quick_set_session(&snapshot, &[app_wide], &settings, &sources, None);
         assert!(session.matched_rule_id.is_none());
         assert!(!session.proposed_conditions.is_empty());
-        assert_eq!(session.languages.len(), 1);
+        assert_eq!(session.sources.len(), 1);
     }
 
     #[test]
@@ -327,7 +246,8 @@ mod tests {
             proposed_conditions: Vec::new(),
             matched_rule_id: None,
             matched_target: None,
-            languages: Vec::new(),
+            sources: Vec::new(),
+            language_preferences: Default::default(),
         };
         assert_eq!(resolve_quick_set_name(&session, "  URL bar  "), "URL bar");
         assert_eq!(resolve_quick_set_name(&session, "   "), "draft");
@@ -335,106 +255,21 @@ mod tests {
     }
 
     #[test]
-    fn build_quick_set_languages_unions_os_rules_and_preferences() {
-        let en = source("com.apple.keylayout.ABC", "ABC", "en");
-        let ja = source("com.apple.inputmethod.Kotoeri.Japanese", "Hiragana", "ja");
-        let ko = source("com.apple.inputmethod.Korean", "2-Set Korean", "ko");
-        let sources = vec![en.clone(), ja.clone(), ko.clone()];
-
-        let cases = [
-            (
-                "os groups only",
-                Vec::<FocusRule>::new(),
-                SwitcherSettings {
-                    language_preferences: Default::default(),
-                    rules: Vec::new(),
-                    ..SwitcherSettings::defaults()
-                },
-                sources.clone(),
-                vec!["en", "ja", "ko"],
-            ),
-            (
-                "prefs-only language kept offline",
-                Vec::new(),
-                {
-                    let mut settings = SwitcherSettings {
-                        rules: Vec::new(),
-                        ..SwitcherSettings::defaults()
-                    };
-                    settings
-                        .language_preferences
-                        .insert(LanguageTag::ja(), Some(ja.id.clone()));
-                    settings
-                },
-                Vec::new(),
-                vec!["ja"],
-            ),
-            (
-                "rule tag resolves via os default",
-                vec![rule_preferred("r-ja", LanguageTag::ja())],
-                SwitcherSettings {
-                    language_preferences: Default::default(),
-                    rules: Vec::new(),
-                    ..SwitcherSettings::defaults()
-                },
-                vec![en.clone(), ja.clone()],
-                vec!["en", "ja"],
-            ),
-            (
-                "stale preference falls back to os group",
-                Vec::new(),
-                {
-                    let mut settings = SwitcherSettings {
-                        rules: Vec::new(),
-                        ..SwitcherSettings::defaults()
-                    };
-                    settings.language_preferences.insert(
-                        LanguageTag::ja(),
-                        Some(InputSourceId::parse("missing.ja").expect("id")),
-                    );
-                    settings
-                },
-                vec![ja.clone()],
-                vec!["ja"],
-            ),
-            (
-                "unavailable rule language omitted",
-                vec![rule_preferred(
-                    "r-zh",
-                    LanguageTag::parse("zh").expect("zh"),
-                )],
-                SwitcherSettings {
-                    language_preferences: Default::default(),
-                    rules: Vec::new(),
-                    ..SwitcherSettings::defaults()
-                },
-                vec![en.clone()],
-                vec!["en"],
-            ),
-        ];
-
-        for (name, rules, settings, case_sources, expected_tags) in cases {
-            let options = build_quick_set_languages(&rules, &settings, &case_sources);
-            let tags: Vec<String> = options
-                .iter()
-                .map(|option| option.language.as_str().to_owned())
-                .collect();
-            assert_eq!(tags, expected_tags, "{name}");
-        }
-
-        let mut settings = SwitcherSettings {
-            rules: Vec::new(),
-            ..SwitcherSettings::defaults()
-        };
+    fn rule_target_from_source_id_prefers_preference_then_exact() {
+        let ja = InputSourceId::parse("com.apple.inputmethod.Kotoeri.Japanese").expect("id");
+        let other = InputSourceId::parse("com.apple.keylayout.ABC").expect("id");
+        let mut settings = SwitcherSettings::defaults();
         settings
             .language_preferences
-            .insert(LanguageTag::en(), Some(en.id.clone()));
-        let options = build_quick_set_languages(&[], &settings, &sources);
-        let en_option = options
-            .iter()
-            .find(|option| option.language == LanguageTag::en())
-            .expect("en");
-        assert_eq!(en_option.preferred_source_id, en.id.as_str());
-        assert_eq!(en_option.preferred_source_name, "ABC");
+            .insert(LanguageTag::ja(), Some(ja.clone()));
+
+        assert_eq!(
+            rule_target_from_source_id(&ja, &settings),
+            RuleTarget::PreferredLanguage(LanguageTag::ja())
+        );
+        assert_eq!(
+            rule_target_from_source_id(&other, &settings),
+            RuleTarget::Exact(other)
+        );
     }
 }

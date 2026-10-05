@@ -1,5 +1,5 @@
 export {
-  applyQuickSetLanguage,
+  applyQuickSetSource,
   getQuickSetSession,
   hideQuickSet,
   openQuickSetAdvanced,
@@ -7,7 +7,6 @@ export {
 export { QuickSetPage } from "./QuickSetPage";
 export {
   buildQuickSetOptions,
-  currentLanguageFromTarget,
   type QuickSetUiPhase,
   targetHeading,
 } from "./quickSetViewModel";

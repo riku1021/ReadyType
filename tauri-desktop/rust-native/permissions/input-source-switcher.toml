@@ -31,7 +31,7 @@ commands.allow = [
   "clear_switch_logs",
   "get_app_presentations",
   "get_quick_set_session",
-  "apply_quick_set_language",
+  "apply_quick_set_source",
   "hide_quick_set",
   "open_quick_set_advanced",
 ]
