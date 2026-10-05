@@ -15,10 +15,13 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { CompletionCheckbox } from "@/components/CompletionCheckbox";
 import { SuccessDialog } from "@/components/Dialog";
 import { SettingItem } from "@/components/SettingItem";
+import { AppIconView, appDisplayName, useAppPresentations } from "@/features/inputSourceApps";
 import { cx } from "@/styled-system/css";
 
 import { applyQuickSetSource, getQuickSetSession, hideQuickSet, openQuickSetAdvanced } from "./api";
 import {
+  appIdentity,
+  appName,
   closeButton,
   divider,
   emptyState,
@@ -32,9 +35,8 @@ import {
   optionTitle,
   prompt,
   shell,
-  targetLabel,
 } from "./QuickSetPage.styles";
-import { buildQuickSetOptions, type QuickSetUiPhase, targetHeading } from "./quickSetViewModel";
+import { buildQuickSetOptions, type QuickSetUiPhase } from "./quickSetViewModel";
 import { QUICK_SET_EVENT, type QuickSetSessionDto } from "./types";
 
 function itemKey(child: ReactNode, index: number): string {
@@ -124,6 +126,13 @@ export function QuickSetPage() {
   }, [phase.kind]);
 
   const options = useMemo(() => (session ? buildQuickSetOptions(session) : []), [session]);
+  const presentations = useAppPresentations(session ? [session.appId] : []);
+  const appLabel = session
+    ? appDisplayName(
+        session.appId,
+        presentations[session.appId]?.displayName || session.appDisplayName
+      )
+    : "";
   const hasExisting = Boolean(session?.matchedRuleId);
   const isIdle = phase.kind === "idle";
   const successLabel = phase.kind === "success" ? phase.languageLabel : null;
@@ -154,7 +163,10 @@ export function QuickSetPage() {
     ? [
         <div key="header" className={headerBlock}>
           <BrandLogo />
-          <p className={targetLabel}>{targetHeading(session)}</p>
+          <div className={appIdentity}>
+            <AppIconView src={presentations[session.appId]?.icon} label={appLabel} />
+            <p className={appName}>{appLabel}</p>
+          </div>
           <p className={prompt}>
             {hasExisting ? t("quickSet.currentSetting") : t("quickSet.chooseLanguage")}
           </p>

@@ -71,12 +71,23 @@ export const headerBlock = css({
   paddingRight: "48px",
 });
 
-export const targetLabel = css({
-  margin: "0",
+export const appIdentity = css({
+  display: "flex",
+  alignItems: "center",
+  gap: "sm",
+  minWidth: "0",
   paddingInline: "sm",
-  fontSize: "sm",
+});
+
+export const appName = css({
+  margin: "0",
+  minWidth: "0",
+  fontSize: "base",
   fontWeight: "semibold",
   color: "text.main",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 });
 
 export const prompt = css({
