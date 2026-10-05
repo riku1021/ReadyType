@@ -69,13 +69,6 @@ export const appCell = css({
   minWidth: "0",
 });
 
-export const appCellText = css({
-  display: "flex",
-  flexDirection: "column",
-  gap: "4px",
-  minWidth: "0",
-});
-
 export const appName = css({
   margin: "0",
   fontSize: "sm",
@@ -84,15 +77,7 @@ export const appName = css({
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
-});
-
-export const appMeta = css({
-  margin: "0",
-  fontSize: "xs",
-  color: "text.secondary",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
+  minWidth: "0",
 });
 
 export const ruleCount = css({

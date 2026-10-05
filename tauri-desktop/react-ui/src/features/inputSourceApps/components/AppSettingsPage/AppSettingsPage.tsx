@@ -55,10 +55,7 @@ export function AppSettingsPage() {
       cell: (group) => (
         <div className={styles.appCell}>
           <AppIconView src={group.iconSrc} label={group.label} />
-          <span className={styles.appCellText}>
-            <span className={styles.appName}>{group.label}</span>
-            <span className={styles.appMeta}>{group.appId}</span>
-          </span>
+          <span className={styles.appName}>{group.label}</span>
         </div>
       ),
     },
