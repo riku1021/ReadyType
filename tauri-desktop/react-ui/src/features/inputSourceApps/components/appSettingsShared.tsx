@@ -101,21 +101,30 @@ export function LanguageSelect({
   wide?: boolean;
 }) {
   const visibleOptions = visibleInputSourceOptions(options, value);
-  const hasOption = visibleOptions.some((option) => option.value === value);
+  const selected = visibleOptions.find((option) => option.value === value);
+  const pinned =
+    selected ?? (value.length > 0 ? { value, label: value, available: false as const } : null);
+  const others = visibleOptions.filter((option) => option.value !== value);
+
   return (
     <select
       className={cx(styles.select, wide ? styles.selectWide : undefined)}
       aria-label={label}
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      disabled={visibleOptions.length === 0}
+      disabled={visibleOptions.length === 0 && !pinned}
     >
-      {visibleOptions.map((option) => (
+      {pinned ? (
+        <option key={pinned.value} value={pinned.value}>
+          {pinned.label}
+        </option>
+      ) : null}
+      {pinned && others.length > 0 ? <hr /> : null}
+      {others.map((option) => (
         <option key={option.value} value={option.value}>
           {option.label}
         </option>
       ))}
-      {hasOption || value.length === 0 ? null : <option value={value}>{value}</option>}
     </select>
   );
 }
