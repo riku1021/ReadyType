@@ -49,6 +49,17 @@
     "resetConfirmText": "ルール一覧を既定プリセットへ戻します。",
     "resetConfirmButton": "リセット"
   },
+  "about": {
+    "appName": "ReadyType",
+    "version": "v{{version}}",
+    "copyright": "© 2026 ReadyType",
+    "privacyPolicy": "プライバシーポリシー",
+    "termsOfUse": "利用規約",
+    "support": "サポート",
+    "sectionCredits": "クレジット",
+    "license": "ライセンス",
+    "licenseValue": "各依存ライブラリの条件に準拠"
+  },
   "home": {
     "permissionBannerTitle": "アクセシビリティ権限が必要です",
     "permissionBannerText": "フォーカス監視と入力ソース切替には、システム設定での許可が必要です。",

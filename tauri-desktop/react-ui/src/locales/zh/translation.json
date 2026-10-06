@@ -49,6 +49,17 @@
     "resetConfirmText": "规则列表将恢复为默认预设。",
     "resetConfirmButton": "重置"
   },
+  "about": {
+    "appName": "ReadyType",
+    "version": "v{{version}}",
+    "copyright": "© 2026 ReadyType",
+    "privacyPolicy": "隐私政策",
+    "termsOfUse": "使用条款",
+    "support": "支持",
+    "sectionCredits": "鸣谢",
+    "license": "许可证",
+    "licenseValue": "遵循各依赖库许可条款"
+  },
   "home": {
     "permissionBannerTitle": "需要辅助功能权限",
     "permissionBannerText": "焦点监视和输入源切换需要在系统设置中授权。",

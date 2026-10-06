@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import type { IconType } from "react-icons";
 import { IoChevronForward } from "react-icons/io5";
 import { MdUnfoldMore } from "react-icons/md";
+import { FiExternalLink } from "react-icons/fi";
 
 import { SelectionMenu } from "@/components/SelectionMenu";
 import { Toggle } from "@/components/Toggle";
@@ -18,6 +19,12 @@ type SettingItemBase = {
 type NavigationSettingItem = SettingItemBase & {
   type: "navigation";
   onClick?: () => void;
+};
+
+/** 外部ブラウザ等で開くリンク */
+type ExternalLinkSettingItem = SettingItemBase & {
+  type: "externalLink";
+  onClick: () => void;
 };
 
 type SelectionSettingItem = SettingItemBase & {
@@ -40,6 +47,7 @@ type ActionSettingItem = SettingItemBase & {
 
 export type SettingItemProps =
   | NavigationSettingItem
+  | ExternalLinkSettingItem
   | SelectionSettingItem
   | ToggleSettingItem
   | ActionSettingItem;
@@ -50,6 +58,12 @@ function renderTrailing(props: SettingItemProps) {
       return (
         <span className={styles.chevron} aria-hidden>
           <IoChevronForward />
+        </span>
+      );
+    case "externalLink":
+      return (
+        <span className={styles.chevron} aria-hidden>
+          <FiExternalLink />
         </span>
       );
     case "selection":

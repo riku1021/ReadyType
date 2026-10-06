@@ -49,6 +49,17 @@
     "resetConfirmText": "This will restore the rule list to the default preset.",
     "resetConfirmButton": "Reset"
   },
+  "about": {
+    "appName": "ReadyType",
+    "version": "v{{version}}",
+    "copyright": "© 2026 ReadyType",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfUse": "Terms of Use",
+    "support": "Support",
+    "sectionCredits": "Credits",
+    "license": "License",
+    "licenseValue": "Per dependency licenses"
+  },
   "home": {
     "permissionBannerTitle": "Accessibility permission required",
     "permissionBannerText": "Focus monitoring and input source switching require permission in System Settings.",
