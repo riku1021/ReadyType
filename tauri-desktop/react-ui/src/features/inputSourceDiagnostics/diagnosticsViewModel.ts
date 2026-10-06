@@ -8,6 +8,10 @@ export type SnapshotAttribute = {
   value: string;
 };
 
+export function switchLogKey(log: SwitchLogDto): string {
+  return `${log.timestampUnixMs}-${log.generation}-${log.ruleId}-${log.decision}`;
+}
+
 export function toCondition(attribute: SnapshotAttribute): RuleConditionDto {
   return {
     attribute: attribute.attribute,
@@ -72,6 +76,16 @@ export function logsToTsv(logs: readonly SwitchLogDto[]): string {
     "reason",
     "detail",
     "processingMicros",
+    "pipelineMicros",
+    "queueMicros",
+    "prepareMicros",
+    "handoffMicros",
+    "currentMicros",
+    "currentCacheHit",
+    "selectMicros",
+    "finalizeMicros",
+    "publishMicros",
+    "axMicros",
   ].join("\t");
   const rows = logs.map((log) =>
     [
@@ -88,6 +102,16 @@ export function logsToTsv(logs: readonly SwitchLogDto[]): string {
       log.reason.replace(/\t/g, " ").replace(/\n/g, " "),
       log.detail.replace(/\t/g, " ").replace(/\n/g, " "),
       log.processingMicros,
+      log.pipelineMicros,
+      log.queueMicros,
+      log.prepareMicros,
+      log.handoffMicros,
+      log.currentMicros,
+      log.currentCacheHit ? "hit" : "miss",
+      log.selectMicros,
+      log.finalizeMicros,
+      log.publishMicros,
+      log.axMicros,
     ].join("\t")
   );
   return [header, ...rows].join("\n");
@@ -104,7 +128,23 @@ export function formatSwitchLogLine(log: SwitchLogDto, t: TFunction): string {
     `gen ${log.generation}`,
     log.ruleId || "rule —",
     route,
-    `${log.processingMicros}µs`,
+    t("diagnostics.logTiming", {
+      judgment: log.processingMicros,
+      pipeline: log.pipelineMicros,
+    }),
+    t("diagnostics.logTimingBreakdown", {
+      queue: log.queueMicros,
+      prepare: log.prepareMicros,
+      handoff: log.handoffMicros,
+      current: log.currentMicros,
+      currentCache: log.currentCacheHit
+        ? t("diagnostics.currentCacheHit")
+        : t("diagnostics.currentCacheMiss"),
+      select: log.selectMicros,
+      finalize: log.finalizeMicros,
+      publish: log.publishMicros,
+      ax: log.axMicros,
+    }),
   ];
   if (log.reason) {
     parts.push(log.reason);
@@ -118,14 +158,156 @@ export function formatSwitchLogLine(log: SwitchLogDto, t: TFunction): string {
 export function formatLatencyMicros(values: readonly number[]): {
   p50: string;
   p95: string;
+  max: string;
 } {
   if (values.length === 0) {
-    return { p50: "—", p95: "—" };
+    return { p50: "—", p95: "—", max: "—" };
   }
   const sorted = [...values].sort((left, right) => left - right);
   const percentile = (ratio: number) => {
     const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * ratio) - 1));
     return `${(sorted[index] ?? 0).toFixed(0)}µs`;
   };
-  return { p50: percentile(0.5), p95: percentile(0.95) };
+  const max = sorted[sorted.length - 1] ?? 0;
+  return { p50: percentile(0.5), p95: percentile(0.95), max: `${max.toFixed(0)}µs` };
+}
+
+export type LatencySummary = ReturnType<typeof formatLatencyMicros>;
+
+export function buildLatencySummaries(logs: readonly SwitchLogDto[]): {
+  judgmentAll: LatencySummary;
+  judgmentAttempted: LatencySummary;
+  pipelineAll: LatencySummary;
+  pipelineAttempted: LatencySummary;
+  currentMiss: LatencySummary;
+  currentHit: LatencySummary;
+  currentCache: { hit: number; miss: number };
+  handoff: LatencySummary;
+  finalize: LatencySummary;
+  publish: LatencySummary;
+  ax: LatencySummary;
+} {
+  const attempted = logs.filter((log) => log.attempted);
+  // switch_input_source を通った行（current 取得あり）。
+  const gatewayLookups = logs.filter(
+    (log) => log.currentCacheHit || log.currentMicros > 0 || log.selectMicros > 0
+  );
+  const misses = gatewayLookups.filter((log) => !log.currentCacheHit);
+  const hits = gatewayLookups.filter((log) => log.currentCacheHit);
+  return {
+    judgmentAll: formatLatencyMicros(logs.map((log) => log.processingMicros)),
+    judgmentAttempted: formatLatencyMicros(attempted.map((log) => log.processingMicros)),
+    pipelineAll: formatLatencyMicros(logs.map((log) => log.pipelineMicros)),
+    pipelineAttempted: formatLatencyMicros(attempted.map((log) => log.pipelineMicros)),
+    currentMiss: formatLatencyMicros(misses.map((log) => log.currentMicros)),
+    currentHit: formatLatencyMicros(hits.map((log) => log.currentMicros)),
+    currentCache: { hit: hits.length, miss: misses.length },
+    handoff: formatLatencyMicros(logs.map((log) => log.handoffMicros)),
+    finalize: formatLatencyMicros(logs.map((log) => log.finalizeMicros)),
+    publish: formatLatencyMicros(
+      logs.filter((log) => log.publishMicros > 0).map((log) => log.publishMicros)
+    ),
+    ax: formatLatencyMicros(logs.filter((log) => log.axMicros > 0).map((log) => log.axMicros)),
+  };
+}
+
+export type LatencyOutlierKind =
+  | "judgmentAll"
+  | "pipelineAll"
+  | "pipelineAttempted"
+  | "queue"
+  | "handoff"
+  | "current"
+  | "select"
+  | "finalize"
+  | "publish"
+  | "ax";
+
+export type LatencyOutlierNote = {
+  kind: LatencyOutlierKind;
+  log: SwitchLogDto;
+  value: number;
+};
+
+function maxLogs(
+  logs: readonly SwitchLogDto[],
+  pick: (log: SwitchLogDto) => number
+): SwitchLogDto[] {
+  if (logs.length === 0) {
+    return [];
+  }
+  const peak = Math.max(...logs.map(pick));
+  return logs.filter((log) => pick(log) === peak);
+}
+
+function formatMicros(value: number): string {
+  return `${value.toFixed(0)}µs`;
+}
+
+export function findLatencyOutliers(logs: readonly SwitchLogDto[]): {
+  highlightKeys: ReadonlySet<string>;
+  notes: LatencyOutlierNote[];
+} {
+  const attempted = logs.filter((log) => log.attempted);
+  const withSelect = logs.filter((log) => log.selectMicros > 0);
+  const withAx = logs.filter((log) => log.axMicros > 0);
+  const specs: Array<{
+    kind: LatencyOutlierKind;
+    candidates: readonly SwitchLogDto[];
+    pick: (log: SwitchLogDto) => number;
+  }> = [
+    { kind: "judgmentAll", candidates: logs, pick: (log) => log.processingMicros },
+    { kind: "pipelineAll", candidates: logs, pick: (log) => log.pipelineMicros },
+    {
+      kind: "pipelineAttempted",
+      candidates: attempted,
+      pick: (log) => log.pipelineMicros,
+    },
+    { kind: "queue", candidates: logs, pick: (log) => log.queueMicros },
+    {
+      kind: "handoff",
+      candidates: logs.filter((log) => log.handoffMicros > 0),
+      pick: (log) => log.handoffMicros,
+    },
+    {
+      kind: "current",
+      candidates: logs.filter((log) => !log.currentCacheHit && log.currentMicros > 0),
+      pick: (log) => log.currentMicros,
+    },
+    { kind: "select", candidates: withSelect, pick: (log) => log.selectMicros },
+    {
+      kind: "finalize",
+      candidates: logs.filter((log) => log.finalizeMicros > 0),
+      pick: (log) => log.finalizeMicros,
+    },
+    {
+      kind: "publish",
+      candidates: logs.filter((log) => log.publishMicros > 0),
+      pick: (log) => log.publishMicros,
+    },
+    { kind: "ax", candidates: withAx, pick: (log) => log.axMicros },
+  ];
+
+  const highlightKeys = new Set<string>();
+  const notes: LatencyOutlierNote[] = [];
+
+  for (const spec of specs) {
+    const peaks = maxLogs(spec.candidates, spec.pick);
+    for (const log of peaks) {
+      highlightKeys.add(switchLogKey(log));
+      notes.push({ kind: spec.kind, log, value: spec.pick(log) });
+    }
+  }
+
+  return { highlightKeys, notes };
+}
+
+export function formatLatencyOutlierNote(note: LatencyOutlierNote, t: TFunction): string {
+  const ruleId = note.log.ruleId || "—";
+  return t(`diagnostics.latencyMax.${note.kind}`, {
+    generation: note.log.generation,
+    ruleId,
+    decision: note.log.decision,
+    value: formatMicros(note.value),
+  });
 }

@@ -17,16 +17,18 @@ use objc2_core_foundation::{
 use crate::{
     application::ports::focus_monitor::{
         AccessibilityPermission, FocusEventSink, FocusMonitor, FocusMonitorError,
+        SwitchingAttributeIndex,
     },
     domain::input_source::{AxAttribute, FocusSnapshot, Platform, PlatformAppId},
     infrastructure::platform::focus_monitor::{
         focus_fingerprint, AttributePlan, MonitorState, MonitoringMode, ObserverRegistration,
-        FALLBACK_INTERVAL_MS,
+        FALLBACK_INTERVAL_MS, MAX_PARENT_DEPTH,
     },
 };
 
 use super::accessibility::{
-    application_element, is_process_trusted, request_process_trust, snapshot_elements,
+    application_element, is_process_trusted, request_process_trust, snapshot_chain_with_depth,
+    snapshot_elements,
 };
 
 const FOCUSED_ELEMENT_CHANGED: &str = "AXFocusedUIElementChanged";
@@ -102,7 +104,7 @@ impl Drop for MacOsFocusMonitor {
 impl FocusMonitor for MacOsFocusMonitor {
     fn start(
         &mut self,
-        attributes: Vec<AxAttribute>,
+        attribute_index: SwitchingAttributeIndex,
         sink: FocusEventSink,
     ) -> Result<(), FocusMonitorError> {
         self.stop_worker()?;
@@ -116,7 +118,15 @@ impl FocusMonitor for MacOsFocusMonitor {
         let worker_sender = sender.clone();
         let worker = thread::Builder::new()
             .name("readytype-focus-monitor".to_owned())
-            .spawn(move || run_monitor(receiver, worker_sender, attributes, debug_capture, sink))
+            .spawn(move || {
+                run_monitor(
+                    receiver,
+                    worker_sender,
+                    attribute_index,
+                    debug_capture,
+                    sink,
+                )
+            })
             .map_err(|error| FocusMonitorError::Operation(error.to_string()))?;
         self.sender = Some(sender);
         self.worker = Some(worker);
@@ -165,7 +175,7 @@ impl FocusMonitor for MacOsFocusMonitor {
 fn run_monitor(
     receiver: Receiver<MonitorCommand>,
     sender: Sender<MonitorCommand>,
-    attributes: Vec<AxAttribute>,
+    attribute_index: SwitchingAttributeIndex,
     debug_capture: bool,
     sink: FocusEventSink,
 ) {
@@ -193,7 +203,6 @@ fn run_monitor(
         return;
     };
     let mut state = MonitorState::default();
-    let normal_plan = AttributePlan::normal(attributes);
     let mut debug = debug_capture;
     let mut observer = None;
     let mut last_fallback = Instant::now();
@@ -206,7 +215,7 @@ fn run_monitor(
             &mut observer,
             &run_loop,
             &sender,
-            &normal_plan,
+            &attribute_index,
             debug,
             &sink,
         );
@@ -224,13 +233,13 @@ fn run_monitor(
                     &mut observer,
                     &run_loop,
                     &sender,
-                    &normal_plan,
+                    &attribute_index,
                     debug,
                     &sink,
                 ),
                 Ok(MonitorCommand::Evaluate { pid }) => {
                     if state.enqueue(pid) {
-                        evaluate_pending(&mut state, &normal_plan, debug, &sink);
+                        evaluate_pending(&mut state, &attribute_index, debug, &sink);
                     }
                 }
                 Ok(MonitorCommand::SetDebug(enabled)) => debug = enabled,
@@ -258,7 +267,7 @@ fn run_monitor(
                         &mut observer,
                         &run_loop,
                         &sender,
-                        &normal_plan,
+                        &attribute_index,
                         debug,
                         &sink,
                     );
@@ -274,7 +283,7 @@ fn run_monitor(
         if fallback_due || consistency_due {
             if let Some(pid) = state.active_app().map(PlatformAppId::pid) {
                 if state.enqueue(pid) {
-                    evaluate_pending(&mut state, &normal_plan, debug, &sink);
+                    evaluate_pending(&mut state, &attribute_index, debug, &sink);
                 }
             }
             if fallback_due {
@@ -293,6 +302,15 @@ fn run_monitor(
     unsafe { center.removeObserver(&activation_observer) };
 }
 
+fn plan_for_app(attribute_index: &SwitchingAttributeIndex, app_id: &str) -> AttributePlan {
+    let attributes = attribute_index
+        .iter()
+        .find(|(id, _)| id == app_id)
+        .map(|(_, attrs)| attrs.clone())
+        .unwrap_or_default();
+    AttributePlan::normal(attributes)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn activate(
     app: PlatformAppId,
@@ -300,7 +318,7 @@ fn activate(
     observer: &mut Option<ActiveObserver>,
     run_loop: &CFRunLoop,
     sender: &Sender<MonitorCommand>,
-    normal_plan: &AttributePlan,
+    attribute_index: &SwitchingAttributeIndex,
     debug: bool,
     sink: &FocusEventSink,
 ) {
@@ -316,7 +334,7 @@ fn activate(
     }
     if let Some(pid) = state.active_app().map(PlatformAppId::pid) {
         if state.enqueue(pid) {
-            evaluate_pending(state, normal_plan, debug, sink);
+            evaluate_pending(state, attribute_index, debug, sink);
         }
     }
 }
@@ -383,7 +401,7 @@ unsafe extern "C-unwind" fn observer_callback(
 
 fn evaluate_pending(
     state: &mut MonitorState,
-    normal_plan: &AttributePlan,
+    attribute_index: &SwitchingAttributeIndex,
     debug: bool,
     sink: &FocusEventSink,
 ) {
@@ -397,19 +415,47 @@ fn evaluate_pending(
         return;
     }
     let application = application_element(pid);
-    let debug_plan;
-    let plan = if debug {
-        debug_plan = AttributePlan::debug();
-        &debug_plan
+    let ax_started = Instant::now();
+    let (elements, ax_micros, fingerprint) = if debug {
+        let debug_plan = AttributePlan::debug();
+        let elements = snapshot_elements(&application, &debug_plan);
+        let ax_micros = u64::try_from(ax_started.elapsed().as_micros()).unwrap_or(u64::MAX);
+        let fingerprint = focus_fingerprint(&elements);
+        (elements, ax_micros, fingerprint)
     } else {
-        normal_plan
+        let app_plan = plan_for_app(attribute_index, app.app_id());
+        // 1) 安い fingerprint ウォーク（深い祖先の Dom* は省略）。親ノードは保持。
+        let mut chain = snapshot_chain_with_depth(
+            &application,
+            &AttributePlan::fingerprint(),
+            MAX_PARENT_DEPTH,
+            true,
+        );
+        let fingerprint = focus_fingerprint(chain.snapshots());
+        if state.peek_focus_unchanged(&fingerprint) {
+            return;
+        }
+        // 2) 変化時: 親の再ウォークはせず、不足属性だけ足す（深い Dom* + lean 追加分）。
+        let mut enrich_attrs = app_plan.attributes_beyond_fingerprint();
+        for attribute in [
+            AxAttribute::Identifier,
+            AxAttribute::DomIdentifier,
+            AxAttribute::DomClassList,
+        ] {
+            if !enrich_attrs.contains(&attribute) {
+                enrich_attrs.push(attribute);
+            }
+        }
+        chain.enrich(&enrich_attrs);
+        let elements = chain.into_snapshots();
+        let ax_micros = u64::try_from(ax_started.elapsed().as_micros()).unwrap_or(u64::MAX);
+        // fingerprint は enrich 後も同一（Description 等は identity に含めない）。
+        (elements, ax_micros, fingerprint)
     };
-    let elements = snapshot_elements(&application, plan);
-    let fingerprint = focus_fingerprint(&elements);
     let Some(generation) = state.commit_focus_change(&fingerprint) else {
         return;
     };
-    sink(FocusSnapshot::new(app, generation, elements));
+    sink(FocusSnapshot::new(app, generation, elements), ax_micros);
 }
 
 fn frontmost_application() -> Option<PlatformAppId> {

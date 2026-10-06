@@ -37,6 +37,11 @@ export const meta = css({
   wordBreak: "break-all",
 });
 
+export const logHighlight = css({
+  color: "status.warning.main",
+  fontWeight: "semibold",
+});
+
 export const row = css({
   display: "flex",
   flexWrap: "wrap",

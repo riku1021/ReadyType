@@ -1,5 +1,6 @@
 use crate::application::switcher_state::SwitcherState;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, OnceLock};
+use std::thread;
 
 use tauri::{
     menu::{IsMenuItem, Menu, MenuItem, PredefinedMenuItem},
@@ -16,6 +17,33 @@ use crate::infrastructure::desktop::main_window;
 
 pub const SNOOZE_MINUTES: [u64; 3] = [5, 15, 60];
 pub const TRAY_ID: &str = "readytype-main-tray";
+
+#[derive(Clone)]
+struct TrayHandles {
+    status: MenuItem<tauri::Wry>,
+    items: Vec<MenuItem<tauri::Wry>>,
+}
+
+struct TrayLive {
+    handles: Option<TrayHandles>,
+    /// 最後に UI へ適用済みのモデル。
+    last_model: Option<(String, TrayMenuModel)>,
+    /// 適用待ち（スケジュール済み）のモデル。同一内容の再スケジュールを防ぐ。
+    desired: Option<(String, TrayMenuModel)>,
+    generation: u64,
+}
+
+fn tray_live() -> &'static Mutex<TrayLive> {
+    static LIVE: OnceLock<Mutex<TrayLive>> = OnceLock::new();
+    LIVE.get_or_init(|| {
+        Mutex::new(TrayLive {
+            handles: None,
+            last_model: None,
+            desired: None,
+            generation: 0,
+        })
+    })
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TrayMenuItemModel {
@@ -95,11 +123,21 @@ pub fn should_show_main_window_on_launch(args: impl IntoIterator<Item = String>)
     !args.into_iter().any(|argument| argument == "--autostart")
 }
 
+fn should_skip_tray_update(
+    last: Option<&(String, TrayMenuModel)>,
+    desired: Option<&(String, TrayMenuModel)>,
+    next: &(String, TrayMenuModel),
+) -> bool {
+    last == Some(next) || desired == Some(next)
+}
+
 pub fn install(app: &AppHandle, state: &SwitcherState, locale: &str) -> tauri::Result<()> {
-    let menu = build_menu(app, state, locale)?;
+    let locale = SwitcherSettings::resolve_ui_locale(locale);
+    let model = TrayMenuModel::from_state(state, &locale);
+    let (handles, menu) = build_handles_and_menu(app, &model)?;
     let mut builder = TrayIconBuilder::with_id(TRAY_ID)
         .menu(&menu)
-        .tooltip("ReadyType")
+        .tooltip(&model.status)
         .show_menu_on_left_click(false)
         .on_menu_event(handle_menu_event)
         .on_tray_icon_event(|tray, event| {
@@ -118,31 +156,107 @@ pub fn install(app: &AppHandle, state: &SwitcherState, locale: &str) -> tauri::R
         builder = builder.icon(icon.clone()).icon_as_template(true);
     }
     builder.build(app)?;
+    if let Ok(mut live) = tray_live().lock() {
+        live.handles = Some(handles);
+        live.last_model = Some((locale, model));
+        live.desired = None;
+        live.generation = 0;
+    }
     Ok(())
 }
 
-/// Rebuild the tray from an already-cloned snapshot and **resolved** locale.
-/// Never locks the switcher mutex — locale comes from the argument or the
-/// lock-free resolved-locale cache.
+/// Tray を最新状態へ合わせる。ワーカーは待たない（別スレッドで差分適用）。
+///
+/// - A: MenuItem を保持し `set_text` / `set_enabled` のみ（フル `set_menu` しない）
+/// - B: 適用はバックグラウンド＋ latest-wins（古い generation は破棄）
+///
+/// `MenuItem::set_*` 自体が main へ marshal するため、`run_on_main_thread` 内で
+/// `set_*` するとデッドロックする。そのため専用スレッドから呼ぶ。
 pub fn update(app: &AppHandle, state: &SwitcherState, locale: &str) -> tauri::Result<()> {
     let locale = if locale.is_empty() {
         resolve_ui_locale(app)
     } else {
         SwitcherSettings::resolve_ui_locale(locale)
     };
-    if let Some(tray) = app.tray_by_id(TRAY_ID) {
-        tray.set_menu(Some(build_menu(app, state, &locale)?))?;
-        tray.set_tooltip(Some(TrayMenuModel::from_state(state, &locale).status))?;
-    }
+    let model = TrayMenuModel::from_state(state, &locale);
+    let next = (locale, model);
+
+    let (generation, handles, previous) = {
+        let Ok(mut live) = tray_live().lock() else {
+            return Ok(());
+        };
+        if should_skip_tray_update(live.last_model.as_ref(), live.desired.as_ref(), &next) {
+            return Ok(());
+        }
+        let Some(handles) = live.handles.clone() else {
+            return Ok(());
+        };
+        live.generation = live.generation.saturating_add(1);
+        let generation = live.generation;
+        let previous = live.last_model.as_ref().map(|(_, model)| model.clone());
+        live.desired = Some(next.clone());
+        (generation, handles, previous)
+    };
+
+    let app = app.clone();
+    let _ = thread::Builder::new()
+        .name("readytype-tray".to_owned())
+        .spawn(move || {
+            if !is_latest_generation(generation) {
+                return;
+            }
+            apply_model_diff(&app, &handles, previous.as_ref(), &next.1);
+            if let Ok(mut live) = tray_live().lock() {
+                if live.generation != generation {
+                    return;
+                }
+                live.last_model = Some(next);
+                if live.desired.as_ref() == live.last_model.as_ref() {
+                    live.desired = None;
+                }
+            }
+        });
     Ok(())
 }
 
-fn build_menu(
+fn is_latest_generation(generation: u64) -> bool {
+    tray_live()
+        .lock()
+        .ok()
+        .is_some_and(|live| live.generation == generation)
+}
+
+fn apply_model_diff(
     app: &AppHandle,
-    state: &SwitcherState,
-    locale: &str,
-) -> tauri::Result<Menu<tauri::Wry>> {
-    let model = TrayMenuModel::from_state(state, locale);
+    handles: &TrayHandles,
+    previous: Option<&TrayMenuModel>,
+    model: &TrayMenuModel,
+) {
+    let status_changed = previous.is_none_or(|prev| prev.status != model.status);
+    if status_changed {
+        let _ = handles.status.set_text(&model.status);
+        if let Some(tray) = app.tray_by_id(TRAY_ID) {
+            let _ = tray.set_tooltip(Some(model.status.clone()));
+        }
+    }
+    for (index, item_model) in model.items.iter().enumerate() {
+        let Some(handle) = handles.items.get(index) else {
+            continue;
+        };
+        let prev = previous.and_then(|prev| prev.items.get(index));
+        if prev.is_none_or(|prev| prev.label != item_model.label) {
+            let _ = handle.set_text(&item_model.label);
+        }
+        if prev.is_none_or(|prev| prev.enabled != item_model.enabled) {
+            let _ = handle.set_enabled(item_model.enabled);
+        }
+    }
+}
+
+fn build_handles_and_menu(
+    app: &AppHandle,
+    model: &TrayMenuModel,
+) -> tauri::Result<(TrayHandles, Menu<tauri::Wry>)> {
     let status = MenuItem::with_id(app, "status", &model.status, false, None::<&str>)?;
     let items = model
         .items
@@ -152,7 +266,7 @@ fn build_menu(
     let separator_one = PredefinedMenuItem::separator(app)?;
     let separator_two = PredefinedMenuItem::separator(app)?;
     let separator_three = PredefinedMenuItem::separator(app)?;
-    Menu::with_items(
+    let menu = Menu::with_items(
         app,
         &[
             &status as &dyn IsMenuItem<_>,
@@ -169,7 +283,8 @@ fn build_menu(
             &separator_three,
             &items[8],
         ],
-    )
+    )?;
+    Ok((TrayHandles { status, items }, menu))
 }
 
 fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
@@ -206,7 +321,9 @@ fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
 
 #[cfg(test)]
 mod tests {
-    use super::{should_show_main_window_on_launch, TrayMenuModel, SNOOZE_MINUTES};
+    use super::{
+        should_show_main_window_on_launch, should_skip_tray_update, TrayMenuModel, SNOOZE_MINUTES,
+    };
     use crate::{
         application::switcher_state::SwitcherState,
         domain::input_source::{Platform, PlatformAppId},
@@ -285,5 +402,20 @@ mod tests {
             "ReadyType".to_owned(),
             "--autostart".to_owned(),
         ]));
+    }
+
+    #[test]
+    fn tray_update_skips_identical_last_or_desired() {
+        let mut state = SwitcherState::new(true, None);
+        state.current_app =
+            Some(PlatformAppId::new(Platform::MacOs, "com.example.Editor", 42).expect("app"));
+        state.matched_rule_id = Some("editor".to_owned());
+        let model = TrayMenuModel::from_state(&state, "ja");
+        let pair = ("ja".to_owned(), model);
+        assert!(should_skip_tray_update(Some(&pair), None, &pair));
+        assert!(should_skip_tray_update(None, Some(&pair), &pair));
+        assert!(!should_skip_tray_update(None, None, &pair));
+        let other = ("en".to_owned(), TrayMenuModel::from_state(&state, "en"));
+        assert!(!should_skip_tray_update(Some(&pair), None, &other));
     }
 }

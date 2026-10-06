@@ -9,6 +9,12 @@ use crate::{
 
 pub const FALLBACK_INTERVAL_MS: u64 = 50;
 pub const MAX_PARENT_DEPTH: usize = 14;
+/// Description / Title など高コスト属性を取る祖先の深さ上限（0=focused のみ）。
+/// ターミナル等の長い Description を祖先でも読むと AX が跳ねるため focused に限定する。
+pub const EXPENSIVE_ATTRIBUTE_MAX_DEPTH: usize = 0;
+/// `focus_fingerprint` が参照する祖先数。これ以降の Dom* / Identifier は
+/// fingerprint 判定に不要なので第一パスでは読まない。
+pub const FINGERPRINT_IDENTITY_DEPTH: usize = 6;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ObserverRegistration {
@@ -56,6 +62,37 @@ impl AttributePlan {
         }
     }
 
+    /// fingerprint 用の安い属性だけ（Description 等を含めない）。
+    pub fn fingerprint() -> Self {
+        Self {
+            attributes: vec![
+                AxAttribute::Role,
+                AxAttribute::Identifier,
+                AxAttribute::DomIdentifier,
+                AxAttribute::DomClassList,
+            ],
+        }
+    }
+
+    pub fn is_fingerprint_attribute(attribute: &AxAttribute) -> bool {
+        matches!(
+            attribute,
+            AxAttribute::Role
+                | AxAttribute::Identifier
+                | AxAttribute::DomIdentifier
+                | AxAttribute::DomClassList
+        )
+    }
+
+    /// fingerprint 以外（第二パスで足す属性）。
+    pub fn attributes_beyond_fingerprint(&self) -> Vec<AxAttribute> {
+        self.attributes
+            .iter()
+            .copied()
+            .filter(|attribute| !Self::is_fingerprint_attribute(attribute))
+            .collect()
+    }
+
     pub fn attributes(&self) -> &[AxAttribute] {
         &self.attributes
     }
@@ -93,7 +130,7 @@ pub fn focus_fingerprint(elements: &[AxElementSnapshot]) -> String {
     }
     elements
         .iter()
-        .take(6)
+        .take(FINGERPRINT_IDENTITY_DEPTH)
         .map(|element| {
             format!(
                 "{}`{}`{}`{}",
@@ -169,6 +206,11 @@ impl MonitorState {
         Some(self.generation)
     }
 
+    /// 指紋が現在と同一か（コミットしない）。
+    pub fn peek_focus_unchanged(&self, fingerprint: &str) -> bool {
+        self.last_focus_fingerprint.as_deref() == Some(fingerprint)
+    }
+
     pub fn accepts_pid(&self, pid: i32) -> bool {
         self.permission_granted
             && self.active_app.as_ref().is_some_and(|app| app.pid() == pid)
@@ -207,7 +249,7 @@ pub struct UnsupportedFocusMonitor;
 impl FocusMonitor for UnsupportedFocusMonitor {
     fn start(
         &mut self,
-        _attributes: Vec<AxAttribute>,
+        _attribute_index: crate::application::ports::focus_monitor::SwitchingAttributeIndex,
         _sink: FocusEventSink,
     ) -> Result<(), FocusMonitorError> {
         Err(FocusMonitorError::UnsupportedPlatform)
@@ -237,7 +279,8 @@ impl FocusMonitor for UnsupportedFocusMonitor {
 #[cfg(test)]
 mod tests {
     use super::{
-        AttributePlan, MonitorState, MonitoringMode, ObserverRegistration, FALLBACK_INTERVAL_MS,
+        AttributePlan, MonitorState, MonitoringMode, ObserverRegistration,
+        EXPENSIVE_ATTRIBUTE_MAX_DEPTH, FALLBACK_INTERVAL_MS, FINGERPRINT_IDENTITY_DEPTH,
         MAX_PARENT_DEPTH,
     };
     use crate::domain::input_source::{AxAttribute, AxElementSnapshot, Platform, PlatformAppId};
@@ -346,7 +389,41 @@ mod tests {
     }
 
     #[test]
+    fn fingerprint_plan_excludes_description() {
+        let plan = AttributePlan::fingerprint();
+        assert!(plan.attributes().contains(&AxAttribute::Role));
+        assert!(plan.attributes().contains(&AxAttribute::DomClassList));
+        assert!(!plan.attributes().contains(&AxAttribute::Description));
+    }
+
+    #[test]
+    fn peek_focus_unchanged_matches_last_fingerprint() {
+        let mut state = MonitorState::default();
+        assert!(!state.peek_focus_unchanged("a"));
+        assert_eq!(state.commit_focus_change("a"), Some(1));
+        assert!(state.peek_focus_unchanged("a"));
+        assert!(!state.peek_focus_unchanged("b"));
+    }
+
+    #[test]
     fn parent_walk_is_bounded() {
         assert_eq!(MAX_PARENT_DEPTH, 14);
+        assert_eq!(EXPENSIVE_ATTRIBUTE_MAX_DEPTH, 0);
+        assert_eq!(FINGERPRINT_IDENTITY_DEPTH, 6);
+    }
+
+    #[test]
+    fn attributes_beyond_fingerprint_excludes_identity_attrs() {
+        let plan = AttributePlan::normal([
+            AxAttribute::Role,
+            AxAttribute::DomClassList,
+            AxAttribute::Description,
+            AxAttribute::Placeholder,
+        ]);
+        let extra = plan.attributes_beyond_fingerprint();
+        assert_eq!(
+            extra,
+            vec![AxAttribute::Description, AxAttribute::Placeholder]
+        );
     }
 }
