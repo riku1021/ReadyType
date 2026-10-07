@@ -22,6 +22,7 @@ use super::{
     ports::{
         app_display_name::AppDisplayNameResolver,
         clock::Clock,
+        current_input_source_change::CurrentInputSourceChangeMonitor,
         focus_monitor::{AccessibilityPermission, FocusMonitor, FocusMonitorError},
         input_source::{AvailableInputSource, InputSourceGateway},
         settings_repository::SettingsRepository,
@@ -43,6 +44,7 @@ pub struct SwitcherControllerDeps {
     pub clock: Arc<dyn Clock>,
     pub publisher: Arc<dyn SwitcherEventPublisher>,
     pub monitor: Box<dyn FocusMonitor>,
+    pub current_source_change_monitor: Box<dyn CurrentInputSourceChangeMonitor>,
     pub app_display_names: Arc<dyn AppDisplayNameResolver>,
 }
 
@@ -113,6 +115,7 @@ enum WorkerMessage {
 pub struct SwitcherController {
     switcher: Arc<Mutex<RuntimeSwitcher>>,
     monitor: Mutex<Box<dyn FocusMonitor>>,
+    current_source_change_monitor: Mutex<Box<dyn CurrentInputSourceChangeMonitor>>,
     sender: Sender<WorkerMessage>,
     worker: Mutex<Option<JoinHandle<()>>>,
     monitoring: AtomicBool,
@@ -133,6 +136,7 @@ impl SwitcherController {
             clock,
             publisher,
             monitor,
+            mut current_source_change_monitor,
             app_display_names,
         } = deps;
         let resolved = SwitcherSettings::resolve_ui_locale(&settings.ui_locale);
@@ -144,11 +148,29 @@ impl SwitcherController {
             clock,
             Arc::clone(&publisher),
         )?));
+        let cache_for_invalidate = {
+            let guard = switcher.lock().map_err(|_| {
+                ControllerError::InvalidRequest("switcher lock poisoned".to_owned())
+            })?;
+            guard.current_cache_handle()
+        };
+        let switcher_for_tis = Arc::clone(&switcher);
+        current_source_change_monitor
+            .start(Arc::new(move || {
+                if let Ok(mut cache) = cache_for_invalidate.lock() {
+                    cache.invalidate();
+                }
+                if let Ok(mut switcher) = switcher_for_tis.lock() {
+                    switcher.note_external_input_source_change();
+                }
+            }))
+            .map_err(ControllerError::InvalidRequest)?;
         let (sender, receiver) = mpsc::channel();
         let last_snapshot = Arc::new(Mutex::new(None));
         let controller = Arc::new(Self {
             switcher: Arc::clone(&switcher),
             monitor: Mutex::new(monitor),
+            current_source_change_monitor: Mutex::new(current_source_change_monitor),
             sender,
             worker: Mutex::new(None),
             monitoring: AtomicBool::new(false),
@@ -619,6 +641,9 @@ impl SwitcherController {
 impl Drop for SwitcherController {
     fn drop(&mut self) {
         let _ = self.monitor.get_mut().map(|monitor| monitor.stop());
+        if let Ok(monitor) = self.current_source_change_monitor.get_mut() {
+            monitor.stop();
+        }
         let _ = self.sender.send(WorkerMessage::Stop);
         if let Ok(worker) = self.worker.get_mut() {
             if let Some(worker) = worker.take() {
@@ -764,6 +789,9 @@ fn run_worker(
                     } => {
                         let locale = ui_locale.load();
                         let handoff_started = Instant::now();
+                        if let Ok(mut switcher) = switcher.lock() {
+                            switcher.set_suppress_tis_as_manual(true);
+                        }
                         let switch_result = match (gateway.lock(), current_cache.lock()) {
                             (Ok(mut gateway), Ok(mut cache)) => {
                                 let handoff_micros = micros_elapsed(handoff_started);
@@ -797,6 +825,7 @@ fn run_worker(
                                 };
                                 let _ = coalesced;
                                 let pending_after = if let Ok(mut switcher) = switcher.lock() {
+                                    switcher.set_suppress_tis_as_manual(false);
                                     let _ = switcher.complete_focus(
                                         snapshot,
                                         *rule,
@@ -822,6 +851,7 @@ fn run_worker(
                                     ..timing
                                 };
                                 let pending_after = if let Ok(mut switcher) = switcher.lock() {
+                                    switcher.set_suppress_tis_as_manual(false);
                                     switcher.record_switch_pipeline_error(
                                         &snapshot,
                                         rule.id(),
@@ -1070,6 +1100,21 @@ mod tests {
         }
     }
 
+    struct NoopCurrentSourceChangeMonitor;
+
+    impl super::super::ports::current_input_source_change::CurrentInputSourceChangeMonitor
+        for NoopCurrentSourceChangeMonitor
+    {
+        fn start(
+            &mut self,
+            _sink: super::super::ports::current_input_source_change::CurrentInputSourceChangeSink,
+        ) -> Result<(), String> {
+            Ok(())
+        }
+
+        fn stop(&mut self) {}
+    }
+
     fn controller(monitor: Arc<MonitorData>) -> Arc<SwitcherController> {
         SwitcherController::new(SwitcherControllerDeps {
             settings: SwitcherSettings::defaults(),
@@ -1078,6 +1123,7 @@ mod tests {
             clock: Arc::new(FakeClock(AtomicU64::new(1_000))),
             publisher: Arc::new(NoopPublisher),
             monitor: Box::new(FakeMonitor(monitor)),
+            current_source_change_monitor: Box::new(NoopCurrentSourceChangeMonitor),
             app_display_names: Arc::new(NoopDisplayNames),
         })
         .expect("controller")

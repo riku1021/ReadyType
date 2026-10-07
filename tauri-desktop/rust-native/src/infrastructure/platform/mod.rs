@@ -13,6 +13,7 @@ pub use windows::WindowsPlatform as CurrentPlatform;
 pub mod app_display_name;
 pub mod app_icon;
 pub mod app_icon_cache;
+pub mod current_input_source_change;
 pub mod focus_monitor;
 pub mod input_source;
 

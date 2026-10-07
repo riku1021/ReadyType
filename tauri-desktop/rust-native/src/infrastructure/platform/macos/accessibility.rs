@@ -1,8 +1,8 @@
 use std::ptr::NonNull;
 
 use objc2_application_services::{
-    kAXTrustedCheckOptionPrompt, AXError, AXIsProcessTrusted, AXIsProcessTrustedWithOptions,
-    AXUIElement, AXValue, AXValueType,
+    kAXTrustedCheckOptionPrompt, AXCopyMultipleAttributeOptions, AXError, AXIsProcessTrusted,
+    AXIsProcessTrustedWithOptions, AXUIElement, AXValue, AXValueType,
 };
 use objc2_core_foundation::{
     CFArray, CFBoolean, CFDictionary, CFRetained, CFString, CFType, CGPoint, CGSize,
@@ -18,6 +18,10 @@ const FOCUSED_ELEMENT: &str = "AXFocusedUIElement";
 const PARENT: &str = "AXParent";
 const POSITION: &str = "AXPosition";
 const SIZE: &str = "AXSize";
+/// FOCUSED_ELEMENT 取得専用の短い上限。失敗時（elements=0）に 0.15s 近く待つのを避ける。
+const FOCUSED_PROBE_TIMEOUT_SECONDS: f32 = 0.05;
+/// 親ウォーク / enrich の AX IPC ハング上限（秒）。
+const MESSAGING_TIMEOUT_SECONDS: f32 = 0.15;
 
 fn is_expensive_attribute(attribute: AxAttribute) -> bool {
     matches!(
@@ -98,9 +102,14 @@ impl RetainedAxChain {
         if attributes.is_empty() {
             return;
         }
+        if let Some(node) = self.nodes.first() {
+            apply_messaging_timeout(node, MESSAGING_TIMEOUT_SECONDS);
+        }
         for (depth, (snapshot, node)) in
             self.snapshots.iter_mut().zip(self.nodes.iter()).enumerate()
         {
+            let mut pending_attrs = Vec::new();
+            let mut pending_names = Vec::new();
             for attribute in attributes {
                 if is_expensive_attribute(*attribute) && depth > EXPENSIVE_ATTRIBUTE_MAX_DEPTH {
                     continue;
@@ -108,11 +117,75 @@ impl RetainedAxChain {
                 if !snapshot.value(*attribute).is_empty() {
                     continue;
                 }
-                if let Some(value) = copy_attribute_text(node, attribute_name(*attribute)) {
-                    *snapshot = std::mem::take(snapshot).with(*attribute, value);
+                pending_attrs.push(*attribute);
+                pending_names.push(attribute_name(*attribute));
+            }
+            if pending_names.is_empty() {
+                continue;
+            }
+            let values = copy_attribute_texts(node, &pending_names);
+            for (attribute, value) in pending_attrs.into_iter().zip(values) {
+                if let Some(value) = value {
+                    *snapshot = std::mem::take(snapshot).with(attribute, value);
                 }
             }
         }
+    }
+
+    /// focused 取得済みチェーンから親だけ伸ばす（`AXFocusedUIElement` の再 IPC をしない）。
+    pub fn extend_parent_walk(
+        mut self,
+        plan: &AttributePlan,
+        max_depth: usize,
+        shallow_identity_attrs: bool,
+    ) -> Self {
+        let max_depth = max_depth.clamp(1, MAX_PARENT_DEPTH);
+        if self.nodes.is_empty() || self.snapshots.len() >= max_depth {
+            return self;
+        }
+        let last_role = self
+            .snapshots
+            .last()
+            .map(|snapshot| snapshot.value(AxAttribute::Role).to_string())
+            .unwrap_or_default();
+        if is_chain_stop_role(&last_role) {
+            return self;
+        }
+        let Some(start) = self.nodes.last().cloned() else {
+            return self;
+        };
+        apply_messaging_timeout(&start, MESSAGING_TIMEOUT_SECONDS);
+        let Some(mut current) = copy_element(&start, PARENT) else {
+            return self;
+        };
+        for depth in self.snapshots.len()..max_depth {
+            push_chain_node(
+                &mut self.snapshots,
+                &mut self.nodes,
+                &current,
+                plan,
+                depth,
+                shallow_identity_attrs,
+            );
+            let role_for_stop = self
+                .snapshots
+                .last()
+                .map(|snapshot| snapshot.value(AxAttribute::Role).to_string())
+                .unwrap_or_default();
+            let role_for_stop = if role_for_stop.is_empty() {
+                copy_attribute_text(&current, attribute_name(AxAttribute::Role)).unwrap_or_default()
+            } else {
+                role_for_stop
+            };
+            if is_chain_stop_role(&role_for_stop) {
+                break;
+            }
+            let Some(parent) = copy_element(&current, PARENT) else {
+                break;
+            };
+            current = parent;
+        }
+        self
     }
 }
 
@@ -132,6 +205,8 @@ pub fn snapshot_chain_with_depth(
     max_depth: usize,
     shallow_identity_attrs: bool,
 ) -> RetainedAxChain {
+    // FOCUSED は短い timeout。空フォーカスで 150ms 近くブロックしない。
+    apply_messaging_timeout(application, FOCUSED_PROBE_TIMEOUT_SECONDS);
     let max_depth = max_depth.clamp(1, MAX_PARENT_DEPTH);
     let Some(mut current) = copy_element(application, FOCUSED_ELEMENT) else {
         return RetainedAxChain {
@@ -139,32 +214,27 @@ pub fn snapshot_chain_with_depth(
             nodes: Vec::new(),
         };
     };
+    apply_messaging_timeout(application, MESSAGING_TIMEOUT_SECONDS);
     let mut snapshots = Vec::with_capacity(max_depth);
     let mut nodes = Vec::with_capacity(max_depth);
     for depth in 0..max_depth {
-        let mut snapshot = AxElementSnapshot::new();
-        for attribute in plan.attributes() {
-            if is_expensive_attribute(*attribute) && depth > EXPENSIVE_ATTRIBUTE_MAX_DEPTH {
-                continue;
-            }
-            if shallow_identity_attrs
-                && is_identity_local_attribute(*attribute)
-                && depth >= FINGERPRINT_IDENTITY_DEPTH
-            {
-                continue;
-            }
-            if let Some(value) = copy_attribute_text(&current, attribute_name(*attribute)) {
-                snapshot = snapshot.with(*attribute, value);
-            }
-        }
-        // 打ち切り判定用: plan に Role が無くても AXRole を読む。
-        let role_for_stop = if snapshot.value(AxAttribute::Role).is_empty() {
+        push_chain_node(
+            &mut snapshots,
+            &mut nodes,
+            &current,
+            plan,
+            depth,
+            shallow_identity_attrs,
+        );
+        let role_for_stop = snapshots
+            .last()
+            .map(|snapshot| snapshot.value(AxAttribute::Role).to_string())
+            .unwrap_or_default();
+        let role_for_stop = if role_for_stop.is_empty() {
             copy_attribute_text(&current, attribute_name(AxAttribute::Role)).unwrap_or_default()
         } else {
-            snapshot.value(AxAttribute::Role).to_string()
+            role_for_stop
         };
-        snapshots.push(snapshot);
-        nodes.push(current.clone());
         if is_chain_stop_role(&role_for_stop) {
             break;
         }
@@ -176,6 +246,40 @@ pub fn snapshot_chain_with_depth(
     RetainedAxChain { snapshots, nodes }
 }
 
+fn push_chain_node(
+    snapshots: &mut Vec<AxElementSnapshot>,
+    nodes: &mut Vec<CFRetained<AXUIElement>>,
+    current: &AXUIElement,
+    plan: &AttributePlan,
+    depth: usize,
+    shallow_identity_attrs: bool,
+) {
+    let mut attrs = Vec::new();
+    let mut names = Vec::new();
+    for attribute in plan.attributes() {
+        if is_expensive_attribute(*attribute) && depth > EXPENSIVE_ATTRIBUTE_MAX_DEPTH {
+            continue;
+        }
+        if shallow_identity_attrs
+            && is_identity_local_attribute(*attribute)
+            && depth >= FINGERPRINT_IDENTITY_DEPTH
+        {
+            continue;
+        }
+        attrs.push(*attribute);
+        names.push(attribute_name(*attribute));
+    }
+    let values = copy_attribute_texts(current, &names);
+    let mut snapshot = AxElementSnapshot::new();
+    for (attribute, value) in attrs.into_iter().zip(values) {
+        if let Some(value) = value {
+            snapshot = snapshot.with(attribute, value);
+        }
+    }
+    snapshots.push(snapshot);
+    nodes.push(current.into());
+}
+
 /// Focused element frame in AX / Core Graphics global coordinates.
 ///
 /// Per `kAXPositionAttribute`: origin is the **top-left** of the display that
@@ -183,7 +287,9 @@ pub fn snapshot_chain_with_depth(
 /// This matches Tauri `LogicalPosition` (top-left), so no Y-flip is applied.
 pub fn focused_element_frame(pid: i32) -> Option<ElementFrame> {
     let application = application_element(pid);
+    apply_messaging_timeout(&application, FOCUSED_PROBE_TIMEOUT_SECONDS);
     let focused = copy_element(&application, FOCUSED_ELEMENT)?;
+    apply_messaging_timeout(&application, MESSAGING_TIMEOUT_SECONDS);
     let position = copy_ax_point(&focused, POSITION)?;
     let size = copy_ax_size(&focused, SIZE)?;
     Some(ElementFrame {
@@ -192,6 +298,11 @@ pub fn focused_element_frame(pid: i32) -> Option<ElementFrame> {
         width: size.width,
         height: size.height,
     })
+}
+
+fn apply_messaging_timeout(element: &AXUIElement, seconds: f32) {
+    // SAFETY: timeout は正の秒数。失敗しても読み取りは続行する。
+    let _ = unsafe { element.set_messaging_timeout(seconds) };
 }
 
 fn attribute_name(attribute: AxAttribute) -> &'static str {
@@ -227,7 +338,53 @@ fn copy_element(element: &AXUIElement, name: &'static str) -> Option<CFRetained<
 }
 
 fn copy_attribute_text(element: &AXUIElement, name: &'static str) -> Option<String> {
-    let value = copy_value(element, name)?;
+    cf_type_to_attribute_text(copy_value(element, name)?)
+}
+
+/// 同一要素の複数属性を 1 回の AX IPC で取得する（欠落属性で全体失敗しない）。
+fn copy_attribute_texts(element: &AXUIElement, names: &[&'static str]) -> Vec<Option<String>> {
+    if names.is_empty() {
+        return Vec::new();
+    }
+    if names.len() == 1 {
+        return vec![copy_attribute_text(element, names[0])];
+    }
+    let name_refs: Vec<CFRetained<CFString>> = names
+        .iter()
+        .map(|name| CFString::from_static_str(name))
+        .collect();
+    let attributes = CFArray::from_retained_objects(&name_refs);
+    let mut values_ptr: *const CFArray = std::ptr::null();
+    // SAFETY: attributes は CFString の CFArray。options=0 で欠落を CFNull/AXError として返す。
+    let error = unsafe {
+        element.copy_multiple_attribute_values(
+            attributes.as_ref(),
+            AXCopyMultipleAttributeOptions(0),
+            NonNull::from(&mut values_ptr),
+        )
+    };
+    if error != AXError::Success {
+        return names
+            .iter()
+            .map(|name| copy_attribute_text(element, name))
+            .collect();
+    }
+    let Some(values_ptr) = NonNull::new(values_ptr.cast_mut()) else {
+        return names.iter().map(|_| None).collect();
+    };
+    // SAFETY: 成功時は create-rule の CFArray。
+    let values = unsafe { CFRetained::from_raw(values_ptr) };
+    // SAFETY: 各要素は CFType（CFString / CFArray / CFNull / AXValue エラー）。
+    let values = unsafe { CFRetained::cast_unchecked::<CFArray<CFType>>(values) };
+    let mut out = Vec::with_capacity(names.len());
+    for index in 0..names.len() {
+        let text = values.get(index).and_then(cf_type_to_attribute_text);
+        out.push(text);
+    }
+    out
+}
+
+fn cf_type_to_attribute_text(value: CFRetained<CFType>) -> Option<String> {
     if let Ok(string) = value.clone().downcast::<CFString>() {
         return Some(string.to_string());
     }

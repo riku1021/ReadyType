@@ -21,8 +21,9 @@ use crate::{
     },
     domain::input_source::{AxAttribute, FocusSnapshot, Platform, PlatformAppId},
     infrastructure::platform::focus_monitor::{
-        focus_fingerprint, AttributePlan, MonitorState, MonitoringMode, ObserverRegistration,
-        FALLBACK_INTERVAL_MS, MAX_PARENT_DEPTH,
+        focus_fingerprint, is_expensive_ax_attribute, is_switch_candidate_role,
+        role_may_need_description, AttributePlan, MonitorState, MonitoringMode,
+        ObserverRegistration, FALLBACK_INTERVAL_MS, MAX_PARENT_DEPTH,
     },
 };
 
@@ -424,34 +425,54 @@ fn evaluate_pending(
         (elements, ax_micros, fingerprint)
     } else {
         let app_plan = plan_for_app(attribute_index, app.app_id());
-        // 1) 安い fingerprint ウォーク（深い祖先の Dom* は省略）。親ノードは保持。
-        let mut chain = snapshot_chain_with_depth(
-            &application,
-            &AttributePlan::fingerprint(),
-            MAX_PARENT_DEPTH,
-            true,
-        );
-        let fingerprint = focus_fingerprint(chain.snapshots());
-        if state.peek_focus_unchanged(&fingerprint) {
-            return;
-        }
-        // 2) 変化時: 親の再ウォークはせず、不足属性だけ足す（深い Dom* + lean 追加分）。
-        let mut enrich_attrs = app_plan.attributes_beyond_fingerprint();
-        for attribute in [
-            AxAttribute::Identifier,
-            AxAttribute::DomIdentifier,
-            AxAttribute::DomClassList,
-        ] {
-            if !enrich_attrs.contains(&attribute) {
-                enrich_attrs.push(attribute);
+        // 1) focused だけ取り、Role で候補判定（非候補は親ウォークしない）。
+        let shallow =
+            snapshot_chain_with_depth(&application, &AttributePlan::fingerprint(), 1, true);
+        let focused_role = shallow
+            .snapshots()
+            .first()
+            .map(|snapshot| snapshot.value(AxAttribute::Role).to_string())
+            .unwrap_or_default();
+        if is_switch_candidate_role(&focused_role) {
+            // 2) 候補: shallow の focused を再利用して親だけ伸ばす（FOCUSED 再 IPC なし）。
+            let mut chain =
+                shallow.extend_parent_walk(&AttributePlan::fingerprint(), MAX_PARENT_DEPTH, true);
+            let fingerprint = focus_fingerprint(chain.snapshots());
+            if state.peek_focus_unchanged(&fingerprint) {
+                return;
             }
+            let mut enrich_attrs = app_plan.attributes_beyond_fingerprint();
+            for attribute in [
+                AxAttribute::Identifier,
+                AxAttribute::DomIdentifier,
+                AxAttribute::DomClassList,
+            ] {
+                if !enrich_attrs.contains(&attribute) {
+                    enrich_attrs.push(attribute);
+                }
+            }
+            if !role_may_need_description(&focused_role) {
+                enrich_attrs.retain(|attribute| !is_expensive_ax_attribute(*attribute));
+            }
+            chain.enrich(&enrich_attrs);
+            let elements = chain.into_snapshots();
+            let ax_micros = u64::try_from(ax_started.elapsed().as_micros()).unwrap_or(u64::MAX);
+            (elements, ax_micros, fingerprint)
+        } else {
+            // 非候補: focused のみ・enrich なし（Button/Link/Row 等）。
+            let fingerprint = focus_fingerprint(shallow.snapshots());
+            if state.peek_focus_unchanged(&fingerprint) {
+                return;
+            }
+            let elements = shallow.into_snapshots();
+            let ax_micros = u64::try_from(ax_started.elapsed().as_micros()).unwrap_or(u64::MAX);
+            (elements, ax_micros, fingerprint)
         }
-        chain.enrich(&enrich_attrs);
-        let elements = chain.into_snapshots();
-        let ax_micros = u64::try_from(ax_started.elapsed().as_micros()).unwrap_or(u64::MAX);
-        // fingerprint は enrich 後も同一（Description 等は identity に含めない）。
-        (elements, ax_micros, fingerprint)
     };
+    // 空フォーカスは一時失敗。generation を進めず sink もしない。
+    if fingerprint == crate::domain::input_source::EMPTY_FOCUS_KEY {
+        return;
+    }
     let Some(generation) = state.commit_focus_change(&fingerprint) else {
         return;
     };

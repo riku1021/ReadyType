@@ -4,7 +4,10 @@ use crate::{
     application::ports::focus_monitor::{
         AccessibilityPermission, FocusEventSink, FocusMonitor, FocusMonitorError,
     },
-    domain::input_source::{AxAttribute, AxElementSnapshot, PlatformAppId},
+    domain::input_source::{
+        focus_identity_key, AxAttribute, AxElementSnapshot, PlatformAppId, EMPTY_FOCUS_KEY,
+        FOCUS_IDENTITY_DEPTH,
+    },
 };
 
 pub const FALLBACK_INTERVAL_MS: u64 = 50;
@@ -14,7 +17,36 @@ pub const MAX_PARENT_DEPTH: usize = 14;
 pub const EXPENSIVE_ATTRIBUTE_MAX_DEPTH: usize = 0;
 /// `focus_fingerprint` が参照する祖先数。これ以降の Dom* / Identifier は
 /// fingerprint 判定に不要なので第一パスでは読まない。
-pub const FINGERPRINT_IDENTITY_DEPTH: usize = 6;
+pub const FINGERPRINT_IDENTITY_DEPTH: usize = FOCUS_IDENTITY_DEPTH;
+
+/// 切替ルールが付き得る focused Role（フル親ウォーク + enrich）。
+/// 非候補は focused のみ・enrich なし（Button/Link 等の無駄 AX を避ける）。
+pub fn is_switch_candidate_role(role: &str) -> bool {
+    matches!(
+        role,
+        "AXTextField" | "AXTextArea" | "AXComboBox" | "AXSearchField" | "AXGroup" | "AXWebArea"
+    ) || role.to_ascii_lowercase().contains("text")
+}
+
+/// Description 等高コスト属性がルールに使われ得る Role。
+pub fn role_may_need_description(role: &str) -> bool {
+    matches!(
+        role,
+        "AXTextField" | "AXTextArea" | "AXComboBox" | "AXSearchField"
+    ) || role.to_ascii_lowercase().contains("text")
+}
+
+/// Description / Title など、enrich で条件付きにする高コスト属性。
+pub fn is_expensive_ax_attribute(attribute: AxAttribute) -> bool {
+    matches!(
+        attribute,
+        AxAttribute::Description
+            | AxAttribute::RoleDescription
+            | AxAttribute::Title
+            | AxAttribute::Help
+            | AxAttribute::Placeholder
+    )
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ObserverRegistration {
@@ -123,25 +155,9 @@ impl Default for MonitorState {
     }
 }
 
-/// Stable-ish identity of the focused AX chain (excludes volatile Description text).
+/// Stable-ish identity of the focused AX chain（domain の focus_identity_key に委譲）。
 pub fn focus_fingerprint(elements: &[AxElementSnapshot]) -> String {
-    if elements.is_empty() {
-        return "empty".to_owned();
-    }
-    elements
-        .iter()
-        .take(FINGERPRINT_IDENTITY_DEPTH)
-        .map(|element| {
-            format!(
-                "{}`{}`{}`{}",
-                element.value(AxAttribute::Role),
-                element.value(AxAttribute::DomIdentifier),
-                element.value(AxAttribute::DomClassList),
-                element.value(AxAttribute::Identifier),
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("/")
+    focus_identity_key(elements)
 }
 
 impl MonitorState {
@@ -197,7 +213,11 @@ impl MonitorState {
     }
 
     /// フォーカス指紋が変わったときだけ generation を進め、新規フォーカスとして返す。
+    /// 空フォーカスは一時失敗とみなし generation を進めない（前回 identity を保持）。
     pub fn commit_focus_change(&mut self, fingerprint: &str) -> Option<u64> {
+        if fingerprint == EMPTY_FOCUS_KEY {
+            return None;
+        }
         if self.last_focus_fingerprint.as_deref() == Some(fingerprint) {
             return None;
         }
@@ -279,11 +299,13 @@ impl FocusMonitor for UnsupportedFocusMonitor {
 #[cfg(test)]
 mod tests {
     use super::{
-        AttributePlan, MonitorState, MonitoringMode, ObserverRegistration,
-        EXPENSIVE_ATTRIBUTE_MAX_DEPTH, FALLBACK_INTERVAL_MS, FINGERPRINT_IDENTITY_DEPTH,
-        MAX_PARENT_DEPTH,
+        is_switch_candidate_role, role_may_need_description, AttributePlan, MonitorState,
+        MonitoringMode, ObserverRegistration, EXPENSIVE_ATTRIBUTE_MAX_DEPTH, FALLBACK_INTERVAL_MS,
+        FINGERPRINT_IDENTITY_DEPTH, MAX_PARENT_DEPTH,
     };
-    use crate::domain::input_source::{AxAttribute, AxElementSnapshot, Platform, PlatformAppId};
+    use crate::domain::input_source::{
+        AxAttribute, AxElementSnapshot, Platform, PlatformAppId, EMPTY_FOCUS_KEY,
+    };
 
     fn app(id: &str, pid: i32) -> PlatformAppId {
         PlatformAppId::new(Platform::MacOs, id, pid).expect("valid app")
@@ -370,6 +392,63 @@ mod tests {
     }
 
     #[test]
+    fn focus_fingerprint_ignores_volatile_dom_class_tokens() {
+        let base = [AxElementSnapshot::new()
+            .with(AxAttribute::Role, "AXTextArea")
+            .with(
+                AxAttribute::DomClassList,
+                "inputarea monaco-mouse-cursor-text",
+            )];
+        let with_ime = [AxElementSnapshot::new()
+            .with(AxAttribute::Role, "AXTextArea")
+            .with(
+                AxAttribute::DomClassList,
+                "inputarea monaco-mouse-cursor-text ime-input",
+            )];
+        assert_eq!(
+            super::focus_fingerprint(&base),
+            super::focus_fingerprint(&with_ime)
+        );
+    }
+
+    #[test]
+    fn focus_fingerprint_ignores_ancestor_dom_class_churn() {
+        let stable = [
+            AxElementSnapshot::new()
+                .with(AxAttribute::Role, "AXTextField")
+                .with(AxAttribute::DomClassList, "xterm-helper-textarea"),
+            AxElementSnapshot::new()
+                .with(AxAttribute::Role, "AXGroup")
+                .with(AxAttribute::DomClassList, "split-view-view"),
+        ];
+        let churned = [
+            AxElementSnapshot::new()
+                .with(AxAttribute::Role, "AXTextField")
+                .with(AxAttribute::DomClassList, "xterm-helper-textarea"),
+            AxElementSnapshot::new()
+                .with(AxAttribute::Role, "AXGroup")
+                .with(AxAttribute::DomClassList, "split-view-view visible"),
+        ];
+        assert_eq!(
+            super::focus_fingerprint(&stable),
+            super::focus_fingerprint(&churned)
+        );
+    }
+
+    #[test]
+    fn empty_fingerprint_does_not_advance_generation() {
+        let mut state = MonitorState::default();
+        state.activate(app("com.example", 41), ObserverRegistration::Registered);
+        let after_activate = state.generation();
+        let first = state
+            .commit_focus_change("textarea`aichat``")
+            .expect("first focus");
+        assert!(first > after_activate);
+        assert_eq!(state.commit_focus_change(EMPTY_FOCUS_KEY), None);
+        assert_eq!(state.commit_focus_change("textarea`aichat``"), None);
+    }
+
+    #[test]
     fn attribute_plans_are_minimal_normally_and_complete_for_debugging() {
         let normal = AttributePlan::normal([
             AxAttribute::Role,
@@ -425,5 +504,41 @@ mod tests {
             extra,
             vec![AxAttribute::Description, AxAttribute::Placeholder]
         );
+    }
+
+    #[test]
+    fn switch_candidate_role_covers_text_and_group() {
+        let cases = [
+            ("AXTextField", true),
+            ("AXTextArea", true),
+            ("AXComboBox", true),
+            ("AXSearchField", true),
+            ("AXGroup", true),
+            ("AXWebArea", true),
+            ("AXStaticText", true),
+            ("AXButton", false),
+            ("AXLink", false),
+            ("AXRow", false),
+            ("AXImage", false),
+            ("AXTab", false),
+            ("", false),
+        ];
+        for (role, expected) in cases {
+            assert_eq!(
+                is_switch_candidate_role(role),
+                expected,
+                "role={role:?} expected={expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn role_may_need_description_excludes_group() {
+        assert!(role_may_need_description("AXTextField"));
+        assert!(role_may_need_description("AXTextArea"));
+        assert!(role_may_need_description("AXStaticText"));
+        assert!(!role_may_need_description("AXGroup"));
+        assert!(!role_may_need_description("AXWebArea"));
+        assert!(!role_may_need_description("AXButton"));
     }
 }

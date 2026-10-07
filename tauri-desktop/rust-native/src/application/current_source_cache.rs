@@ -11,7 +11,7 @@ pub struct CurrentInputSourceCache {
 
 impl CurrentInputSourceCache {
     /// フォーカス間隔が数百 ms を超えてもヒットしやすいよう、短すぎない TTL にする。
-    /// 手動 IME 切替は次フォーカス or 明示 invalidate で拾う（OS 通知は無い）。
+    /// 手動 IME 切替は TIS 変更通知の invalidate・TTL 期限切れ・次フォーカスで拾う。
     pub const DEFAULT_TTL: Duration = Duration::from_millis(2_500);
 
     pub fn new(ttl: Duration) -> Self {
@@ -68,5 +68,15 @@ mod tests {
     #[test]
     fn default_ttl_is_long_enough_for_focus_gaps() {
         assert!(CurrentInputSourceCache::DEFAULT_TTL >= Duration::from_millis(2_000));
+    }
+
+    #[test]
+    fn invalidate_clears_cached_value() {
+        let mut cache = CurrentInputSourceCache::new(Duration::from_millis(100));
+        let id = InputSourceId::parse("en").expect("id");
+        let now = Instant::now();
+        cache.put(now, id);
+        cache.invalidate();
+        assert_eq!(cache.get(now), None);
     }
 }
