@@ -31,6 +31,9 @@ pub trait TisBackend: Send {
     fn list(&mut self, locale: &str) -> Result<Vec<NativeInputSource<Self::Handle>>, GatewayError>;
     fn current(&self) -> Result<InputSourceId, GatewayError>;
     fn select(&mut self, handle: &Self::Handle) -> Result<(), GatewayError>;
+    fn input_method_keyboard_layout_override(&self) -> Option<InputSourceId> {
+        None
+    }
 }
 
 pub struct MacOsInputSourceGateway<B: TisBackend> {
@@ -70,6 +73,13 @@ impl<B: TisBackend> MacOsInputSourceGateway<B> {
             .iter()
             .find(|source| source.id == *id)
             .map(|source| source.handle.clone())
+    }
+
+    fn source_flags(&self, id: &InputSourceId) -> Option<(bool, bool)> {
+        self.cache
+            .iter()
+            .find(|source| source.id == *id)
+            .map(|source| (source.enabled, source.selectable))
     }
 
     #[cfg(test)]
@@ -118,12 +128,45 @@ impl<B: TisBackend> InputSourceGateway for MacOsInputSourceGateway<B> {
             None => {
                 self.refresh()?;
                 self.find_handle(id).ok_or_else(|| {
-                    GatewayError::Operation(format!("input source is unavailable: {}", id.as_str()))
+                    GatewayError::Operation(format!(
+                        "input source is unavailable: {}{}",
+                        id.as_str(),
+                        diagnose_unavailable_suffix(id)
+                    ))
                 })?
             }
         };
-        self.backend.select(&handle)
+        let flags = self.source_flags(id).unwrap_or((false, false));
+        self.backend.select(&handle).map_err(|error| {
+            let base = match &error {
+                GatewayError::Operation(message) => message.clone(),
+                other => other.to_string(),
+            };
+            GatewayError::Operation(format!(
+                "{base}; target={} enabled={} selectCapable={}",
+                id.as_str(),
+                flags.0,
+                flags.1
+            ))
+        })
     }
+
+    fn input_method_keyboard_layout_override(&self) -> Option<InputSourceId> {
+        self.backend.input_method_keyboard_layout_override()
+    }
+}
+
+/// キャッシュ外（disabled 等）のとき、可能なら enabled/selectCapable を添える。
+fn diagnose_unavailable_suffix(id: &InputSourceId) -> String {
+    #[cfg(target_os = "macos")]
+    {
+        use super::macos::inspect_input_source_flags;
+        if let Some((enabled, selectable)) = inspect_input_source_flags(id.as_str()) {
+            return format!("; enabled={enabled} selectCapable={selectable}");
+        }
+    }
+    let _ = id;
+    String::new()
 }
 
 #[cfg(target_os = "macos")]
@@ -310,7 +353,12 @@ mod tests {
             .select(&input_id("jp"))
             .expect_err("selection fails");
 
-        assert_eq!(error, GatewayError::Operation("OSStatus -50".to_owned()));
+        assert_eq!(
+            error,
+            GatewayError::Operation(
+                "OSStatus -50; target=jp enabled=true selectCapable=true".to_owned()
+            )
+        );
         assert_eq!(gateway.backend().select_calls, 1);
     }
 

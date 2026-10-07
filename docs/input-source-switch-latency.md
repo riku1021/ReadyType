@@ -255,10 +255,34 @@ UI では p50 系集計・hit/miss 分割・外れ値ハイライト（`findLate
 
 ---
 
-## 11. 実機での確認手順（受け入れ）
+## 11. 診断ログ（動作確認用）
+
+`SwitchLogEntry` / 診断 TSV で挙動を追うときの見方。
+
+| 項目 | 用途 |
+|------|------|
+| `focusKey` | manual override の文脈単位。変わると override クリア |
+| `reason` | 判定理由。`tis: … latched` / `manual … skipped` / `override cleared` / `selected target` など |
+| `postSelect=match\|mismatch` | `TISSelect` 直後の `current` 再読取。メニューだけ変わった疑いの切り分け |
+| `layoutOverride=` | `TISCopyInputMethodKeyboardLayoutOverride`（あれば）。IME 内 ASCII レイアウト残りの手がかり |
+| `enabled=` / `selectCapable=` | select 失敗時。Apple の選択可能条件 |
+| `focus: coalesced N…` | キュー合流で捨てた件数と採用 generation |
+| `detail` | `override=none\|active` + 空でない focused 属性のみ（generation は列で持つ） |
+| `from`/`to` + reason の `[imeLatin]` | IME 英数モード（`.Roman`）とレイアウト（ABC 等）の切り分け |
+
+出さない／デバッグ時のみ:
+
+- 同一 `generation already handled`（常に抑制）
+- TIS の suppress / last_auto エコー（`debug_logging` 時のみ）
+- follow-up reselect（+40/120/250ms）の status / current（`debug_logging` 時のみ）
+- 画面表示の timing は非ゼロ区間だけ（フル breakdown は TSV 列に残す）
+
+---
+
+## 12. 実機での確認手順（受け入れ）
 
 自動テストでは AX/TIS の体感は測れない。診断画面で次を確認する。
 
 1. **AX** — Cursor / Terminal / ブラウザでフォーカス移動を各数回。`ax_micros` の p50・外れ値が悪化していないこと（一括取得後は同等以上を期待）。
-2. **current 鮮度** — メニューバーで手動 IME 変更 → すぐにフィールドへフォーカス。誤った `AlreadySelected` が減り、変更後の最初の lookup で `current_cache_hit=false` になりやすいこと。
+2. **current 鮮度** — メニューバーで手動 IME 変更 → すぐにフィールドへフォーカス。誤った `AlreadySelected` が減り、変更後の最初の lookup で `current_cache_hit=false` になりやすいこと。手動変更後は `tis: … latched` と `manual … skipped` が出ること。
 3. **ハング耐性** — 重い AX アプリでもパイプラインが長時間固まらないこと（timeout の効果）。

@@ -195,6 +195,19 @@ impl SwitcherController {
         self.ui_locale.load()
     }
 
+    /// Composition root から follow-up reselect の診断 sink を配線する。
+    pub fn bind_followup_reselect_log<F>(&self, bind: F)
+    where
+        F: FnOnce(Arc<dyn Fn(u64, i32, Option<InputSourceId>) + Send + Sync>),
+    {
+        let switcher = Arc::clone(&self.switcher);
+        bind(Arc::new(move |delay_ms, status, current| {
+            if let Ok(mut switcher) = switcher.lock() {
+                switcher.note_followup_reselect(delay_ms, status, current.as_ref());
+            }
+        }));
+    }
+
     /// Re-resolve when preference is `system` (e.g. on window focus).
     pub fn refresh_resolved_ui_locale(&self) -> Result<Option<SwitcherState>, ControllerError> {
         let (preference, state) = {
@@ -763,6 +776,9 @@ fn run_worker(
                         let _ = switcher.activate(key.0.clone(), key.1);
                         active = Some(key);
                     }
+                    if coalesced > 0 {
+                        switcher.note_focus_coalesced(coalesced, snapshot.generation());
+                    }
                     let gateway = switcher.gateway_handle();
                     let current_cache = switcher.current_cache_handle();
                     let prepared = switcher.prepare_focus(snapshot, pipeline_started, ax_micros);
@@ -778,7 +794,6 @@ fn run_worker(
                 };
                 match prepared {
                     PreparedFocus::Done(_) => {
-                        let _ = coalesced;
                         timed_dispatch(pending_after_prepare, &dispatch, &switcher, true);
                     }
                     PreparedFocus::NeedsSwitch {
@@ -786,6 +801,7 @@ fn run_worker(
                         rule,
                         target,
                         timing,
+                        reason_prefix,
                     } => {
                         let locale = ui_locale.load();
                         let handoff_started = Instant::now();
@@ -801,8 +817,8 @@ fn run_worker(
                                     &locale,
                                     &mut cache,
                                 ) {
-                                    Ok((current, select_result, gateway_timing)) => {
-                                        Ok((handoff_micros, current, select_result, gateway_timing))
+                                    Ok((current, select_outcome, gateway_timing)) => {
+                                        Ok((handoff_micros, current, select_outcome, gateway_timing))
                                     }
                                     Err(error) => Err((handoff_micros, error)),
                                 }
@@ -815,7 +831,7 @@ fn run_worker(
                             )),
                         };
                         match switch_result {
-                            Ok((handoff_micros, current, select_result, gateway_timing)) => {
+                            Ok((handoff_micros, current, select_outcome, gateway_timing)) => {
                                 let timing = FocusPipelineTiming {
                                     handoff_micros,
                                     current_micros: gateway_timing.current_micros,
@@ -823,7 +839,6 @@ fn run_worker(
                                     select_micros: gateway_timing.select_micros,
                                     ..timing
                                 };
-                                let _ = coalesced;
                                 let pending_after = if let Ok(mut switcher) = switcher.lock() {
                                     switcher.set_suppress_tis_as_manual(false);
                                     let _ = switcher.complete_focus(
@@ -831,8 +846,9 @@ fn run_worker(
                                         *rule,
                                         target,
                                         current,
-                                        select_result,
+                                        select_outcome,
                                         timing,
+                                        &reason_prefix,
                                     );
                                     switcher.drain_publish_snapshot()
                                 } else {
@@ -858,6 +874,7 @@ fn run_worker(
                                         &target,
                                         &error,
                                         timing,
+                                        &reason_prefix,
                                     );
                                     switcher.drain_publish_snapshot()
                                 } else {

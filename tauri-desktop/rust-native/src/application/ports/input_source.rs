@@ -39,6 +39,10 @@ pub trait InputSourceGateway: Send {
     ) -> Result<Vec<AvailableInputSource>, GatewayError>;
     fn current(&self) -> Result<InputSourceId, GatewayError>;
     fn select(&mut self, id: &InputSourceId) -> Result<(), GatewayError>;
+    /// 現在の IME に紐づくキーボードレイアウト override（無ければ `None`）。
+    fn input_method_keyboard_layout_override(&self) -> Option<InputSourceId> {
+        None
+    }
 }
 
 impl<T: InputSourceGateway + ?Sized> InputSourceGateway for Box<T> {
@@ -56,5 +60,9 @@ impl<T: InputSourceGateway + ?Sized> InputSourceGateway for Box<T> {
 
     fn select(&mut self, id: &InputSourceId) -> Result<(), GatewayError> {
         (**self).select(id)
+    }
+
+    fn input_method_keyboard_layout_override(&self) -> Option<InputSourceId> {
+        (**self).input_method_keyboard_layout_override()
     }
 }

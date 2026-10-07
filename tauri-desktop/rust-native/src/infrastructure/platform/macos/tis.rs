@@ -2,7 +2,10 @@ use std::{
     ffi::c_void,
     mem::MaybeUninit,
     ptr::NonNull,
-    sync::atomic::{AtomicU64, Ordering},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc, Mutex, OnceLock,
+    },
 };
 
 use objc2::MainThreadMarker;
@@ -15,6 +18,20 @@ use crate::{
         macos::input_source_display_name,
     },
 };
+
+/// follow-up reselect 結果の診断コールバック（composition から配線）。
+pub type FollowUpReselectLogSink = Arc<dyn Fn(u64, i32, Option<InputSourceId>) + Send + Sync>;
+
+fn followup_log_sink() -> &'static Mutex<Option<FollowUpReselectLogSink>> {
+    static SINK: OnceLock<Mutex<Option<FollowUpReselectLogSink>>> = OnceLock::new();
+    SINK.get_or_init(|| Mutex::new(None))
+}
+
+pub fn set_followup_reselect_log_sink(sink: Option<FollowUpReselectLogSink>) {
+    if let Ok(mut guard) = followup_log_sink().lock() {
+        *guard = sink;
+    }
+}
 
 type CFIndex = isize;
 type DispatchTime = u64;
@@ -42,6 +59,7 @@ unsafe extern "C" {
     static kTISTypeKeyboardInputMode: *const c_void;
 
     fn TISCopyCurrentKeyboardInputSource() -> *const c_void;
+    fn TISCopyInputMethodKeyboardLayoutOverride() -> *const c_void;
     fn TISCreateInputSourceList(
         properties: *const c_void,
         include_all_installed: u8,
@@ -166,6 +184,16 @@ impl TisBackend for SystemTisBackend {
         let handle = handle.clone();
         run_on_main_thread(move || select_on_main(&handle))
     }
+
+    fn input_method_keyboard_layout_override(&self) -> Option<InputSourceId> {
+        run_on_main_thread(layout_override_on_main)
+    }
+}
+
+/// disabled 含む全インストールから ID を探し、enabled / selectCapable を返す。
+pub fn inspect_input_source_flags(id: &str) -> Option<(bool, bool)> {
+    let id = id.to_owned();
+    run_on_main_thread(move || inspect_flags_on_main(&id))
 }
 
 fn list_on_main(locale: &str) -> Result<Vec<NativeInputSource<OwnedTisInputSource>>, GatewayError> {
@@ -249,6 +277,40 @@ fn current_on_main() -> Result<InputSourceId, GatewayError> {
     InputSourceId::parse(&id).map_err(|error| GatewayError::Operation(error.to_string()))
 }
 
+fn layout_override_on_main() -> Option<InputSourceId> {
+    // SAFETY: create rule; null means no override.
+    let raw = unsafe { TISCopyInputMethodKeyboardLayoutOverride() };
+    if raw.is_null() {
+        return None;
+    }
+    let source = unsafe { OwnedTisInputSource::from_create_rule(raw) }.ok()?;
+    let id = property_string(source.as_ptr(), unsafe { kTISPropertyInputSourceID })?;
+    InputSourceId::parse(&id).ok()
+}
+
+fn inspect_flags_on_main(id: &str) -> Option<(bool, bool)> {
+    // SAFETY: includeAllInstalled=1 で disabled も列挙。
+    let array =
+        unsafe { OwnedCfArray::from_create_rule(TISCreateInputSourceList(std::ptr::null(), 1)) }
+            .ok()?;
+    let count = unsafe { CFArrayGetCount(array.0.as_ptr()) };
+    for index in 0..count {
+        let raw = unsafe { CFArrayGetValueAtIndex(array.0.as_ptr(), index) };
+        let Some(source_id) = property_string(raw, unsafe { kTISPropertyInputSourceID }) else {
+            continue;
+        };
+        if source_id != id {
+            continue;
+        }
+        let enabled =
+            property_bool(raw, unsafe { kTISPropertyInputSourceIsEnabled }).unwrap_or(false);
+        let selectable =
+            property_bool(raw, unsafe { kTISPropertyInputSourceIsSelectCapable }).unwrap_or(false);
+        return Some((enabled, selectable));
+    }
+    None
+}
+
 fn select_on_main(handle: &OwnedTisInputSource) -> Result<(), GatewayError> {
     // SAFETY: handle owns a live TISInputSource object.
     let status = unsafe { TISSelectInputSource(handle.as_ptr()) };
@@ -271,7 +333,13 @@ fn schedule_followup_reselects(handle: OwnedTisInputSource) {
                 return;
             }
             // SAFETY: handle keeps the TISInputSource alive across the delayed callback.
-            let _ = unsafe { TISSelectInputSource(handle.as_ptr()) };
+            let status = unsafe { TISSelectInputSource(handle.as_ptr()) };
+            let current = current_on_main().ok();
+            if let Ok(guard) = followup_log_sink().lock() {
+                if let Some(sink) = guard.as_ref() {
+                    sink(delay_ms, status, current);
+                }
+            }
         });
     }
 }

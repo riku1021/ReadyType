@@ -8,6 +8,8 @@ pub struct SwitchLogEntry {
     pub app_id: String,
     pub pid: i32,
     pub generation: u64,
+    /// 正規化フォーカス文脈キー（manual override ラッチ単位）。
+    pub focus_key: String,
     pub rule_id: String,
     pub decision: SwitchDecision,
     pub from: String,

@@ -17,14 +17,15 @@ function sampleLog(overrides: Partial<SwitchLogDto> = {}): SwitchLogDto {
     appId: "app",
     pid: 42,
     generation: 3,
+    focusKey: "AXTextArea||composer",
     ruleId: "rule",
     decision: "switched",
     from: "en",
     to: "ja",
     success: true,
     attempted: true,
-    reason: "",
-    detail: "elements=1",
+    reason: "selected target input source",
+    detail: "override=none elements=1 focused[role=AXTextArea]",
     processingMicros: 10,
     pipelineMicros: 100,
     queueMicros: 50,
@@ -103,10 +104,12 @@ describe("diagnosticsViewModel", () => {
   it("formats TSV logs and latency percentiles", () => {
     const sample = sampleLog();
     const tsv = logsToTsv([sample]);
+    expect(tsv.split("\n")[0]).toContain("focusKey");
     expect(tsv.split("\n")[0]).toContain("handoffMicros");
     expect(tsv.split("\n")[0]).toContain("publishMicros");
     expect(tsv.split("\n")[0]).toContain("axMicros");
     expect(tsv.split("\n")[0]).toContain("currentCacheHit");
+    expect(tsv).toContain("AXTextArea||composer");
     expect(tsv).toContain("miss");
     expect(formatLatencyMicros([10, 20, 30, 40, 100])).toEqual({
       p50: "30µs",

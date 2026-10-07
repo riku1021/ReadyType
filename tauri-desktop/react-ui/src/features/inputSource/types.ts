@@ -91,6 +91,7 @@ export interface SwitchLogDto {
   appId: string;
   pid: number;
   generation: number;
+  focusKey: string;
   ruleId: string;
   decision: SwitchDecision;
   from: string;

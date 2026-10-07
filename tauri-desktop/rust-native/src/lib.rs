@@ -125,6 +125,12 @@ pub fn run() {
                     app_display_names: Arc::clone(&app_display_name_resolver),
                 },
             )?;
+            #[cfg(target_os = "macos")]
+            {
+                controller.bind_followup_reselect_log(|sink| {
+                    infrastructure::platform::macos::set_followup_reselect_log_sink(Some(sink));
+                });
+            }
             controller.refresh_permission()?;
             let initial_state = controller.state()?;
             app.manage(controller);

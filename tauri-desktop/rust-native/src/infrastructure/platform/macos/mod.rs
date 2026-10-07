@@ -16,7 +16,9 @@ pub use app_icon::MacOsAppIconSource;
 pub use application_path::application_path;
 pub use current_input_source_change::MacOsCurrentInputSourceChangeMonitor;
 pub use focus_monitor::MacOsFocusMonitor;
-pub use tis::SystemTisBackend;
+pub use tis::{
+    inspect_input_source_flags, set_followup_reselect_log_sink, SystemTisBackend,
+};
 pub use window_chrome::{set_window_background_main, set_window_background_transparent};
 
 use crate::application::ports::platform::PlatformGateway;

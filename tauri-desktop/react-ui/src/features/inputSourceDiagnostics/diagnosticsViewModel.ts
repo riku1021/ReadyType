@@ -67,6 +67,7 @@ export function logsToTsv(logs: readonly SwitchLogDto[]): string {
     "appId",
     "pid",
     "generation",
+    "focusKey",
     "ruleId",
     "decision",
     "from",
@@ -93,6 +94,7 @@ export function logsToTsv(logs: readonly SwitchLogDto[]): string {
       log.appId,
       log.pid,
       log.generation,
+      log.focusKey.replace(/\t/g, " ").replace(/\n/g, " "),
       log.ruleId,
       log.decision,
       log.from,
@@ -117,40 +119,65 @@ export function logsToTsv(logs: readonly SwitchLogDto[]): string {
   return [header, ...rows].join("\n");
 }
 
+function compactTimingSuffix(log: SwitchLogDto): string | null {
+  const segments: string[] = [];
+  if (log.axMicros > 0) {
+    segments.push(`ax=${log.axMicros}`);
+  }
+  if (log.queueMicros > 0) {
+    segments.push(`q=${log.queueMicros}`);
+  }
+  if (log.prepareMicros > 0) {
+    segments.push(`prep=${log.prepareMicros}`);
+  }
+  if (log.handoffMicros > 0) {
+    segments.push(`handoff=${log.handoffMicros}`);
+  }
+  if (log.currentMicros > 0) {
+    segments.push(`cur=${log.currentMicros}${log.currentCacheHit ? "h" : "m"}`);
+  }
+  if (log.selectMicros > 0) {
+    segments.push(`sel=${log.selectMicros}`);
+  }
+  if (log.publishMicros > 0) {
+    segments.push(`pub=${log.publishMicros}`);
+  }
+  if (segments.length === 0 && log.pipelineMicros === 0 && log.processingMicros === 0) {
+    return null;
+  }
+  if (segments.length === 0) {
+    return `pipe=${log.pipelineMicros}`;
+  }
+  return segments.join(" ");
+}
+
 export function formatSwitchLogLine(log: SwitchLogDto, t: TFunction): string {
   const route = log.from || log.to ? `${log.from || "—"} → ${log.to || "—"}` : "—";
   const parts = [
     log.success ? t("diagnostics.logSuccess") : t("diagnostics.logFailure"),
     log.decision,
     log.attempted ? t("diagnostics.logAttempted") : t("diagnostics.logSkipped"),
-    log.appId,
-    `pid ${log.pid}`,
+    log.appId || "app —",
     `gen ${log.generation}`,
-    log.ruleId || "rule —",
-    route,
-    t("diagnostics.logTiming", {
-      judgment: log.processingMicros,
-      pipeline: log.pipelineMicros,
-    }),
-    t("diagnostics.logTimingBreakdown", {
-      queue: log.queueMicros,
-      prepare: log.prepareMicros,
-      handoff: log.handoffMicros,
-      current: log.currentMicros,
-      currentCache: log.currentCacheHit
-        ? t("diagnostics.currentCacheHit")
-        : t("diagnostics.currentCacheMiss"),
-      select: log.selectMicros,
-      finalize: log.finalizeMicros,
-      publish: log.publishMicros,
-      ax: log.axMicros,
-    }),
   ];
+  if (log.focusKey) {
+    parts.push(`focusKey ${log.focusKey}`);
+  }
+  if (log.ruleId) {
+    parts.push(log.ruleId);
+  }
+  if (log.from || log.to) {
+    parts.push(route);
+  }
   if (log.reason) {
     parts.push(log.reason);
   }
   if (log.detail) {
     parts.push(log.detail);
+  }
+  const timing = compactTimingSuffix(log);
+  if (timing) {
+    parts.push(timing);
   }
   return parts.join(" / ");
 }
