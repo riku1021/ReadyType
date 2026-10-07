@@ -257,6 +257,21 @@ UI では p50 系集計・hit/miss 分割・外れ値ハイライト（`findLate
 
 ## 11. 診断ログ（動作確認用）
 
+### 11.0 ファイル出力（コピー不要）
+
+アプリ起動時から、診断 UI と同じ切替イベントをリポジトリ直下へ JSONL 追記する（**Git 対象外**）。
+
+```text
+tmp/input-source-logs/
+  current.jsonl              ← いま読むのはこれ（1 行 = 1 JSON）
+  sessions/<unixSecs>.jsonl  ← 過去起動分（最大 30）
+```
+
+- 1 行目は `kind=session_start`、以降は `kind=switch`
+- フィールドは camelCase（`focusKey` / `decision` / `reason` / timing など）
+- 上書きディレクトリ: 環境変数 `READYTYPE_INPUT_SOURCE_LOG_DIR`
+- AI / 人間向け: `current.jsonl` をそのまま貼るか、パスを指定して読む
+
 `SwitchLogEntry` / 診断 TSV で挙動を追うときの見方。
 
 | 項目 | 用途 |

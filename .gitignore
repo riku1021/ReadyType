@@ -1,5 +1,8 @@
 .worktrees/
 .DS_Store
+# ローカル診断ログ（切替 JSONL 等）。コミットしない。
+/tmp/
+tmp/
 tauri-desktop/react-ui/tmp/
 tauri-desktop/react-ui/test-results/
 tauri-desktop/react-ui/playwright-report/

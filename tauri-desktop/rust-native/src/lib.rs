@@ -131,6 +131,18 @@ pub fn run() {
                     infrastructure::platform::macos::set_followup_reselect_log_sink(Some(sink));
                 });
             }
+            match infrastructure::persistence::FileDiagnosticLogSink::open_default() {
+                Ok(sink) => {
+                    eprintln!(
+                        "input-source diagnostics: writing {}",
+                        sink.path().display()
+                    );
+                    controller.set_diagnostic_log_sink(Some(Arc::new(sink)));
+                }
+                Err(error) => {
+                    eprintln!("input-source diagnostics: file log disabled ({error})");
+                }
+            }
             controller.refresh_permission()?;
             let initial_state = controller.state()?;
             app.manage(controller);

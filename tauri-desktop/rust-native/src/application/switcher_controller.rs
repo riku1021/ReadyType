@@ -23,6 +23,7 @@ use super::{
         app_display_name::AppDisplayNameResolver,
         clock::Clock,
         current_input_source_change::CurrentInputSourceChangeMonitor,
+        diagnostic_log::SharedDiagnosticLogSink,
         focus_monitor::{AccessibilityPermission, FocusMonitor, FocusMonitorError},
         input_source::{AvailableInputSource, InputSourceGateway},
         settings_repository::SettingsRepository,
@@ -206,6 +207,13 @@ impl SwitcherController {
                 switcher.note_followup_reselect(delay_ms, status, current.as_ref());
             }
         }));
+    }
+
+    /// Composition root から診断ファイル等の sink を配線する。
+    pub fn set_diagnostic_log_sink(&self, sink: Option<SharedDiagnosticLogSink>) {
+        if let Ok(mut switcher) = self.switcher.lock() {
+            switcher.set_diagnostic_log_sink(sink);
+        }
     }
 
     /// Re-resolve when preference is `system` (e.g. on window focus).

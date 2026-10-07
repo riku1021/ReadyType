@@ -13,6 +13,7 @@ use super::{
     current_source_cache::CurrentInputSourceCache,
     ports::{
         clock::Clock,
+        diagnostic_log::SharedDiagnosticLogSink,
         input_source::{GatewayError, InputSourceGateway},
         settings_repository::{SettingsError, SettingsRepository},
         switcher_events::SwitcherEventPublisher,
@@ -92,6 +93,8 @@ pub struct InputSourceSwitcher<G, R, C, E> {
     last_auto_target: Option<InputSourceId>,
     /// 自前 select 起因の TIS 通知を手動扱いしない。
     suppress_tis_as_manual: bool,
+    /// UI ログと並行してファイル等へ書く（未配線なら None）。
+    diagnostic_log: Option<SharedDiagnosticLogSink>,
 }
 
 /// StateDto / tray に効くフィールド（version・logs は除外）。
@@ -228,7 +231,12 @@ where
             manual_override_key: None,
             last_auto_target: None,
             suppress_tis_as_manual: false,
+            diagnostic_log: None,
         })
+    }
+
+    pub fn set_diagnostic_log_sink(&mut self, sink: Option<SharedDiagnosticLogSink>) {
+        self.diagnostic_log = sink;
     }
 
     pub fn gateway_handle(&self) -> Arc<Mutex<G>> {
@@ -1012,6 +1020,7 @@ where
             },
         );
         self.state.logs.truncate(MAX_LOGS);
+        self.persist_latest_log();
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1058,6 +1067,17 @@ where
             },
         );
         self.state.logs.truncate(MAX_LOGS);
+        self.persist_latest_log();
+    }
+
+    fn persist_latest_log(&self) {
+        let Some(sink) = &self.diagnostic_log else {
+            return;
+        };
+        let Some(entry) = self.state.logs.first() else {
+            return;
+        };
+        sink.append_switch_log(entry);
     }
 
     /// 直近ログに publish 所要を書き戻す（push_log 後に計測するため）。
