@@ -49,17 +49,6 @@
     "resetConfirmText": "ルール一覧を既定プリセットへ戻します。",
     "resetConfirmButton": "リセット"
   },
-  "about": {
-    "appName": "ReadyType",
-    "version": "v{{version}}",
-    "copyright": "© 2026 ReadyType",
-    "privacyPolicy": "プライバシーポリシー",
-    "termsOfUse": "利用規約",
-    "support": "サポート",
-    "sectionCredits": "クレジット",
-    "license": "ライセンス",
-    "licenseValue": "各依存ライブラリの条件に準拠"
-  },
   "home": {
     "permissionBannerTitle": "アクセシビリティ権限が必要です",
     "permissionBannerText": "フォーカス監視と入力ソース切替には、システム設定での許可が必要です。",
@@ -141,29 +130,6 @@
     "clearLogs": "ログをクリア",
     "copyFailed": "クリップボードへのコピーに失敗しました",
     "sectionLatency": "処理時間",
-    "latencyJudgmentAll": "判定処理（全体）: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyJudgmentAttempted": "判定処理（切替実行）: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyPipelineAll": "パイプライン（全体・AX取得〜完了）: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyPipelineAttempted": "パイプライン（切替実行）: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyCurrentCache": "current キャッシュ: hit {{hit}} / miss {{miss}}",
-    "latencyCurrentMiss": "current取得（miss）: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyCurrentHit": "current取得（hit）: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyHandoff": "handoff（ロック待ち含む）: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyFinalize": "finalize（完了処理）: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyPublish": "publish（state/tray）: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyAx": "AX取得: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyMax": {
-      "judgmentAll": "max 判定（全体）: gen {{generation}} {{ruleId}} {{decision}} ({{value}})",
-      "pipelineAll": "max パイプライン（全体）: gen {{generation}} {{ruleId}} {{decision}} ({{value}})",
-      "pipelineAttempted": "max パイプライン（切替実行）: gen {{generation}} {{ruleId}} {{decision}} ({{value}})",
-      "queue": "max キュー待ち: gen {{generation}} {{ruleId}} {{decision}} ({{value}})",
-      "handoff": "max handoff: gen {{generation}} {{ruleId}} {{decision}} ({{value}})",
-      "current": "max current取得（miss）: gen {{generation}} {{ruleId}} {{decision}} ({{value}})",
-      "select": "max select切替: gen {{generation}} {{ruleId}} {{decision}} ({{value}})",
-      "finalize": "max finalize: gen {{generation}} {{ruleId}} {{decision}} ({{value}})",
-      "publish": "max publish: gen {{generation}} {{ruleId}} {{decision}} ({{value}})",
-      "ax": "max AX取得: gen {{generation}} {{ruleId}} {{decision}} ({{value}})"
-    },
     "sectionFocus": "フォーカス要素",
     "noSnapshot": "スナップショットなし",
     "copy": "コピー",
@@ -245,5 +211,16 @@
   },
   "rules": {
     "defaultTitle": "デフォルト"
+  },
+  "about": {
+    "appName": "ReadyType",
+    "version": "v{{version}}",
+    "copyright": "© 2026 ReadyType",
+    "privacyPolicy": "プライバシーポリシー",
+    "termsOfUse": "利用規約",
+    "support": "サポート",
+    "sectionCredits": "クレジット",
+    "license": "ライセンス",
+    "licenseValue": "各依存ライブラリの条件に準拠"
   }
 }

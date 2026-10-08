@@ -20,8 +20,7 @@ use std::{
 use serde::Serialize;
 
 use crate::application::{
-    input_source_switcher::SwitchDecision,
-    ports::diagnostic_log::DiagnosticLogSink,
+    input_source_switcher::SwitchDecision, ports::diagnostic_log::DiagnosticLogSink,
     switcher_state::SwitchLogEntry,
 };
 
@@ -111,7 +110,6 @@ struct SwitchLogFileRecord<'a> {
     app_id: &'a str,
     pid: i32,
     generation: u64,
-    focus_key: &'a str,
     rule_id: &'a str,
     decision: &'static str,
     from: &'a str,
@@ -121,16 +119,6 @@ struct SwitchLogFileRecord<'a> {
     reason: &'a str,
     detail: &'a str,
     processing_micros: u64,
-    pipeline_micros: u64,
-    queue_micros: u64,
-    prepare_micros: u64,
-    handoff_micros: u64,
-    current_micros: u64,
-    current_cache_hit: bool,
-    select_micros: u64,
-    finalize_micros: u64,
-    publish_micros: u64,
-    ax_micros: u64,
 }
 
 impl<'a> From<&'a SwitchLogEntry> for SwitchLogFileRecord<'a> {
@@ -142,7 +130,6 @@ impl<'a> From<&'a SwitchLogEntry> for SwitchLogFileRecord<'a> {
             app_id: entry.app_id.as_str(),
             pid: entry.pid,
             generation: entry.generation,
-            focus_key: entry.focus_key.as_str(),
             rule_id: entry.rule_id.as_str(),
             decision: decision_slug(entry.decision),
             from: entry.from.as_str(),
@@ -152,16 +139,6 @@ impl<'a> From<&'a SwitchLogEntry> for SwitchLogFileRecord<'a> {
             reason: entry.reason.as_str(),
             detail: entry.detail.as_str(),
             processing_micros: entry.processing_micros,
-            pipeline_micros: entry.pipeline_micros,
-            queue_micros: entry.queue_micros,
-            prepare_micros: entry.prepare_micros,
-            handoff_micros: entry.handoff_micros,
-            current_micros: entry.current_micros,
-            current_cache_hit: entry.current_cache_hit,
-            select_micros: entry.select_micros,
-            finalize_micros: entry.finalize_micros,
-            publish_micros: entry.publish_micros,
-            ax_micros: entry.ax_micros,
         }
     }
 }
@@ -208,8 +185,7 @@ fn resolve_log_dir() -> Result<PathBuf, String> {
 fn find_repo_root(start: &Path) -> Option<PathBuf> {
     for dir in start.ancestors() {
         let has_git = dir.join(".git").exists();
-        let looks_like_readytype =
-            dir.join("tauri-desktop").is_dir() && dir.join("docs").is_dir();
+        let looks_like_readytype = dir.join("tauri-desktop").is_dir() && dir.join("docs").is_dir();
         if has_git || looks_like_readytype {
             return Some(dir.to_path_buf());
         }
@@ -267,10 +243,7 @@ mod tests {
 
     #[test]
     fn writes_jsonl_switch_records() {
-        let dir = std::env::temp_dir().join(format!(
-            "readytype-diag-log-{}",
-            now_unix_ms()
-        ));
+        let dir = std::env::temp_dir().join(format!("readytype-diag-log-{}", now_unix_ms()));
         let _ = fs::remove_dir_all(&dir);
         let sink = FileDiagnosticLogSink::open(dir.clone()).expect("open");
         sink.append_switch_log(&SwitchLogEntry {
@@ -278,7 +251,6 @@ mod tests {
             app_id: "com.example".to_owned(),
             pid: 1,
             generation: 2,
-            focus_key: "key".to_owned(),
             rule_id: "rule".to_owned(),
             decision: SwitchDecision::Switched,
             from: "en".to_owned(),
@@ -286,18 +258,8 @@ mod tests {
             success: true,
             attempted: true,
             reason: "selected target input source; postSelect=match".to_owned(),
-            detail: "override=none".to_owned(),
+            detail: "elements=0".to_owned(),
             processing_micros: 1,
-            pipeline_micros: 2,
-            queue_micros: 3,
-            prepare_micros: 4,
-            handoff_micros: 5,
-            current_micros: 6,
-            current_cache_hit: false,
-            select_micros: 7,
-            finalize_micros: 8,
-            publish_micros: 9,
-            ax_micros: 10,
         });
 
         let body = fs::read_to_string(sink.path()).expect("read");
@@ -305,7 +267,7 @@ mod tests {
         assert!(body.contains("\"kind\":\"switch\""));
         assert!(body.contains("\"decision\":\"switched\""));
         assert!(body.contains("postSelect=match"));
-        assert!(body.contains("\"focusKey\":\"key\""));
+        assert!(body.contains("\"processingMicros\":1"));
 
         let _ = fs::remove_dir_all(&dir);
     }

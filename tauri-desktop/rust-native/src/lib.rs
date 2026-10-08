@@ -78,22 +78,6 @@ pub fn run() {
                     Box::new(infrastructure::platform::focus_monitor::UnsupportedFocusMonitor)
                 }
             };
-            let current_source_change_monitor: Box<
-                dyn application::ports::current_input_source_change::CurrentInputSourceChangeMonitor,
-            > = {
-                #[cfg(target_os = "macos")]
-                {
-                    Box::new(
-                        infrastructure::platform::macos::MacOsCurrentInputSourceChangeMonitor::new(),
-                    )
-                }
-                #[cfg(not(target_os = "macos"))]
-                {
-                    Box::new(
-                        infrastructure::platform::current_input_source_change::UnsupportedCurrentInputSourceChangeMonitor,
-                    )
-                }
-            };
             let publisher: Arc<dyn SwitcherEventPublisher> = Arc::new(
                 presentation::commands::input_source_switcher::TauriSwitcherEventPublisher::new(
                     app.handle().clone(),
@@ -121,7 +105,6 @@ pub fn run() {
                     clock: Arc::new(application::switcher_controller::SystemClock),
                     publisher,
                     monitor,
-                    current_source_change_monitor,
                     app_display_names: Arc::clone(&app_display_name_resolver),
                 },
             )?;

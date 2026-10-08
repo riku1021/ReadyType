@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import type { IconType } from "react-icons";
+import { FiExternalLink } from "react-icons/fi";
 import { IoChevronForward } from "react-icons/io5";
 import { MdUnfoldMore } from "react-icons/md";
-import { FiExternalLink } from "react-icons/fi";
 
 import { SelectionMenu } from "@/components/SelectionMenu";
 import { Toggle } from "@/components/Toggle";

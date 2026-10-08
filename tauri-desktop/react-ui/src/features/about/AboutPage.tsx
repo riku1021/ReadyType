@@ -3,8 +3,8 @@ import { isTauri } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MdDescription, MdMailOutline } from "react-icons/md";
 import { FaFileShield } from "react-icons/fa6";
+import { MdDescription, MdMailOutline } from "react-icons/md";
 
 import { SettingItem } from "@/components/SettingItem";
 import { SettingsSection } from "@/components/SettingsSection";

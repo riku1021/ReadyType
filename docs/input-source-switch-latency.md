@@ -1,16 +1,21 @@
-# 入力ソース切替のレイテンシ対策
+# 入力ソース切替のレイテンシ対策（施策メモ）
 
-フォーカス変更から入力ソース切替・状態反映までのクリティカルパスを短くするための実装メモ。  
-実装の正本は `tauri-desktop/rust-native`。診断 UI は `tauri-desktop/react-ui` の inputSourceDiagnostics。
+**現行コードには未適用。** 挙動の正は `57d310a` 時点の切替実装（＋詳細ログ / ファイル診断ログ）とする。  
+以下は試行した高速化（`1d52ef8` / `93487fe` 周辺）のメモであり、再検証してから個別に戻す候補。パス名・型名は当時の案。
 
 関連:
 
 - ドメインモデル: [rules/ja-JP/input-source-model.md](./rules/ja-JP/input-source-model.md)
 - 手動確認: [input-source-switcher-manual-test.md](./input-source-switcher-manual-test.md)
 
+残しているもの（現行）:
+
+- 詳細な切替 reason / detail、follow-up reselect の debug ログ
+- `tmp/input-source-logs/` への JSONL ファイル出力（§11.0）
+
 ---
 
-## 1. クリティカルパス
+## 1. クリティカルパス（当時の計測モデル）
 
 ```text
 AX capture (ax_micros)
@@ -24,7 +29,7 @@ AX capture (ax_micros)
   → publish state + tray (publish_micros)  ※ pipeline 外
 ```
 
-| 区間 | 主な対策 |
+| 区間 | 主な対策（候補） |
 |------|----------|
 | AX | 2 パス指紋・enrich・構造打ち切り・高コスト属性の深さ制限・**属性一括取得**・**messaging timeout** |
 | キュー | フォーカス合流（最新のみ処理） |
@@ -34,9 +39,9 @@ AX capture (ax_micros)
 
 ---
 
-## 2. Accessibility（フォーカス監視）
+## 2. Accessibility（フォーカス監視）— 候補
 
-主要ファイル:
+当時の主なファイル（再適用時の手がかり）:
 
 - `infrastructure/platform/focus_monitor.rs` — 定数・指紋・`AttributePlan`・`MonitorState`
 - `infrastructure/platform/macos/accessibility.rs` — 親ウォーク / enrich
@@ -92,9 +97,9 @@ debug キャプチャ以外:
 
 ---
 
-## 3. Current 入力ソースキャッシュ
+## 3. Current 入力ソースキャッシュ — 候補
 
-ファイル: `application/current_source_cache.rs`
+当時のファイル案: `application/current_source_cache.rs`
 
 | 項目 | 内容 |
 |------|------|
@@ -118,9 +123,9 @@ debug キャプチャ以外:
 
 トレードオフ: TTL は通知取りこぼしの安全網として残す。自前 `select` でも通知が飛び得るが、select 成功後の `put` と競合しても余分な `current()` 1 回程度。
 
-### 3.1 Manual override（フォーカス文脈ラッチ）
+### 3.1 Manual override（フォーカス文脈ラッチ）— 候補
 
-ファイル: `application/input_source_switcher.rs`
+当時の置き場: `application/input_source_switcher.rs`
 
 xxkb 系と同様、**同一フォーカス文脈では手動 IME 切替をルール再適用で上書きしない**。
 
@@ -139,11 +144,11 @@ xxkb 系と同様、**同一フォーカス文脈では手動 IME 切替をル�
 
 ---
 
-## 4. Switcher ワーカーとロック
+## 4. Switcher ワーカーとロック — 候補
 
-ファイル: `application/switcher_controller.rs`
+当時の置き場: `application/switcher_controller.rs`
 
-- **専用 worker** — フォーカスイベントをチャネルで受け、判定・切替をメイン UI から分離。
+- **専用 worker** — フォーカスイベントをチャネルで受け、判定・切替をメイン UI から分離。（ベースにも worker はある）
 - **`drain_queued_focus`** — 後続 Focus があれば最新スナップショットに置換（中間破棄）。バースト時の中間切替コストを削減。
 - **ロック外 handoff** — `prepare_focus` は switcher mutex 内 → gateway/cache を取り出して **mutex 解放後**に `switch_input_source`。TIS 待ち中に switcher ロックを握らない。
 - **NeedsSwitch 時の publish 遅延** — 切替完了後に state/tray publish をまとめ、切替前の tray 待ちを避ける。
@@ -151,9 +156,9 @@ xxkb 系と同様、**同一フォーカス文脈では手動 IME 切替をル�
 
 ---
 
-## 5. Publish スキップ（`PublishFingerprint`）
+## 5. Publish スキップ（`PublishFingerprint`）— 候補
 
-ファイル: `application/input_source_switcher.rs`
+当時の置き場: `application/input_source_switcher.rs`
 
 tray / FE 向けに「見た目が変わらない」publish を省略する。
 
@@ -166,9 +171,9 @@ tray / FE 向けに「見た目が変わらない」publish を省略する。
 
 ---
 
-## 6. トレイ更新
+## 6. トレイ更新 — 候補
 
-ファイル: `infrastructure/desktop/tray.rs`
+当時の置き場: `infrastructure/desktop/tray.rs`
 
 | 施策 | 内容 |
 |------|------|
@@ -184,14 +189,13 @@ tray / FE 向けに「見た目が変わらない」publish を省略する。
 
 ## 7. Select パス
 
-ファイル: `application/input_source_switcher.rs`
-
-| 施策 | 効果 |
-|------|------|
-| `current == target` で select 省略 | `select_micros = 0`、ネイティブ再選択コスト回避 |
-| `AlreadySelected` | 決定ログ上もスキップとして記録 |
-| select 失敗時 1 回だけ `list(true)` + 再試行 | 欠落ソースの回復 |
-| `handled_generation` | 同一 generation の二重処理を Ignored |
+| 施策 | 状態 | 効果 |
+|------|------|------|
+| `current == target` で select 省略 | **候補（未適用）** | ネイティブ再選択コスト回避。ベースは同ソースでも reselect |
+| `AlreadySelected` | 現行あり | 決定ログ上の扱い |
+| select 失敗時 1 回だけ `list(true)` + 再試行 | 現行あり | 欠落ソースの回復 |
+| `handled_generation` | 現行あり | 同一 generation の二重処理を Ignored |
+| postSelect / layoutOverride を reason に | 現行あり（ログ強化） | 切替直後の検証メモ |
 
 ### 7.1 当面非採用
 
@@ -201,10 +205,9 @@ tray / FE 向けに「見た目が変わらない」publish を省略する。
 
 ---
 
-## 8. 診断メトリクス
+## 8. 診断メトリクス — 候補（当時）
 
-ログ型: `SwitchLogEntry`（`application/switcher_state.rs`）  
-UI: `features/inputSourceDiagnostics/`（`diagnosticsViewModel.ts` / `DiagnosticsPage`）
+高速化試行時に `SwitchLogEntry` へ載せた timing 列と診断 UI。**現行の `SwitchLogEntry` は `processing_micros` までの単純形**で、以下の細分フィールドは未適用。
 
 | フィールド | 測るもの |
 |------------|----------|
@@ -215,13 +218,11 @@ UI: `features/inputSourceDiagnostics/`（`diagnosticsViewModel.ts` / `Diagnostic
 | `current_micros` / `current_cache_hit` | `gateway.current()` とキャッシュ成否 |
 | `select_micros` | `gateway.select()`（未実行 0。失敗時の list+再試行含む） |
 | `finalize_micros` | complete_focus / 早期 push_log 直前まで |
-| `processing_micros` | 判定処理全体 |
+| `processing_micros` | 判定処理全体（**現行も保持**） |
 | `pipeline_micros` | AX 完了〜ログまで（キュー・gateway 含む） |
 | `publish_micros` | state/tray publish（pipeline 外。後書き） |
 
-UI では p50 系集計・hit/miss 分割・外れ値ハイライト（`findLatencyOutliers`）を表示する。ログリング上限は 200。
-
-読み方の目安:
+再適用時の読み方の目安:
 
 - **AX が長い** → アプリの AX ツリー / Description 系ルール / debug キャプチャの有無
 - **handoff が長い** → gateway ロック競合・warm 未実施
@@ -231,7 +232,7 @@ UI では p50 系集計・hit/miss 分割・外れ値ハイライト（`findLate
 
 ---
 
-## 9. 意図的な二重スキップ一覧
+## 9. 意図的な二重スキップ一覧 — 候補
 
 | 層 | 何が二重か | なぜ残すか |
 |----|------------|------------|
@@ -241,23 +242,25 @@ UI では p50 系集計・hit/miss 分割・外れ値ハイライト（`findLate
 
 ---
 
-## 10. 関連テスト（索引）
+## 10. 関連テスト（索引・当時）
+
+再適用時に復活させ得るテストの手がかり。現行ツリーには無いものが多い。
 
 | 領域 | テストの例 |
 |------|------------|
-| current キャッシュ | `current_source_cache::tests::*`（`invalidate_clears_cached_value` 含む）, `current_source_cache_hits_within_ttl` |
+| current キャッシュ | `current_source_cache::tests::*`、`current_source_cache_hits_within_ttl` |
 | publish 省略 | `duplicate_already_selected_skips_redundant_publish` |
 | select 省略 | `same_source_skips_select` |
 | フォーカス合流 | `drain_queued_focus_keeps_latest_snapshot` |
-| 指紋 / 属性計画 | `focus_monitor::tests::*`（`attributes_beyond_fingerprint_*` など） |
+| 指紋 / 属性計画 | `focus_monitor::tests::*` |
 | tray skip | `tray_update_skips_identical_last_or_desired` |
 | 診断 UI | `react-ui/tests/.../diagnosticsViewModel.test.ts` |
 
 ---
 
-## 11. 診断ログ（動作確認用）
+## 11. 診断ログ
 
-### 11.0 ファイル出力（コピー不要）
+### 11.0 ファイル出力（**現行あり**）
 
 アプリ起動時から、診断 UI と同じ切替イベントをリポジトリ直下へ JSONL 追記する（**Git 対象外**）。
 
@@ -268,36 +271,28 @@ tmp/input-source-logs/
 ```
 
 - 1 行目は `kind=session_start`、以降は `kind=switch`
-- フィールドは camelCase（`focusKey` / `decision` / `reason` / timing など）
+- フィールドは camelCase（`decision` / `reason` / `detail` / `processingMicros` など）。timing 細分は現行スキーマには無い
 - 上書きディレクトリ: 環境変数 `READYTYPE_INPUT_SOURCE_LOG_DIR`
-- AI / 人間向け: `current.jsonl` をそのまま貼るか、パスを指定して読む
 
-`SwitchLogEntry` / 診断 TSV で挙動を追うときの見方。
+### 11.1 reason / detail の見方
 
-| 項目 | 用途 |
-|------|------|
-| `focusKey` | manual override の文脈単位。変わると override クリア |
-| `reason` | 判定理由。`tis: … latched` / `manual … skipped` / `override cleared` / `selected target` など |
-| `postSelect=match\|mismatch` | `TISSelect` 直後の `current` 再読取。メニューだけ変わった疑いの切り分け |
-| `layoutOverride=` | `TISCopyInputMethodKeyboardLayoutOverride`（あれば）。IME 内 ASCII レイアウト残りの手がかり |
-| `enabled=` / `selectCapable=` | select 失敗時。Apple の選択可能条件 |
-| `focus: coalesced N…` | キュー合流で捨てた件数と採用 generation |
-| `detail` | `override=none\|active` + 空でない focused 属性のみ（generation は列で持つ） |
-| `from`/`to` + reason の `[imeLatin]` | IME 英数モード（`.Roman`）とレイアウト（ABC 等）の切り分け |
-
-出さない／デバッグ時のみ:
-
-- 同一 `generation already handled`（常に抑制）
-- TIS の suppress / last_auto エコー（`debug_logging` 時のみ）
-- follow-up reselect（+40/120/250ms）の status / current（`debug_logging` 時のみ）
-- 画面表示の timing は非ゼロ区間だけ（フル breakdown は TSV 列に残す）
+| 項目 | 状態 | 用途 |
+|------|------|------|
+| `reason` | 現行 | 判定理由。`selected target` / 失敗メッセージなど |
+| `postSelect=match\|mismatch` | 現行 | `TISSelect` 直後の `current` 再読取 |
+| `layoutOverride=` | 現行 | `TISCopyInputMethodKeyboardLayoutOverride`（あれば） |
+| `enabled=` / `selectCapable=` | 現行（本番のみ） | select 失敗時の補助。ユニットテストでは OS 照会しない |
+| `from`/`to` + `[imeLatin]` | 現行 | IME 英数モードとレイアウトの切り分け |
+| follow-up reselect ログ | 現行（`debug_logging` 時） | +40/120/250ms の status / current |
+| `focusKey` / override / coalesced | **候補（未適用）** | manual override・キュー合流向け |
 
 ---
 
-## 12. 実機での確認手順（受け入れ）
+## 12. 再適用時の実機確認（受け入れ案）
 
-自動テストでは AX/TIS の体感は測れない。診断画面で次を確認する。
+自動テストでは AX/TIS の体感は測れない。施策を戻したら診断で次を確認する。
 
-1. **AX** — Cursor / Terminal / ブラウザでフォーカス移動を各数回。`ax_micros` の p50・外れ値が悪化していないこと（一括取得後は同等以上を期待）。
-2. **current 鮮度** — メニューバーで手動 IME 変更 → すぐにフィールドへフォーカス。誤った `AlreadySelected` が減り、変更後の最初の lookup で `current_cache_hit=false` になりやすいこと。手動変更後は `tis: … latched` と `manual … skipped` が出ること。
+1. **AX** — Cursor / Terminal / ブラウザでフォーカス移動を各数回。`ax_micros` の p50・外れ値が悪化していないこと。
+2. **current 鮮度** — メニューバーで手動 IME 変更 → すぐにフィールドへフォーカス。誤った `AlreadySelected` やキャッシュ stale が減ること。
 3. **ハング耐性** — 重い AX アプリでもパイプラインが長時間固まらないこと（timeout の効果）。
+4. **回帰** — 自動切替の正しさが `57d310a` 相当から壊れていないこと（本メモの施策を戻す主因だったため）。

@@ -7,7 +7,7 @@ use std::{
         Arc, Mutex, MutexGuard,
     },
     thread::{self, JoinHandle},
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use crate::domain::input_source::{
@@ -16,13 +16,11 @@ use crate::domain::input_source::{
 
 use super::{
     input_source_switcher::{
-        switch_input_source, ApplicationError, FocusPipelineTiming, InputSourceSwitcher,
-        PreparedFocus,
+        switch_input_source, ApplicationError, InputSourceSwitcher, PreparedFocus,
     },
     ports::{
         app_display_name::AppDisplayNameResolver,
         clock::Clock,
-        current_input_source_change::CurrentInputSourceChangeMonitor,
         diagnostic_log::SharedDiagnosticLogSink,
         focus_monitor::{AccessibilityPermission, FocusMonitor, FocusMonitorError},
         input_source::{AvailableInputSource, InputSourceGateway},
@@ -45,7 +43,6 @@ pub struct SwitcherControllerDeps {
     pub clock: Arc<dyn Clock>,
     pub publisher: Arc<dyn SwitcherEventPublisher>,
     pub monitor: Box<dyn FocusMonitor>,
-    pub current_source_change_monitor: Box<dyn CurrentInputSourceChangeMonitor>,
     pub app_display_names: Arc<dyn AppDisplayNameResolver>,
 }
 
@@ -104,11 +101,7 @@ impl Clock for SystemClock {
 }
 
 enum WorkerMessage {
-    Focus {
-        snapshot: FocusSnapshot,
-        pipeline_started: Instant,
-        ax_micros: u64,
-    },
+    Focus(FocusSnapshot),
     SettingsChanged,
     Stop,
 }
@@ -116,7 +109,6 @@ enum WorkerMessage {
 pub struct SwitcherController {
     switcher: Arc<Mutex<RuntimeSwitcher>>,
     monitor: Mutex<Box<dyn FocusMonitor>>,
-    current_source_change_monitor: Mutex<Box<dyn CurrentInputSourceChangeMonitor>>,
     sender: Sender<WorkerMessage>,
     worker: Mutex<Option<JoinHandle<()>>>,
     monitoring: AtomicBool,
@@ -137,7 +129,6 @@ impl SwitcherController {
             clock,
             publisher,
             monitor,
-            mut current_source_change_monitor,
             app_display_names,
         } = deps;
         let resolved = SwitcherSettings::resolve_ui_locale(&settings.ui_locale);
@@ -149,29 +140,11 @@ impl SwitcherController {
             clock,
             Arc::clone(&publisher),
         )?));
-        let cache_for_invalidate = {
-            let guard = switcher.lock().map_err(|_| {
-                ControllerError::InvalidRequest("switcher lock poisoned".to_owned())
-            })?;
-            guard.current_cache_handle()
-        };
-        let switcher_for_tis = Arc::clone(&switcher);
-        current_source_change_monitor
-            .start(Arc::new(move || {
-                if let Ok(mut cache) = cache_for_invalidate.lock() {
-                    cache.invalidate();
-                }
-                if let Ok(mut switcher) = switcher_for_tis.lock() {
-                    switcher.note_external_input_source_change();
-                }
-            }))
-            .map_err(ControllerError::InvalidRequest)?;
         let (sender, receiver) = mpsc::channel();
         let last_snapshot = Arc::new(Mutex::new(None));
         let controller = Arc::new(Self {
             switcher: Arc::clone(&switcher),
             monitor: Mutex::new(monitor),
-            current_source_change_monitor: Mutex::new(current_source_change_monitor),
             sender,
             worker: Mutex::new(None),
             monitoring: AtomicBool::new(false),
@@ -187,7 +160,6 @@ impl SwitcherController {
             .spawn(move || run_worker(receiver, switcher, last_snapshot, publisher, ui_locale))
             .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
         *controller.lock_worker()? = Some(worker);
-        warm_current_source_cache(&controller.switcher);
         Ok(controller)
     }
 
@@ -291,17 +263,12 @@ impl SwitcherController {
         if self.is_monitoring() {
             return Ok(());
         }
-        let attribute_index = switching_attribute_index(self.lock_switcher()?.rules());
+        let attributes = required_attributes(self.lock_switcher()?.rules());
         let sender = self.sender.clone();
         self.lock_monitor()?.start(
-            attribute_index,
-            Arc::new(move |snapshot, ax_micros| {
-                let pipeline_started = Instant::now();
-                let _ = sender.send(WorkerMessage::Focus {
-                    snapshot,
-                    pipeline_started,
-                    ax_micros,
-                });
+            attributes,
+            Arc::new(move |snapshot| {
+                let _ = sender.send(WorkerMessage::Focus(snapshot));
             }),
         )?;
         self.monitoring.store(true, Ordering::Release);
@@ -662,9 +629,6 @@ impl SwitcherController {
 impl Drop for SwitcherController {
     fn drop(&mut self) {
         let _ = self.monitor.get_mut().map(|monitor| monitor.stop());
-        if let Ok(monitor) = self.current_source_change_monitor.get_mut() {
-            monitor.stop();
-        }
         let _ = self.sender.send(WorkerMessage::Stop);
         if let Ok(worker) = self.worker.get_mut() {
             if let Some(worker) = worker.take() {
@@ -678,29 +642,6 @@ fn repository_gateway(
     gateway: Box<dyn InputSourceGateway>,
 ) -> Arc<Mutex<Box<dyn InputSourceGateway>>> {
     Arc::new(Mutex::new(gateway))
-}
-
-/// 起動直後の `current()` スパイクを避けるため、呼び出しスレッドでキャッシュを温める。
-///
-/// バックグラウンドだと最初の NeedsSwitch と gateway ロックが競合し、
-/// `handoff` が 100ms 超えることがある（TIS は main へ sync）。
-fn warm_current_source_cache(switcher: &Arc<Mutex<RuntimeSwitcher>>) {
-    let Ok(guard) = switcher.lock() else {
-        return;
-    };
-    let gateway = guard.gateway_handle();
-    let cache = guard.current_cache_handle();
-    drop(guard);
-    let Ok(gateway) = gateway.lock() else {
-        return;
-    };
-    let Ok(id) = gateway.current() else {
-        return;
-    };
-    drop(gateway);
-    if let Ok(mut cache_guard) = cache.lock() {
-        cache_guard.put(Instant::now(), id);
-    };
 }
 
 fn sanitize_id_part(value: &str) -> String {
@@ -746,32 +687,7 @@ fn run_worker(
             None => receiver.recv().map_err(|_| RecvTimeoutError::Disconnected),
         };
         match message {
-            Ok(WorkerMessage::Focus {
-                snapshot,
-                pipeline_started,
-                ax_micros,
-            }) => {
-                let drained = drain_queued_focus(
-                    &receiver,
-                    FocusBatch {
-                        snapshot,
-                        pipeline_started,
-                        ax_micros,
-                        coalesced: 0,
-                        stop: false,
-                    },
-                );
-                if drained.stop {
-                    break;
-                }
-                let FocusBatch {
-                    snapshot,
-                    pipeline_started,
-                    ax_micros,
-                    coalesced,
-                    stop: _,
-                } = drained;
-
+            Ok(WorkerMessage::Focus(snapshot)) => {
                 if let Ok(mut latest) = last_snapshot.lock() {
                     *latest = Some(snapshot.clone());
                 }
@@ -784,116 +700,60 @@ fn run_worker(
                         let _ = switcher.activate(key.0.clone(), key.1);
                         active = Some(key);
                     }
-                    if coalesced > 0 {
-                        switcher.note_focus_coalesced(coalesced, snapshot.generation());
-                    }
                     let gateway = switcher.gateway_handle();
-                    let current_cache = switcher.current_cache_handle();
-                    let prepared = switcher.prepare_focus(snapshot, pipeline_started, ax_micros);
+                    let prepared = switcher.prepare_focus(snapshot);
                     let pending = switcher.drain_publish_snapshot();
-                    (gateway, current_cache, prepared, pending)
+                    (gateway, prepared, pending)
                 };
                 // TIS はメインキューへ sync するため、switcher ロックを握ったまま待たない。
-                // activate 由来の publish は NeedsSwitch では切替完了後にまとめ、切替前の tray 更新待ちを避ける。
-                let (gateway, current_cache, prepared, pending_after_prepare) = prepared;
+                let (gateway, prepared, pending) = prepared;
+                dispatch(pending);
                 let Ok(prepared) = prepared else {
-                    timed_dispatch(pending_after_prepare, &dispatch, &switcher, true);
                     continue;
                 };
                 match prepared {
-                    PreparedFocus::Done(_) => {
-                        timed_dispatch(pending_after_prepare, &dispatch, &switcher, true);
-                    }
+                    PreparedFocus::Done(_) => {}
                     PreparedFocus::NeedsSwitch {
                         snapshot,
                         rule,
                         target,
-                        timing,
-                        reason_prefix,
                     } => {
                         let locale = ui_locale.load();
-                        let handoff_started = Instant::now();
-                        if let Ok(mut switcher) = switcher.lock() {
-                            switcher.set_suppress_tis_as_manual(true);
-                        }
-                        let switch_result = match (gateway.lock(), current_cache.lock()) {
-                            (Ok(mut gateway), Ok(mut cache)) => {
-                                let handoff_micros = micros_elapsed(handoff_started);
-                                match switch_input_source(
-                                    &mut *gateway,
-                                    &target,
-                                    &locale,
-                                    &mut cache,
-                                ) {
-                                    Ok((current, select_outcome, gateway_timing)) => {
-                                        Ok((handoff_micros, current, select_outcome, gateway_timing))
-                                    }
-                                    Err(error) => Err((handoff_micros, error)),
-                                }
-                            }
-                            _ => Err((
-                                micros_elapsed(handoff_started),
-                                ApplicationError::InvalidSettings(
-                                    "gateway or current cache lock poisoned".to_owned(),
-                                ),
+                        let switch_result = match gateway.lock() {
+                            Ok(mut gateway) => switch_input_source(&mut *gateway, &target, &locale),
+                            Err(_) => Err(ApplicationError::InvalidSettings(
+                                "gateway lock poisoned".to_owned(),
                             )),
                         };
                         match switch_result {
-                            Ok((handoff_micros, current, select_outcome, gateway_timing)) => {
-                                let timing = FocusPipelineTiming {
-                                    handoff_micros,
-                                    current_micros: gateway_timing.current_micros,
-                                    current_cache_hit: gateway_timing.current_cache_hit,
-                                    select_micros: gateway_timing.select_micros,
-                                    ..timing
-                                };
-                                let pending_after = if let Ok(mut switcher) = switcher.lock() {
-                                    switcher.set_suppress_tis_as_manual(false);
+                            Ok((current, select_result)) => {
+                                let pending = if let Ok(mut switcher) = switcher.lock() {
                                     let _ = switcher.complete_focus(
                                         snapshot,
                                         *rule,
                                         target,
                                         current,
-                                        select_outcome,
-                                        timing,
-                                        &reason_prefix,
+                                        select_result,
                                     );
                                     switcher.drain_publish_snapshot()
                                 } else {
                                     None
                                 };
-                                timed_dispatch(
-                                    pending_after.or(pending_after_prepare),
-                                    &dispatch,
-                                    &switcher,
-                                    true,
-                                );
+                                dispatch(pending);
                             }
-                            Err((handoff_micros, error)) => {
-                                let timing = FocusPipelineTiming {
-                                    handoff_micros,
-                                    ..timing
-                                };
-                                let pending_after = if let Ok(mut switcher) = switcher.lock() {
-                                    switcher.set_suppress_tis_as_manual(false);
+                            Err(error) => {
+                                let pending = if let Ok(mut switcher) = switcher.lock() {
                                     switcher.record_switch_pipeline_error(
                                         &snapshot,
                                         rule.id(),
                                         &target,
                                         &error,
-                                        timing,
-                                        &reason_prefix,
                                     );
                                     switcher.drain_publish_snapshot()
                                 } else {
                                     None
                                 };
-                                timed_dispatch(
-                                    pending_after.or(pending_after_prepare),
-                                    &dispatch,
-                                    &switcher,
-                                    true,
-                                );
+                                dispatch(pending);
                             }
                         }
                     }
@@ -908,80 +768,41 @@ fn run_worker(
                 } else {
                     None
                 };
-                timed_dispatch(pending, &dispatch, &switcher, false);
+                dispatch(pending);
             }
         }
     }
 }
 
-fn timed_dispatch(
-    pending: Option<(SwitcherState, String)>,
-    dispatch: &dyn Fn(Option<(SwitcherState, String)>),
-    switcher: &Arc<Mutex<RuntimeSwitcher>>,
-    attach_to_latest_log: bool,
-) {
-    if pending.is_none() {
-        return;
-    }
-    let started = Instant::now();
-    dispatch(pending);
-    if !attach_to_latest_log {
-        return;
-    }
-    let publish_micros = micros_elapsed(started);
-    if let Ok(mut switcher) = switcher.lock() {
-        switcher.set_latest_log_publish_micros(publish_micros);
-    }
-}
-
-fn micros_elapsed(since: Instant) -> u64 {
-    u64::try_from(since.elapsed().as_micros()).unwrap_or(u64::MAX)
-}
-
-struct FocusBatch {
-    snapshot: FocusSnapshot,
-    pipeline_started: Instant,
-    ax_micros: u64,
-    coalesced: u32,
-    stop: bool,
-}
-
-/// キューに後続 Focus があれば最新に置き換える（中間は捨てる）。
-fn drain_queued_focus(receiver: &Receiver<WorkerMessage>, mut batch: FocusBatch) -> FocusBatch {
-    while let Ok(queued) = receiver.try_recv() {
-        match queued {
-            WorkerMessage::Focus {
-                snapshot,
-                pipeline_started,
-                ax_micros,
-            } => {
-                batch.snapshot = snapshot;
-                batch.pipeline_started = pipeline_started;
-                batch.ax_micros = ax_micros;
-                batch.coalesced = batch.coalesced.saturating_add(1);
-            }
-            WorkerMessage::SettingsChanged => {}
-            WorkerMessage::Stop => {
-                batch.stop = true;
-                break;
-            }
+fn required_attributes(rules: &[FocusRule]) -> Vec<AxAttribute> {
+    let mut seen = HashSet::new();
+    let mut attributes = Vec::new();
+    // Always read AccName / placeholder sources so Quick Set can draft a label.
+    for attribute in [
+        AxAttribute::Role,
+        AxAttribute::Title,
+        AxAttribute::Description,
+        AxAttribute::RoleDescription,
+        AxAttribute::Placeholder,
+        AxAttribute::Identifier,
+        AxAttribute::DomIdentifier,
+        AxAttribute::DomClassList,
+    ] {
+        if seen.insert(attribute) {
+            attributes.push(attribute);
         }
     }
-    batch
-}
-
-fn switching_attribute_index(rules: &[FocusRule]) -> Vec<(String, Vec<AxAttribute>)> {
-    let mut by_app: HashMap<String, HashSet<AxAttribute>> = HashMap::new();
-    for rule in rules.iter().filter(|rule| rule.enabled()) {
-        let entry = by_app.entry(rule.app_id().to_owned()).or_default();
-        for condition in rule.conditions() {
-            entry.insert(condition.attribute());
+    for attribute in rules
+        .iter()
+        .filter(|rule| rule.enabled())
+        .flat_map(|rule| rule.conditions())
+        .map(|condition| condition.attribute())
+    {
+        if seen.insert(attribute) {
+            attributes.push(attribute);
         }
     }
-    by_app
-        .into_iter()
-        .map(|(app_id, attrs)| (app_id, attrs.into_iter().collect()))
-        .collect()
+    attributes
 }
 
 fn with_priority(rule: FocusRule, priority: u32) -> Result<FocusRule, ControllerError> {
@@ -1021,7 +842,7 @@ mod tests {
             settings::SwitcherSettings,
             switcher_state::SwitcherState,
         },
-        domain::input_source::InputSourceId,
+        domain::input_source::{AxAttribute, InputSourceId},
     };
 
     struct FakeGateway;
@@ -1084,7 +905,7 @@ mod tests {
     impl FocusMonitor for FakeMonitor {
         fn start(
             &mut self,
-            _attribute_index: crate::application::ports::focus_monitor::SwitchingAttributeIndex,
+            _attributes: Vec<AxAttribute>,
             _sink: FocusEventSink,
         ) -> Result<(), FocusMonitorError> {
             self.0.starts.fetch_add(1, Ordering::AcqRel);
@@ -1125,21 +946,6 @@ mod tests {
         }
     }
 
-    struct NoopCurrentSourceChangeMonitor;
-
-    impl super::super::ports::current_input_source_change::CurrentInputSourceChangeMonitor
-        for NoopCurrentSourceChangeMonitor
-    {
-        fn start(
-            &mut self,
-            _sink: super::super::ports::current_input_source_change::CurrentInputSourceChangeSink,
-        ) -> Result<(), String> {
-            Ok(())
-        }
-
-        fn stop(&mut self) {}
-    }
-
     fn controller(monitor: Arc<MonitorData>) -> Arc<SwitcherController> {
         SwitcherController::new(SwitcherControllerDeps {
             settings: SwitcherSettings::defaults(),
@@ -1148,7 +954,6 @@ mod tests {
             clock: Arc::new(FakeClock(AtomicU64::new(1_000))),
             publisher: Arc::new(NoopPublisher),
             monitor: Box::new(FakeMonitor(monitor)),
-            current_source_change_monitor: Box::new(NoopCurrentSourceChangeMonitor),
             app_display_names: Arc::new(NoopDisplayNames),
         })
         .expect("controller")
@@ -1237,52 +1042,5 @@ mod tests {
             std::thread::yield_now();
         }
         panic!("snooze did not expire");
-    }
-
-    #[test]
-    fn drain_queued_focus_keeps_latest_snapshot() {
-        use std::sync::mpsc;
-        use std::time::Instant;
-
-        use super::{drain_queued_focus, FocusBatch, WorkerMessage};
-        use crate::domain::input_source::{FocusSnapshot, Platform, PlatformAppId};
-
-        let (sender, receiver) = mpsc::channel();
-        let app = PlatformAppId::new(Platform::MacOs, "com.example.app", 1).expect("app");
-        let first = FocusSnapshot::new(app.clone(), 1, Vec::new());
-        let second = FocusSnapshot::new(app.clone(), 2, Vec::new());
-        let third = FocusSnapshot::new(app, 3, Vec::new());
-        let t0 = Instant::now();
-        let t1 = Instant::now();
-        let t2 = Instant::now();
-        sender
-            .send(WorkerMessage::Focus {
-                snapshot: second,
-                pipeline_started: t1,
-                ax_micros: 20,
-            })
-            .expect("send");
-        sender
-            .send(WorkerMessage::Focus {
-                snapshot: third.clone(),
-                pipeline_started: t2,
-                ax_micros: 30,
-            })
-            .expect("send");
-
-        let drained = drain_queued_focus(
-            &receiver,
-            FocusBatch {
-                snapshot: first,
-                pipeline_started: t0,
-                ax_micros: 10,
-                coalesced: 0,
-                stop: false,
-            },
-        );
-        assert_eq!(drained.snapshot.generation(), 3);
-        assert_eq!(drained.ax_micros, 30);
-        assert_eq!(drained.coalesced, 2);
-        assert!(!drained.stop);
     }
 }

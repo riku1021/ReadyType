@@ -157,8 +157,11 @@ impl<B: TisBackend> InputSourceGateway for MacOsInputSourceGateway<B> {
 }
 
 /// キャッシュ外（disabled 等）のとき、可能なら enabled/selectCapable を添える。
+///
+/// ユニットテストでは FakeTis 経路のため実 OS の `dispatch_sync_f` を呼ばない
+///（メインキューが回っておらずハングするため）。
 fn diagnose_unavailable_suffix(id: &InputSourceId) -> String {
-    #[cfg(target_os = "macos")]
+    #[cfg(all(target_os = "macos", not(test)))]
     {
         use super::macos::inspect_input_source_flags;
         if let Some((enabled, selectable)) = inspect_input_source_flags(id.as_str()) {

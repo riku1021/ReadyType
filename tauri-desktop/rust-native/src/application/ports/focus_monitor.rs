@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::domain::input_source::FocusSnapshot;
+use crate::domain::input_source::{AxAttribute, FocusSnapshot};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AccessibilityPermission {
@@ -15,15 +15,12 @@ pub enum FocusMonitorError {
     UnsupportedPlatform,
 }
 
-pub type FocusEventSink = Arc<dyn Fn(FocusSnapshot, u64) + Send + Sync>;
-
-/// アプリ bundle id → 切替判定に必要な AX 属性。
-pub type SwitchingAttributeIndex = Vec<(String, Vec<crate::domain::input_source::AxAttribute>)>;
+pub type FocusEventSink = Arc<dyn Fn(FocusSnapshot) + Send + Sync>;
 
 pub trait FocusMonitor: Send {
     fn start(
         &mut self,
-        attribute_index: SwitchingAttributeIndex,
+        attributes: Vec<AxAttribute>,
         sink: FocusEventSink,
     ) -> Result<(), FocusMonitorError>;
     fn stop(&mut self) -> Result<(), FocusMonitorError>;

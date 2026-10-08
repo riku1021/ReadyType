@@ -228,63 +228,19 @@ impl AxElementSnapshot {
     }
 }
 
-/// fingerprint / focus_key が空フォーカスを表すときの値。
-pub const EMPTY_FOCUS_KEY: &str = "empty";
-/// focus identity に使う祖先数（それ以深の Dom* / Identifier は key に含めない）。
-pub const FOCUS_IDENTITY_DEPTH: usize = 6;
-
-/// IME / 装飾で付く揮発クラス。identity からは除き、ルールマッチ用の生 class は触らない。
-fn is_volatile_dom_class_token(token: &str) -> bool {
-    matches!(
-        token,
-        "ime-input" | "ProseMirror-focused" | "focused" | "focus-visible"
-    ) || token.ends_with("-focused")
-}
-
-/// DomClassList を identity 用に正規化（揮発トークン除去・ソート）。
-pub fn normalize_dom_class_list_for_identity(class_list: &str) -> String {
-    let mut tokens: Vec<&str> = class_list
-        .split_whitespace()
-        .filter(|token| !token.is_empty() && !is_volatile_dom_class_token(token))
-        .collect();
-    tokens.sort_unstable();
-    tokens.dedup();
-    tokens.join(" ")
-}
-
-/// フォーカス文脈の安定キー（**focused 要素のみ**）。
-///
-/// 祖先チェーンは Electron で長さ・class が揺れやすく、入力中の偽フォーカス変化の主因になる。
-/// composer / terminal / monaco は focused の Role + DomClassList で区別できる。
-pub fn focus_identity_key(elements: &[AxElementSnapshot]) -> String {
-    let Some(focused) = elements.first() else {
-        return EMPTY_FOCUS_KEY.to_owned();
-    };
-    format!(
-        "{}`{}`{}`{}",
-        focused.value(AxAttribute::Role),
-        focused.value(AxAttribute::DomIdentifier),
-        normalize_dom_class_list_for_identity(focused.value(AxAttribute::DomClassList)),
-        focused.value(AxAttribute::Identifier),
-    )
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FocusSnapshot {
     app: PlatformAppId,
     generation: u64,
     elements: Vec<AxElementSnapshot>,
-    focus_key: String,
 }
 
 impl FocusSnapshot {
     pub fn new(app: PlatformAppId, generation: u64, elements: Vec<AxElementSnapshot>) -> Self {
-        let focus_key = focus_identity_key(&elements);
         Self {
             app,
             generation,
             elements,
-            focus_key,
         }
     }
 
@@ -298,11 +254,6 @@ impl FocusSnapshot {
 
     pub fn elements(&self) -> &[AxElementSnapshot] {
         &self.elements
-    }
-
-    /// 正規化済みフォーカス文脈キー（手動 override の紐づけに使う）。
-    pub fn focus_key(&self) -> &str {
-        &self.focus_key
     }
 }
 
@@ -442,51 +393,5 @@ impl FocusRule {
 
     pub fn target(&self) -> &RuleTarget {
         &self.target
-    }
-}
-
-#[cfg(test)]
-mod focus_identity_tests {
-    use super::*;
-
-    #[test]
-    fn normalize_dom_class_strips_volatile_tokens_and_sorts() {
-        let normalized = normalize_dom_class_list_for_identity(
-            "ime-input monaco-mouse-cursor-text inputarea ProseMirror-focused",
-        );
-        assert_eq!(normalized, "inputarea monaco-mouse-cursor-text");
-    }
-
-    #[test]
-    fn focus_identity_key_stable_across_ime_class() {
-        let base = [AxElementSnapshot::new()
-            .with(AxAttribute::Role, "AXTextArea")
-            .with(AxAttribute::DomClassList, "aislash-editor-input")];
-        let with_ime = [AxElementSnapshot::new()
-            .with(AxAttribute::Role, "AXTextArea")
-            .with(AxAttribute::DomClassList, "aislash-editor-input ime-input")];
-        assert_eq!(focus_identity_key(&base), focus_identity_key(&with_ime));
-        assert_ne!(focus_identity_key(&[]), focus_identity_key(&base));
-    }
-
-    #[test]
-    fn focus_identity_key_ignores_ancestor_dom_class_churn() {
-        let stable = [
-            AxElementSnapshot::new()
-                .with(AxAttribute::Role, "AXTextArea")
-                .with(AxAttribute::DomClassList, "aislash-editor-input"),
-            AxElementSnapshot::new()
-                .with(AxAttribute::Role, "AXGroup")
-                .with(AxAttribute::DomClassList, "split-view-view"),
-        ];
-        let churned = [
-            AxElementSnapshot::new()
-                .with(AxAttribute::Role, "AXTextArea")
-                .with(AxAttribute::DomClassList, "aislash-editor-input"),
-            AxElementSnapshot::new()
-                .with(AxAttribute::Role, "AXGroup")
-                .with(AxAttribute::DomClassList, "split-view-view visible"),
-        ];
-        assert_eq!(focus_identity_key(&stable), focus_identity_key(&churned));
     }
 }

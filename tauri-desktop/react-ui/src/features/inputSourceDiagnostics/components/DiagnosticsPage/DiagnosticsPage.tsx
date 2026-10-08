@@ -8,16 +8,11 @@ import {
   useInputSourceState,
 } from "@/features/inputSource";
 
-import { cx } from "@/styled-system/css";
-
 import {
-  buildLatencySummaries,
-  findLatencyOutliers,
   flattenSnapshotAttributes,
-  formatLatencyOutlierNote,
+  formatLatencyMicros,
   formatSwitchLogLine,
   logsToTsv,
-  switchLogKey,
 } from "../../diagnosticsViewModel";
 import * as styles from "./DiagnosticsPage.styles";
 
@@ -61,8 +56,7 @@ export function DiagnosticsPage() {
   }, [fetchFocusSnapshot, fetchSwitchLogs]);
 
   const attributes = flattenSnapshotAttributes(snapshot?.elements ?? []);
-  const latency = buildLatencySummaries(logs);
-  const outliers = findLatencyOutliers(logs);
+  const latency = formatLatencyMicros(logs.map((log) => log.processingMicros));
 
   const copyText = async (text: string) => {
     try {
@@ -97,26 +91,9 @@ export function DiagnosticsPage() {
 
       <section className={styles.section}>
         <h2 className={styles.title}>{t("diagnostics.sectionLatency")}</h2>
-        <p className={styles.meta}>{t("diagnostics.latencyJudgmentAll", latency.judgmentAll)}</p>
         <p className={styles.meta}>
-          {t("diagnostics.latencyJudgmentAttempted", latency.judgmentAttempted)}
+          p50 {latency.p50} / p95 {latency.p95}
         </p>
-        <p className={styles.meta}>{t("diagnostics.latencyPipelineAll", latency.pipelineAll)}</p>
-        <p className={styles.meta}>
-          {t("diagnostics.latencyPipelineAttempted", latency.pipelineAttempted)}
-        </p>
-        <p className={styles.meta}>{t("diagnostics.latencyCurrentCache", latency.currentCache)}</p>
-        <p className={styles.meta}>{t("diagnostics.latencyCurrentMiss", latency.currentMiss)}</p>
-        <p className={styles.meta}>{t("diagnostics.latencyCurrentHit", latency.currentHit)}</p>
-        <p className={styles.meta}>{t("diagnostics.latencyHandoff", latency.handoff)}</p>
-        <p className={styles.meta}>{t("diagnostics.latencyFinalize", latency.finalize)}</p>
-        <p className={styles.meta}>{t("diagnostics.latencyPublish", latency.publish)}</p>
-        <p className={styles.meta}>{t("diagnostics.latencyAx", latency.ax)}</p>
-        {outliers.notes.map((note) => (
-          <p key={`${note.kind}-${switchLogKey(note.log)}`} className={styles.logHighlight}>
-            {formatLatencyOutlierNote(note, t)}
-          </p>
-        ))}
       </section>
 
       <section className={styles.section}>
@@ -156,11 +133,8 @@ export function DiagnosticsPage() {
         {logs.length === 0 ? <p className={styles.meta}>{t("diagnostics.noLogs")}</p> : null}
         {logs.map((log) => (
           <p
-            key={switchLogKey(log)}
-            className={cx(
-              styles.meta,
-              outliers.highlightKeys.has(switchLogKey(log)) ? styles.logHighlight : undefined
-            )}
+            key={`${log.timestampUnixMs}-${log.generation}-${log.ruleId}-${log.decision}-${log.processingMicros}`}
+            className={styles.meta}
           >
             {formatSwitchLogLine(log, t)}
           </p>

@@ -49,17 +49,6 @@
     "resetConfirmText": "规则列表将恢复为默认预设。",
     "resetConfirmButton": "重置"
   },
-  "about": {
-    "appName": "ReadyType",
-    "version": "v{{version}}",
-    "copyright": "© 2026 ReadyType",
-    "privacyPolicy": "隐私政策",
-    "termsOfUse": "使用条款",
-    "support": "支持",
-    "sectionCredits": "鸣谢",
-    "license": "许可证",
-    "licenseValue": "遵循各依赖库许可条款"
-  },
   "home": {
     "permissionBannerTitle": "需要辅助功能权限",
     "permissionBannerText": "焦点监视和输入源切换需要在系统设置中授权。",
@@ -141,29 +130,6 @@
     "clearLogs": "清除日志",
     "copyFailed": "复制到剪贴板失败",
     "sectionLatency": "处理时间",
-    "latencyJudgmentAll": "判定处理（全部）: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyJudgmentAttempted": "判定处理（已执行切换）: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyPipelineAll": "流水线（全部・AX 获取〜完成）: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyPipelineAttempted": "流水线（已执行切换）: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyCurrentCache": "current 缓存: hit {{hit}} / miss {{miss}}",
-    "latencyCurrentMiss": "current 获取（miss）: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyCurrentHit": "current 获取（hit）: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyHandoff": "handoff（含锁等待）: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyFinalize": "finalize（完成处理）: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyPublish": "publish（state/tray）: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyAx": "AX 获取: p50 {{p50}} / p95 {{p95}} / max {{max}}",
-    "latencyMax": {
-      "judgmentAll": "max 判定（全部）: gen {{generation}} {{ruleId}} {{decision}} ({{value}})",
-      "pipelineAll": "max 流水线（全部）: gen {{generation}} {{ruleId}} {{decision}} ({{value}})",
-      "pipelineAttempted": "max 流水线（已执行切换）: gen {{generation}} {{ruleId}} {{decision}} ({{value}})",
-      "queue": "max 队列等待: gen {{generation}} {{ruleId}} {{decision}} ({{value}})",
-      "handoff": "max handoff: gen {{generation}} {{ruleId}} {{decision}} ({{value}})",
-      "current": "max current 获取（miss）: gen {{generation}} {{ruleId}} {{decision}} ({{value}})",
-      "select": "max select 切换: gen {{generation}} {{ruleId}} {{decision}} ({{value}})",
-      "finalize": "max finalize: gen {{generation}} {{ruleId}} {{decision}} ({{value}})",
-      "publish": "max publish: gen {{generation}} {{ruleId}} {{decision}} ({{value}})",
-      "ax": "max AX 获取: gen {{generation}} {{ruleId}} {{decision}} ({{value}})"
-    },
     "sectionFocus": "焦点元素",
     "noSnapshot": "无快照",
     "copy": "复制",
@@ -245,5 +211,16 @@
   },
   "rules": {
     "defaultTitle": "默认"
+  },
+  "about": {
+    "appName": "ReadyType",
+    "version": "v{{version}}",
+    "copyright": "© 2026 ReadyType",
+    "privacyPolicy": "隐私政策",
+    "termsOfUse": "使用条款",
+    "support": "支持",
+    "sectionCredits": "鸣谢",
+    "license": "许可证",
+    "licenseValue": "遵循各依赖库许可条款"
   }
 }

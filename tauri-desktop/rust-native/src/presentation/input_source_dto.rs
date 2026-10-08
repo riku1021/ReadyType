@@ -382,7 +382,6 @@ pub struct SwitchLogDto {
     pub app_id: String,
     pub pid: i32,
     pub generation: u64,
-    pub focus_key: String,
     pub rule_id: String,
     pub decision: DecisionDto,
     pub from: String,
@@ -392,16 +391,6 @@ pub struct SwitchLogDto {
     pub reason: String,
     pub detail: String,
     pub processing_micros: u64,
-    pub pipeline_micros: u64,
-    pub queue_micros: u64,
-    pub prepare_micros: u64,
-    pub current_micros: u64,
-    pub current_cache_hit: bool,
-    pub select_micros: u64,
-    pub handoff_micros: u64,
-    pub finalize_micros: u64,
-    pub publish_micros: u64,
-    pub ax_micros: u64,
 }
 
 impl From<SwitchLogEntry> for SwitchLogDto {
@@ -411,7 +400,6 @@ impl From<SwitchLogEntry> for SwitchLogDto {
             app_id: log.app_id,
             pid: log.pid,
             generation: log.generation,
-            focus_key: log.focus_key,
             rule_id: log.rule_id,
             decision: DecisionDto::from(log.decision),
             from: log.from,
@@ -421,16 +409,6 @@ impl From<SwitchLogEntry> for SwitchLogDto {
             reason: log.reason,
             detail: log.detail,
             processing_micros: log.processing_micros,
-            pipeline_micros: log.pipeline_micros,
-            queue_micros: log.queue_micros,
-            prepare_micros: log.prepare_micros,
-            current_micros: log.current_micros,
-            current_cache_hit: log.current_cache_hit,
-            select_micros: log.select_micros,
-            handoff_micros: log.handoff_micros,
-            finalize_micros: log.finalize_micros,
-            publish_micros: log.publish_micros,
-            ax_micros: log.ax_micros,
         }
     }
 }

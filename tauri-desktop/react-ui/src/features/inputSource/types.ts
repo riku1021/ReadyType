@@ -91,7 +91,6 @@ export interface SwitchLogDto {
   appId: string;
   pid: number;
   generation: number;
-  focusKey: string;
   ruleId: string;
   decision: SwitchDecision;
   from: string;
@@ -101,16 +100,6 @@ export interface SwitchLogDto {
   reason: string;
   detail: string;
   processingMicros: number;
-  pipelineMicros: number;
-  queueMicros: number;
-  prepareMicros: number;
-  currentMicros: number;
-  currentCacheHit: boolean;
-  selectMicros: number;
-  handoffMicros: number;
-  finalizeMicros: number;
-  publishMicros: number;
-  axMicros: number;
 }
 
 export interface AxElementDto {
