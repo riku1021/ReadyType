@@ -33,10 +33,10 @@ mise run dev              # Tauri + Vite (from react-ui)
 ### Frontend (`tauri-desktop/react-ui`)
 
 ```bash
-mise run check            # pnpm typecheck
-mise run lint             # Biome check
-mise run fix              # Biome check --write
-mise run test             # Vitest
+mise run react-ui:typecheck
+mise run react-ui:lint
+mise run react-ui:fix
+mise run react-ui:test
 # or:
 cd tauri-desktop/react-ui && pnpm typecheck && pnpm lint && pnpm test
 ```
@@ -44,9 +44,9 @@ cd tauri-desktop/react-ui && pnpm typecheck && pnpm lint && pnpm test
 ### Rust native (`tauri-desktop/rust-native`)
 
 ```bash
-mise run fmt              # cargo fmt
-mise run fmt:check
-mise run clippy           # cargo clippy --all-targets -- -D warnings
+mise run rust-native:format
+mise run rust-native:format:check
+mise run rust-native:lint
 cd tauri-desktop/rust-native && cargo test
 ```
 
@@ -54,7 +54,7 @@ cd tauri-desktop/rust-native && cargo test
 
 ```bash
 lefthook install          # once per clone
-# pre-commit: Biome fix + typecheck + rustfmt + clippy
+# pre-commit: react-ui:format-lint + typecheck, rust-native:format + lint
 ```
 
 ## Architecture

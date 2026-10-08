@@ -2,6 +2,7 @@
 # Run with: mise run <task>
 # Paths: see [env] in .mise.toml (TAURI_APP_PATH / TAURI_FRONTEND_PATH)
 # Rust toolchain: see rust-toolchain.toml
+# Naming: <package>:<role> (e.g. react-ui:lint, rust-native:format)
 
 [install]
 description = "Install frontend dependencies"
@@ -18,52 +19,52 @@ description = "Build the Tauri application"
 dir = "tauri-desktop/react-ui"
 run = "pnpm tauri build"
 
-[check]
-description = "Type-check the frontend TypeScript"
+["react-ui:typecheck"]
+description = "Type-check react-ui"
 dir = "tauri-desktop/react-ui"
 run = "pnpm typecheck"
 
-[test]
-description = "Run frontend unit tests with Vitest"
+["react-ui:test"]
+description = "Run react-ui unit tests"
 dir = "tauri-desktop/react-ui"
 run = "pnpm test"
 
-["test:e2e"]
+["react-ui:test:e2e"]
 description = "Run Playwright E2E (Vite UI + invoke mocks)"
 dir = "tauri-desktop/react-ui"
 run = "pnpm test:e2e"
 
-[screenshots]
+["react-ui:screenshots"]
 description = "Capture diagnostic screenshots via Playwright"
 dir = "tauri-desktop/react-ui"
 run = "pnpm screenshots"
 
-[lint]
-description = "Lint & format-check the frontend with Biome"
+["react-ui:lint"]
+description = "Lint & format-check react-ui"
 dir = "tauri-desktop/react-ui"
 run = "pnpm lint"
 
-[fix]
-description = "Auto-fix frontend lint & format issues with Biome"
+["react-ui:fix"]
+description = "Auto-fix react-ui lint & format issues"
 dir = "tauri-desktop/react-ui"
 run = "pnpm fix"
 
-[format]
-description = "Format the frontend with Biome"
+["react-ui:format"]
+description = "Format react-ui"
 dir = "tauri-desktop/react-ui"
 run = "pnpm format"
 
-[fmt]
-description = "Format Rust code with rustfmt"
+["rust-native:format"]
+description = "Format rust-native"
 dir = "tauri-desktop/rust-native"
 run = "cargo fmt"
 
-["fmt:check"]
-description = "Check Rust formatting without writing"
+["rust-native:format:check"]
+description = "Check rust-native formatting without writing"
 dir = "tauri-desktop/rust-native"
 run = "cargo fmt -- --check"
 
-[clippy]
-description = "Lint Rust code with Clippy"
+["rust-native:lint"]
+description = "Lint rust-native"
 dir = "tauri-desktop/rust-native"
 run = "cargo clippy --all-targets -- -D warnings"

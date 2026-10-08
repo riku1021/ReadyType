@@ -26,10 +26,10 @@ ReadyType はタイピング練習用の **Tauri 2 デスクトップアプリ**
 mise install
 mise run install          # react-ui の pnpm install
 mise run dev              # Tauri + Vite
-mise run check            # typecheck
-mise run lint / mise run fix
-mise run test             # Vitest
-mise run fmt / mise run clippy
+mise run react-ui:typecheck
+mise run react-ui:lint / mise run react-ui:fix
+mise run react-ui:test
+mise run rust-native:format / mise run rust-native:lint
 cd tauri-desktop/rust-native && cargo test
 lefthook install          # 初回のみ
 ```
