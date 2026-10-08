@@ -14,7 +14,7 @@ fn preferred_ja() -> RuleTarget {
 const TERMINAL_BUNDLE_ID: &str = "com.apple.Terminal";
 const CURSOR_BUNDLE_ID: &str = "com.todesktop.230313mzl4w4u92";
 const VSCODE_BUNDLE_ID: &str = "com.microsoft.VSCode";
-pub const READYTYPE_BUNDLE_ID: &str = "com.readytype.app";
+pub const READYTYPE_BUNDLE_ID: &str = "com.readytype";
 
 /// Lab 切替テスト欄の AXIdentifier（ネイティブ NSTextField の accessibilityIdentifier と一致）。
 pub const LAB_SWITCH_FIELD_IDS: [&str; 6] = [

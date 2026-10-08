@@ -192,7 +192,7 @@ fn preset_ids_are_stable_and_unique() {
 
 #[test]
 fn readytype_lab_switch_fields_match_fixed_languages() {
-    let app = PlatformAppId::new(Platform::MacOs, "com.readytype.app", 1).expect("valid app");
+    let app = PlatformAppId::new(Platform::MacOs, "com.readytype", 1).expect("valid app");
     let rules = RuleSet::new(default_rules()).expect("valid presets");
 
     let cases = [
