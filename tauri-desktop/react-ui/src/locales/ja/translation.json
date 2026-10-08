@@ -220,11 +220,13 @@
     "ruleName": "ルール名",
     "advanced": "詳細設定...",
     "editRule": "ルールを編集...",
+    "deleteRule": "このルールを削除",
     "saved": "{{language}}に設定しました",
     "waiting": "対象を取得しています…",
     "noLanguages": "設定済みの入力言語がありません。設定画面で優先入力ソースを確認してください。",
     "loadFailed": "クイック設定を開けませんでした",
-    "saveFailed": "保存に失敗しました"
+    "saveFailed": "保存に失敗しました",
+    "deleteFailed": "削除に失敗しました"
   },
   "rules": {
     "defaultTitle": "デフォルト"

@@ -220,11 +220,13 @@
     "ruleName": "Rule name",
     "advanced": "Advanced settings...",
     "editRule": "Edit rule...",
+    "deleteRule": "Delete this rule",
     "saved": "Set to {{language}}",
     "waiting": "Detecting target…",
     "noLanguages": "No preferred languages are configured. Check preferred input sources in Settings.",
     "loadFailed": "Could not open Quick Set",
-    "saveFailed": "Failed to save"
+    "saveFailed": "Failed to save",
+    "deleteFailed": "Failed to delete"
   },
   "rules": {
     "defaultTitle": "Default"

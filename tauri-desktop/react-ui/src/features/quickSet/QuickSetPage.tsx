@@ -9,12 +9,14 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { FiTrash2 } from "react-icons/fi";
 import { MdClose, MdSettings } from "react-icons/md";
 
 import { BrandLogo } from "@/components/BrandLogo";
 import { CompletionCheckbox } from "@/components/CompletionCheckbox";
-import { SuccessDialog } from "@/components/Dialog";
+import { AlertDialog, SuccessDialog } from "@/components/Dialog";
 import { SettingItem } from "@/components/SettingItem";
+import { deleteRule } from "@/features/inputSource/api";
 import { AppIconView, appDisplayName, useAppPresentations } from "@/features/inputSourceApps";
 import { cx } from "@/styled-system/css";
 
@@ -64,6 +66,7 @@ export function QuickSetPage() {
   const [ruleName, setRuleName] = useState("");
   const [phase, setPhase] = useState<QuickSetUiPhase>({ kind: "idle" });
   const [error, setError] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const resetInteraction = useCallback(() => {
     setPhase({ kind: "idle" });
@@ -159,6 +162,24 @@ export function QuickSetPage() {
     void openQuickSetAdvanced(session.appId);
   };
 
+  const onDeleteConfirm = () => {
+    const ruleId = session?.matchedRuleId;
+    if (!ruleId || phase.kind === "applying") {
+      return;
+    }
+    setPhase({ kind: "applying" });
+    setError(null);
+    void deleteRule(ruleId)
+      .then(() => {
+        setDeleteOpen(false);
+        void hideQuickSet();
+      })
+      .catch(() => {
+        setError(t("quickSet.deleteFailed"));
+        setPhase({ kind: "idle" });
+      });
+  };
+
   const optionItems: ReactNode[] =
     options.length === 0
       ? [
@@ -233,12 +254,27 @@ export function QuickSetPage() {
           ) : null}
           <hr className={divider} />
           <div className={footerBlock}>
-            <SettingItem
-              icon={MdSettings}
-              title={hasExisting ? t("quickSet.editRule") : t("quickSet.advanced")}
-              type="navigation"
-              onClick={isIdle ? onAdvanced : undefined}
-            />
+            {withDividers([
+              <SettingItem
+                key="advanced"
+                icon={MdSettings}
+                title={hasExisting ? t("quickSet.editRule") : t("quickSet.advanced")}
+                type="navigation"
+                onClick={isIdle ? onAdvanced : undefined}
+              />,
+              ...(hasExisting
+                ? [
+                    <SettingItem
+                      key="delete"
+                      icon={FiTrash2}
+                      title={t("quickSet.deleteRule")}
+                      type="action"
+                      danger
+                      onClick={isIdle ? () => setDeleteOpen(true) : undefined}
+                    />,
+                  ]
+                : []),
+            ])}
           </div>
         </>
       ) : (
@@ -248,6 +284,14 @@ export function QuickSetPage() {
         isOpen={successLabel !== null}
         onClose={closeAfterSuccess}
         title={successLabel ? t("quickSet.saved", { language: successLabel }) : ""}
+      />
+      <AlertDialog
+        isOpen={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title={t("apps.deleteRuleConfirmTitle")}
+        text={t("apps.deleteRuleConfirmText", { title: ruleName || t("quickSet.ruleName") })}
+        confirmButtonText={t("apps.deleteRuleConfirmButton")}
+        onConfirm={onDeleteConfirm}
       />
     </div>
   );

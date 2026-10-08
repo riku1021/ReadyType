@@ -7,7 +7,6 @@ import { MdUnfoldMore } from "react-icons/md";
 import { Button } from "@/components/Button";
 import { SelectionMenu } from "@/components/SelectionMenu";
 import { Toggle } from "@/components/Toggle";
-import { cx } from "@/styled-system/css";
 
 import * as styles from "./SettingItem.styles";
 
@@ -110,15 +109,17 @@ export function SettingItem(props: SettingItemProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  const tone = danger ? "danger" : "default";
+
   const content = (
     <>
       {Icon ? (
-        <span className={cx(styles.icon, danger ? styles.iconError : undefined)} aria-hidden>
+        <span className={styles.icon({ tone })} aria-hidden>
           <Icon />
         </span>
       ) : null}
       <span className={styles.textStack}>
-        <span className={cx(styles.title, danger ? styles.titleError : undefined)}>{title}</span>
+        <span className={styles.title({ tone })}>{title}</span>
         {description ? <span className={styles.description}>{description}</span> : null}
       </span>
       {renderTrailing(props)}

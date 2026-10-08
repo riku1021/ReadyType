@@ -14,7 +14,8 @@ pub const QUICK_SET_WINDOW_LABEL: &str = "quick-set";
 pub const QUICK_SET_EVENT: &str = "readytype://quick-set";
 
 const WINDOW_WIDTH: f64 = 320.0;
-const WINDOW_HEIGHT: f64 = 360.0;
+/// ヘッダー／ルール名／選択肢ちょうど2行／編集＋削除フッターが収まる高さ
+const WINDOW_HEIGHT: f64 = 448.0;
 const GAP: f64 = 8.0;
 
 pub fn ensure_window(app: &AppHandle) -> Result<(), String> {

@@ -107,16 +107,20 @@ export const nameField = css({
   paddingBottom: "sm",
 });
 
-/** 固定窓内で選択肢だけ縦スクロール */
+/**
+ * 選択肢ビューポート: ちょうど 2 行分。
+ * 行 44px（padding 10+10 + 本文）× 2 + 区切り 1px。3 件目以降は縦スクロール。
+ */
 export const optionsScroll = css({
-  flex: "1",
-  minHeight: "0",
+  flexShrink: "0",
+  height: "89px",
   overflowY: "auto",
   overscrollBehavior: "contain",
 });
 
 export const footerBlock = css({
   flexShrink: "0",
+  marginTop: "auto",
 });
 
 export const nameLabel = css({
@@ -151,9 +155,10 @@ export const nameInput = css({
 
 export const optionButton = css({
   display: "flex",
-  alignItems: "flex-start",
+  alignItems: "center",
   gap: "sm",
   width: "100%",
+  minHeight: "44px",
   paddingBlock: "10px",
   paddingInline: "sm",
   border: "none",

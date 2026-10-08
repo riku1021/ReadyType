@@ -50,23 +50,33 @@ export const row = cva({
   },
 });
 
-export const icon = css({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flexShrink: "0",
-  width: "24px",
-  height: "24px",
-  fontSize: "24px",
-  color: "icon.primary",
-  "& > svg": {
-    width: "100%",
-    height: "100%",
+export const icon = cva({
+  base: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: "0",
+    width: "24px",
+    height: "24px",
+    fontSize: "24px",
+    color: "icon.primary",
+    "& > svg": {
+      width: "100%",
+      height: "100%",
+    },
   },
-});
-
-export const iconError = css({
-  color: "status.error.main",
+  variants: {
+    tone: {
+      default: {},
+      // cx だと atomic の順序で icon.primary が勝つことがあるため cva で上書きする
+      danger: {
+        color: "status.error.main",
+      },
+    },
+  },
+  defaultVariants: {
+    tone: "default",
+  },
 });
 
 export const textStack = css({
@@ -77,13 +87,22 @@ export const textStack = css({
   gap: "2px",
 });
 
-export const title = css({
-  fontSize: "base",
-  color: "text.main",
-});
-
-export const titleError = css({
-  color: "status.error.main",
+export const title = cva({
+  base: {
+    fontSize: "base",
+    color: "text.main",
+  },
+  variants: {
+    tone: {
+      default: {},
+      danger: {
+        color: "status.error.main",
+      },
+    },
+  },
+  defaultVariants: {
+    tone: "default",
+  },
 });
 
 export const description = css({
