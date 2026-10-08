@@ -14,6 +14,17 @@ fn preferred_ja() -> RuleTarget {
 const TERMINAL_BUNDLE_ID: &str = "com.apple.Terminal";
 const CURSOR_BUNDLE_ID: &str = "com.todesktop.230313mzl4w4u92";
 const VSCODE_BUNDLE_ID: &str = "com.microsoft.VSCode";
+pub const READYTYPE_BUNDLE_ID: &str = "com.readytype.app";
+
+/// Lab 切替テスト欄の AXIdentifier（ネイティブ NSTextField の accessibilityIdentifier と一致）。
+pub const LAB_SWITCH_FIELD_IDS: [&str; 6] = [
+    "readytype-lab-switch-01",
+    "readytype-lab-switch-02",
+    "readytype-lab-switch-03",
+    "readytype-lab-switch-04",
+    "readytype-lab-switch-05",
+    "readytype-lab-switch-06",
+];
 
 fn condition(attribute: AxAttribute, operator: MatchOperator, value: &str) -> RuleCondition {
     RuleCondition::new(attribute, operator, SearchScope::FocusedAndAncestors, value)
@@ -181,8 +192,40 @@ pub fn default_rules() -> Vec<FocusRule> {
         preferred_ja(),
     ));
     rules.extend(vscode);
+    rules.extend(readytype_lab_switch_rules());
 
     rules
+}
+
+/// ReadyType 自身の Lab 画面で、フィールドごとに固定言語へ切替する。
+/// 言語割当は 01/03/05 → ja、02/04/06 → en（設定の preferred を参照）。
+pub fn readytype_lab_switch_rules() -> Vec<FocusRule> {
+    LAB_SWITCH_FIELD_IDS
+        .iter()
+        .enumerate()
+        .map(|(index, field_id)| {
+            let ordinal = index + 1;
+            let target = if ordinal % 2 == 1 {
+                preferred_ja()
+            } else {
+                preferred_en()
+            };
+            let language = if ordinal % 2 == 1 { "ja" } else { "en" };
+            rule(
+                &format!("preset-readytype-lab-switch-{ordinal:02}"),
+                &format!("ReadyType Lab Switch {ordinal:02} ({language})"),
+                READYTYPE_BUNDLE_ID,
+                200 + u32::try_from(index).expect("lab field index fits u32"),
+                // NSTextField フォーカス時は field editor が FOCUSED になることがあるため祖先も見る。
+                vec![condition(
+                    AxAttribute::Identifier,
+                    MatchOperator::Equals,
+                    field_id,
+                )],
+                target,
+            )
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -371,9 +414,46 @@ mod tests {
         assert!(ids.iter().any(|id| id == "preset-cursor-composer"));
         assert!(ids.iter().any(|id| id == "preset-cursor-ai-input"));
         assert!(ids.iter().any(|id| id == "preset-vscode-editor"));
+        assert!(ids.iter().any(|id| id == "preset-readytype-lab-switch-01"));
+        assert!(ids.iter().any(|id| id == "preset-readytype-lab-switch-06"));
         assert_eq!(
             RuleSet::new(rules).expect("unique presets").rules().len(),
             ids.len()
         );
+    }
+
+    #[test]
+    fn readytype_lab_switch_fields_match_fixed_languages() {
+        let app = PlatformAppId::new(Platform::MacOs, "com.readytype.app", 1).expect("valid app");
+        let rules = RuleSet::new(default_rules()).expect("valid presets");
+
+        let cases = [
+            ("readytype-lab-switch-01", "preset-readytype-lab-switch-01"),
+            ("readytype-lab-switch-02", "preset-readytype-lab-switch-02"),
+            ("readytype-lab-switch-06", "preset-readytype-lab-switch-06"),
+        ];
+        for (identifier, expected_rule_id) in cases {
+            let snapshot = FocusSnapshot::new(
+                app.clone(),
+                1,
+                vec![element(&[(AxAttribute::Identifier, identifier)])],
+            );
+            let matched = rules.first_match(&snapshot).expect("lab field matches");
+            assert_eq!(matched.id(), expected_rule_id);
+
+            // field editor が FOCUSED で Identifier は親 NSTextField にあるケース
+            let via_ancestor = FocusSnapshot::new(
+                app.clone(),
+                1,
+                vec![
+                    element(&[(AxAttribute::Role, "AXTextArea")]),
+                    element(&[(AxAttribute::Identifier, identifier)]),
+                ],
+            );
+            let matched = rules
+                .first_match(&via_ancestor)
+                .expect("lab field matches via ancestor");
+            assert_eq!(matched.id(), expected_rule_id);
+        }
     }
 }

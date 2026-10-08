@@ -6,6 +6,7 @@ mod app_icon;
 mod application_path;
 mod focus_monitor;
 mod input_source_display_name;
+pub(crate) mod lab_switch_window;
 mod tis;
 mod window_chrome;
 

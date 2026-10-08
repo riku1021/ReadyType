@@ -46,3 +46,29 @@ export const formBody = css({
   color: "text.sub",
   fontSize: "base",
 });
+
+export const fieldList = css({
+  display: "flex",
+  flexDirection: "column",
+  gap: "xs",
+  margin: "0",
+  paddingInlineStart: "md",
+  listStyleType: "disc",
+});
+
+export const fieldRow = css({
+  display: "flex",
+  flexDirection: "column",
+  gap: "xs",
+});
+
+export const fieldLabel = css({
+  fontSize: "sm",
+  fontWeight: "medium",
+  color: "text.main",
+});
+
+export const fieldHint = css({
+  fontSize: "xs",
+  color: "text.secondary",
+});

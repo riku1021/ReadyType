@@ -27,6 +27,8 @@ commands.allow = [
   "set_debug_logging",
   "set_ui_locale",
   "get_focus_snapshot",
+  "ensure_lab_switch_rules",
+  "open_lab_switch_window",
   "list_switch_logs",
   "clear_switch_logs",
   "get_app_presentations",

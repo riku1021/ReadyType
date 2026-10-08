@@ -2,7 +2,7 @@ use std::{
     collections::{HashMap, HashSet},
     fmt,
     sync::{
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
         mpsc::{self, Receiver, RecvTimeoutError, Sender},
         Arc, Mutex, MutexGuard,
     },
@@ -11,7 +11,8 @@ use std::{
 };
 
 use crate::domain::input_source::{
-    default_rules, AxAttribute, FocusRule, FocusSnapshot, InputSourceId, PlatformAppId, RuleTarget,
+    default_rules, readytype_lab_switch_rules, AxAttribute, AxElementSnapshot, FocusRule,
+    FocusSnapshot, InputSourceId, Platform, PlatformAppId, RuleTarget, READYTYPE_BUNDLE_ID,
 };
 
 use super::{
@@ -113,6 +114,8 @@ pub struct SwitcherController {
     worker: Mutex<Option<JoinHandle<()>>>,
     monitoring: AtomicBool,
     debug_capture: AtomicBool,
+    /// Lab ネイティブ窓の AppKit フォーカス通知用（AX 世代と衝突しにくいレンジ）。
+    lab_focus_generation: AtomicU64,
     last_snapshot: Arc<Mutex<Option<FocusSnapshot>>>,
     quick_set_session: Mutex<Option<QuickSetSession>>,
     publisher: Arc<dyn SwitcherEventPublisher>,
@@ -149,6 +152,7 @@ impl SwitcherController {
             worker: Mutex::new(None),
             monitoring: AtomicBool::new(false),
             debug_capture: AtomicBool::new(false),
+            lab_focus_generation: AtomicU64::new(1_000_000),
             last_snapshot: Arc::clone(&last_snapshot),
             quick_set_session: Mutex::new(None),
             publisher: Arc::clone(&publisher),
@@ -401,6 +405,24 @@ impl SwitcherController {
         self.replace_rules(default_rules())
     }
 
+    /// 既存ルールを保ったまま Lab 切替テスト用プリセットを upsert する。
+    /// 件数だけでなく条件内容が変わったときも置換する（例: DomIdentifier → Identifier）。
+    pub fn ensure_lab_switch_rules(self: &Arc<Self>) -> Result<SwitcherState, ControllerError> {
+        let lab = readytype_lab_switch_rules();
+        let lab_ids = lab
+            .iter()
+            .map(|rule| rule.id().to_owned())
+            .collect::<HashSet<_>>();
+        let current = self.rules()?;
+        let mut next = current.clone();
+        next.retain(|rule| !lab_ids.contains(rule.id()));
+        next.extend(lab);
+        if next == current {
+            return self.state();
+        }
+        self.replace_rules(next)
+    }
+
     pub fn set_debug_capture(&self, enabled: bool) -> Result<SwitcherState, ControllerError> {
         self.lock_monitor()?.set_debug_capture(enabled)?;
         self.debug_capture.store(enabled, Ordering::Release);
@@ -425,6 +447,35 @@ impl SwitcherController {
 
     pub fn focus_snapshot(&self) -> Result<Option<FocusSnapshot>, ControllerError> {
         Ok(self.lock_last_snapshot()?.clone())
+    }
+
+    /// Lab ネイティブ入力欄フォーカス（同一プロセス AX が空のときのフォールバック）。
+    ///
+    /// 本番と同じ `WorkerMessage::Focus` → ルール照合 → 切替経路を使う。
+    pub fn report_lab_focus(&self, identifier: &str) -> Result<(), ControllerError> {
+        let identifier = identifier.trim();
+        if identifier.is_empty() {
+            return Err(ControllerError::InvalidRequest(
+                "lab identifier is required".to_owned(),
+            ));
+        }
+        if !self.is_monitoring() {
+            return Err(ControllerError::InvalidRequest(
+                "focus monitoring is not running".to_owned(),
+            ));
+        }
+        let pid = i32::try_from(std::process::id()).unwrap_or(0);
+        let app = PlatformAppId::new(Platform::MacOs, READYTYPE_BUNDLE_ID, pid)
+            .map_err(|error| ControllerError::InvalidRequest(error.to_string()))?;
+        let generation = self.lab_focus_generation.fetch_add(1, Ordering::AcqRel);
+        let focused = AxElementSnapshot::new()
+            .with(AxAttribute::Role, "AXTextField")
+            .with(AxAttribute::Identifier, identifier);
+        let snapshot = FocusSnapshot::new(app, generation, vec![focused]);
+        self.sender
+            .send(WorkerMessage::Focus(snapshot))
+            .map_err(|_| ControllerError::WorkerStopped)?;
+        Ok(())
     }
 
     /// Capture current focus into a Quick Set session (call before showing the popover window).

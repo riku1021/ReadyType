@@ -147,7 +147,19 @@
   },
   "lab": {
     "heading": "開発確認",
-    "lead": "ダイアログやモーダルなど、共通コンポーネントの動作確認用ページです。",
+    "lead": "ダイアログ確認と、自アプリ内での入力ソース自動切替の動作確認用ページです。",
+    "sectionSwitchTest": "入力ソース切替テスト",
+    "switchTestLead": "ネイティブ入力窓の各欄にフォーカスすると、本番と同じルール照合・切替経路で固定言語へ切り替わります（奇数欄は日本語、偶数欄は英語）。同一プロセスでは AX フォーカスが取れないことがあるため、Lab 窓は AppKit フォーカスも併用します。この画面を開くと Lab 用ルールが自動登録されます。切替が有効であることを確認してください。",
+    "switchRulesEnsuring": "Lab 用ルールを登録しています…",
+    "switchRulesEnsureFailed": "Lab 用ルールの登録に失敗しました。コンソールを確認してください。",
+    "openNativeWindow": "ネイティブ入力窓を開く",
+    "openNativeWindowFailed": "ネイティブ入力窓を開けませんでした。コンソールを確認してください。",
+    "switchFieldLabel": "欄 {{index}}（{{language}}）",
+    "switchFieldHint": "AXIdentifier: {{id}}",
+    "switchLanguage": {
+      "ja": "日本語",
+      "en": "英語"
+    },
     "sectionDialogs": "ダイアログ / モーダル確認",
     "buttonSuccess": "成功",
     "buttonError": "エラー",

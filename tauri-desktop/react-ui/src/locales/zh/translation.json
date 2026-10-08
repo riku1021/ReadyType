@@ -147,7 +147,19 @@
   },
   "lab": {
     "heading": "开发确认",
-    "lead": "用于确认对话框、模态框等共用组件行为的页面。",
+    "lead": "用于确认共用组件，以及在本应用内测试输入源自动切换。",
+    "sectionSwitchTest": "输入源切换测试",
+    "switchTestLead": "在原生输入窗口中聚焦各输入框时，会通过与正式环境相同的规则匹配与切换路径切换到固定语言（奇数栏→日语，偶数栏→英语）。同一进程内 AX 焦点有时为空，因此 Lab 窗口也会并用 AppKit 焦点。打开本页会自动注册 Lab 规则。请确认自动切换已开启。",
+    "switchRulesEnsuring": "正在注册 Lab 切换规则…",
+    "switchRulesEnsureFailed": "Lab 切换规则注册失败。请查看控制台。",
+    "openNativeWindow": "打开原生输入窗口",
+    "openNativeWindowFailed": "无法打开原生输入窗口。请查看控制台。",
+    "switchFieldLabel": "栏 {{index}}（{{language}}）",
+    "switchFieldHint": "AXIdentifier: {{id}}",
+    "switchLanguage": {
+      "ja": "日语",
+      "en": "英语"
+    },
     "sectionDialogs": "对话框 / 模态框确认",
     "buttonSuccess": "成功",
     "buttonError": "错误",

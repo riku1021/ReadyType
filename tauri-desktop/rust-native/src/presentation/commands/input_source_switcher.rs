@@ -275,6 +275,34 @@ pub fn get_focus_snapshot(
         .map_err(IpcError::from)
 }
 
+/// Lab 切替テスト用プリセットを既存ルールへ upsert（他ルールは維持）。
+#[tauri::command]
+pub fn ensure_lab_switch_rules(
+    controller: State<'_, Arc<SwitcherController>>,
+) -> Result<StateDto, IpcError> {
+    controller
+        .ensure_lab_switch_rules()
+        .map(|state| StateDto::from(&state))
+        .map_err(IpcError::from)
+}
+
+/// Lab 切替テスト用のネイティブ入力窓を開く。
+///
+/// 同一プロセスでは AX フォーカスが空のまま残ることがあるため、窓側で
+/// AppKit / AX から Identifier を読み `report_lab_focus` へ渡す。
+#[tauri::command]
+pub fn open_lab_switch_window(
+    controller: State<'_, Arc<SwitcherController>>,
+) -> Result<(), IpcError> {
+    let controller = Arc::clone(&controller);
+    crate::infrastructure::desktop::lab_switch_window::show(Arc::new(move |identifier| {
+        if let Err(error) = controller.report_lab_focus(identifier) {
+            eprintln!("[lab] report_lab_focus failed: {error}");
+        }
+    }))
+    .map_err(|message| IpcError { message })
+}
+
 #[tauri::command]
 pub fn list_switch_logs(
     controller: State<'_, Arc<SwitcherController>>,

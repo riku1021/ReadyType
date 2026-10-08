@@ -44,6 +44,10 @@ export const setDebugLogging = (enabled: boolean) =>
 export const setUiLocale = (locale: string) =>
   invoke<InputSourceSettingsDto>("set_ui_locale", { locale });
 export const getFocusSnapshot = () => invoke<FocusSnapshotDto | null>("get_focus_snapshot");
+/** Lab 切替プリセットを既存ルールへ upsert。 */
+export const ensureLabSwitchRules = () => invoke<SwitcherStateDto>("ensure_lab_switch_rules");
+/** Lab 切替テスト用のネイティブ入力窓を開く。 */
+export const openLabSwitchWindow = () => invoke<void>("open_lab_switch_window");
 export const listSwitchLogs = () => invoke<SwitchLogDto[]>("list_switch_logs");
 export const clearSwitchLogs = () => invoke<SwitcherStateDto>("clear_switch_logs");
 export const getAutostartEnabled = () => invoke<boolean>("get_autostart_enabled");

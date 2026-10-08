@@ -147,7 +147,19 @@
   },
   "lab": {
     "heading": "Lab",
-    "lead": "Page for verifying shared components such as dialogs and modals.",
+    "lead": "Page for verifying shared components and in-app input-source auto-switching.",
+    "sectionSwitchTest": "Input source switch test",
+    "switchTestLead": "Focus each field in the native input window to switch via the same rule-matching and switch path as production (odd → Japanese, even → English). Same-process AX focus can be empty, so the Lab window also uses AppKit focus. Opening this page registers Lab rules automatically. Ensure auto-switch is enabled.",
+    "switchRulesEnsuring": "Registering Lab switch rules…",
+    "switchRulesEnsureFailed": "Failed to register Lab switch rules. Check the console.",
+    "openNativeWindow": "Open native input window",
+    "openNativeWindowFailed": "Failed to open the native input window. Check the console.",
+    "switchFieldLabel": "Field {{index}} ({{language}})",
+    "switchFieldHint": "AXIdentifier: {{id}}",
+    "switchLanguage": {
+      "ja": "Japanese",
+      "en": "English"
+    },
     "sectionDialogs": "Dialog / modal checks",
     "buttonSuccess": "Success",
     "buttonError": "Error",

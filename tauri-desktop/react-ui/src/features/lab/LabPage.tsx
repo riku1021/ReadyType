@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/Button";
 import { AlertDialog, ErrorDialog, LoadingDialog, SuccessDialog } from "@/components/Dialog";
 import { FormModal } from "@/components/FormModal";
+import { ensureLabSwitchRules, openLabSwitchWindow } from "@/features/inputSource/api";
 
 import * as styles from "./LabPage.styles";
+import { LAB_SWITCH_FIELDS } from "./labSwitchFields";
 
 export function LabPage() {
   const { t } = useTranslation();
@@ -15,6 +17,38 @@ export function LabPage() {
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
   const [isLoadingDialogOpen, setIsLoadingDialogOpen] = useState(false);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [labRulesReady, setLabRulesReady] = useState(false);
+  const [labRulesError, setLabRulesError] = useState<string | null>(null);
+  const [labWindowError, setLabWindowError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void ensureLabSwitchRules()
+      .then(() => {
+        if (!cancelled) {
+          setLabRulesReady(true);
+          setLabRulesError(null);
+        }
+      })
+      .catch((error: unknown) => {
+        console.error("[lab] ensure_lab_switch_rules failed", error);
+        if (!cancelled) {
+          setLabRulesReady(false);
+          setLabRulesError(t("lab.switchRulesEnsureFailed"));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
+
+  const handleOpenLabWindow = () => {
+    setLabWindowError(null);
+    void openLabSwitchWindow().catch((error: unknown) => {
+      console.error("[lab] open_lab_switch_window failed", error);
+      setLabWindowError(t("lab.openNativeWindowFailed"));
+    });
+  };
 
   const handleLoadingDialog = () => {
     setIsLoadingDialogOpen(true);
@@ -27,6 +61,36 @@ export function LabPage() {
     <div className={styles.page}>
       <h1 className={styles.heading}>{t("lab.heading")}</h1>
       <p className={styles.lead}>{t("lab.lead")}</p>
+
+      <h2 className={styles.sectionTitle}>{t("lab.sectionSwitchTest")}</h2>
+      <p className={styles.lead}>{t("lab.switchTestLead")}</p>
+      {labRulesError ? <p className={styles.result}>{labRulesError}</p> : null}
+      {!labRulesReady && !labRulesError ? (
+        <p className={styles.result}>{t("lab.switchRulesEnsuring")}</p>
+      ) : null}
+      {labWindowError ? <p className={styles.result}>{labWindowError}</p> : null}
+      <div className={styles.buttonGroup}>
+        <Button variant="primary" onClick={handleOpenLabWindow} disabled={!labRulesReady}>
+          {t("lab.openNativeWindow")}
+        </Button>
+      </div>
+      <ul className={styles.fieldList}>
+        {LAB_SWITCH_FIELDS.map((field, index) => {
+          const ordinal = index + 1;
+          const languageLabel = t(`lab.switchLanguage.${field.language}`);
+          return (
+            <li key={field.id} className={styles.fieldRow}>
+              <span className={styles.fieldLabel}>
+                {t("lab.switchFieldLabel", {
+                  index: ordinal,
+                  language: languageLabel,
+                })}
+              </span>
+              <span className={styles.fieldHint}>{t("lab.switchFieldHint", { id: field.id })}</span>
+            </li>
+          );
+        })}
+      </ul>
 
       <h2 className={styles.sectionTitle}>{t("lab.sectionDialogs")}</h2>
       <div className={styles.buttonGroup}>
