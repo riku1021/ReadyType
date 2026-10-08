@@ -438,6 +438,16 @@ impl SwitcherController {
                 "no focused input field".to_owned(),
             ));
         }
+        // ReadyType 前面時に他アプリの古い last_snapshot で Quick Set しない。
+        if let Some(frontmost) = self.lock_monitor()?.frontmost_app() {
+            if frontmost.app_id() != snapshot.app().app_id() {
+                return Err(ControllerError::InvalidRequest(format!(
+                    "focus snapshot is for {} but frontmost is {}; focus a field in the frontmost app first",
+                    snapshot.app().app_id(),
+                    frontmost.app_id()
+                )));
+            }
+        }
         let rules = self.rules()?;
         let settings = self.settings()?;
         // Match app-settings LanguageSelect: always refresh OS input sources.

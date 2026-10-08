@@ -160,6 +160,10 @@ impl FocusMonitor for MacOsFocusMonitor {
             .map_err(|error| FocusMonitorError::Operation(error.to_string()))?;
         Ok(())
     }
+
+    fn frontmost_app(&self) -> Option<PlatformAppId> {
+        frontmost_application()
+    }
 }
 
 fn run_monitor(
@@ -405,6 +409,11 @@ fn evaluate_pending(
         normal_plan
     };
     let elements = snapshot_elements(&application, plan);
+    // 空フォーカスは sink しない（一時的な FOCUSED 失敗や WebView AX 欠落で
+    // last_snapshot を潰し、Quick Set / 切替が死ぬのを防ぐ）。
+    if elements.is_empty() {
+        return;
+    }
     let fingerprint = focus_fingerprint(&elements);
     let Some(generation) = state.commit_focus_change(&fingerprint) else {
         return;

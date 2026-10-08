@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::domain::input_source::{AxAttribute, FocusSnapshot};
+use crate::domain::input_source::{AxAttribute, FocusSnapshot, PlatformAppId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AccessibilityPermission {
@@ -28,4 +28,8 @@ pub trait FocusMonitor: Send {
     fn permission_status(&self) -> AccessibilityPermission;
     fn request_permission(&self) -> Result<AccessibilityPermission, FocusMonitorError>;
     fn open_settings(&self) -> Result<(), FocusMonitorError>;
+    /// 現在の前面アプリ（Quick Set の stale snapshot ガード用）。
+    fn frontmost_app(&self) -> Option<PlatformAppId> {
+        None
+    }
 }
