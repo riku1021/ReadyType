@@ -70,24 +70,23 @@ export const fieldLabel = css({
   color: "text.main",
 });
 
-export const infoBox = css({
+export const fieldHelp = css({
   display: "flex",
   alignItems: "flex-start",
   gap: "xs",
+  margin: "0",
   padding: "sm",
   borderRadius: "10px",
-  backgroundColor: "background.sub",
-  boxShadow: "inset 0 0 0 1px {colors.border.primary}",
-  color: "text.secondary",
-  fontSize: "xs",
+  backgroundColor: "status.info.soft",
+  color: "text.main",
+  fontSize: "sm",
   lineHeight: "1.5",
-  flexShrink: "0",
 });
 
-export const infoIcon = css({
+export const fieldHelpIcon = css({
   fontSize: "md",
   flexShrink: "0",
-  color: "text.secondary",
+  color: "status.info.main",
   marginTop: "0.1em",
 });
 

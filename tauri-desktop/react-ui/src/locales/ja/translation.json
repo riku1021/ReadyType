@@ -108,6 +108,7 @@
     "notFound": "指定されたアプリの設定が見つかりません。",
     "defaultInputLanguage": "デフォルトの入力言語",
     "defaultInputLanguageNone": "デフォルト入力言語を設定しない",
+    "defaultInputLanguageHelp": "このアプリのすべての入力欄で使用する既定の言語です。特定の入力欄のみ変えたい場合は、個別にルールを追加すると良いです。",
     "contextualRules": "個別のルール",
     "columnRule": "ルール",
     "columnInputLanguage": "入力言語",
@@ -119,8 +120,7 @@
     "deleteRuleConfirmText": "「{{title}}」を削除します。この操作は取り消せません。",
     "deleteRuleConfirmButton": "削除",
     "deleteRuleSuccess": "「{{title}}」を削除しました",
-    "emptyContextualRules": "個別ルールはありません。",
-    "kindDisplayNote": "Chat / Editor / Terminal は分かりやすさのための表示で、実際の判定は各ルールの条件（AX）で行います。"
+    "emptyContextualRules": "個別ルールはありません。"
   },
   "diagnostics": {
     "copyLogs": "ログをコピー",

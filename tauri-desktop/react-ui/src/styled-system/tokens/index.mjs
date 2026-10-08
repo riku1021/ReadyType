@@ -1855,6 +1855,18 @@ const tokens = {
     "value": "var(--glMVso)",
     "variable": "var(--glMVso)"
   },
+  "colors.status.info.main": {
+    "value": "#1F76FB",
+    "variable": "var(--dQerWh)"
+  },
+  "colors.status.info.soft": {
+    "value": "var(--hKzIwA)",
+    "variable": "var(--hKzIwA)"
+  },
+  "colors.status.info.softBorder": {
+    "value": "var(--iVVoaE)",
+    "variable": "var(--iVVoaE)"
+  },
   "colors.text.main": {
     "value": "var(--jdpJrz)",
     "variable": "var(--jdpJrz)"
@@ -2306,6 +2318,18 @@ const tokens = {
   "colors.colorPalette.attention.softBorder": {
     "value": "var(--fkFbyI)",
     "variable": "var(--fkFbyI)"
+  },
+  "colors.colorPalette.info.main": {
+    "value": "var(--efWiQB)",
+    "variable": "var(--efWiQB)"
+  },
+  "colors.colorPalette.info.soft": {
+    "value": "var(--kZVnPI)",
+    "variable": "var(--kZVnPI)"
+  },
+  "colors.colorPalette.info.softBorder": {
+    "value": "var(--byApbM)",
+    "variable": "var(--byApbM)"
   },
   "colors.colorPalette.sub": {
     "value": "var(--lfBWZt)",

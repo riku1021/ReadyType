@@ -16,6 +16,8 @@ const baseColors = {
     error: "#f8313e",
     /** 緊急・今日・推奨など。error ではない強調 */
     attention: "#f8313e",
+    /** 情報・ヘルプ。 */
+    info: "#1F76FB",
   },
   neutral: {
     white: "#ffffff",
@@ -44,6 +46,7 @@ export const colorTokens = {
     warning: createColorSurface(baseColors.status.warning),
     error: createColorSurface(baseColors.status.error),
     attention: createColorSurface(baseColors.status.attention),
+    info: createColorSurface(baseColors.status.info),
   },
 
   // 基本カラー

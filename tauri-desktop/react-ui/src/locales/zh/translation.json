@@ -108,6 +108,7 @@
     "notFound": "找不到指定应用的设置。",
     "defaultInputLanguage": "默认输入语言",
     "defaultInputLanguageNone": "不设置默认输入语言",
+    "defaultInputLanguageHelp": "此应用中所有输入区域使用的默认语言。若只想更改特定输入区域，请添加个别规则。",
     "contextualRules": "个别规则",
     "columnRule": "规则",
     "columnInputLanguage": "输入语言",
@@ -119,8 +120,7 @@
     "deleteRuleConfirmText": "将删除“{{title}}”。此操作无法撤销。",
     "deleteRuleConfirmButton": "删除",
     "deleteRuleSuccess": "已删除“{{title}}”",
-    "emptyContextualRules": "没有个别规则。",
-    "kindDisplayNote": "Chat / Editor / Terminal 仅为便于理解的显示，实际判定依据各规则的条件（AX）。"
+    "emptyContextualRules": "没有个别规则。"
   },
   "diagnostics": {
     "copyLogs": "复制日志",

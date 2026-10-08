@@ -277,6 +277,10 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
               void setDefaultInputLanguage(value);
             }}
           />
+          <div className={styles.fieldHelp}>
+            <IoInformationCircle className={styles.fieldHelpIcon} aria-hidden="true" />
+            <span>{t("apps.defaultInputLanguageHelp")}</span>
+          </div>
         </div>
       </SettingsSection>
 
@@ -291,11 +295,6 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
         rowClassName={() => styles.row}
         emptyMessage={t("apps.emptyContextualRules")}
       />
-
-      <div className={styles.infoBox}>
-        <IoInformationCircle className={styles.infoIcon} aria-hidden="true" />
-        <span>{t("apps.kindDisplayNote")}</span>
-      </div>
 
       <AlertDialog
         isOpen={pendingDelete !== null}

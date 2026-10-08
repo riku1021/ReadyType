@@ -108,6 +108,7 @@
     "notFound": "Settings for the specified app were not found.",
     "defaultInputLanguage": "Default input language",
     "defaultInputLanguageNone": "Do not set a default input language",
+    "defaultInputLanguageHelp": "The default language used for all input fields in this app. To change only specific fields, add individual rules.",
     "contextualRules": "Field rules",
     "columnRule": "Rule",
     "columnInputLanguage": "Input language",
@@ -119,8 +120,7 @@
     "deleteRuleConfirmText": "“{{title}}” will be deleted. This cannot be undone.",
     "deleteRuleConfirmButton": "Delete",
     "deleteRuleSuccess": "Deleted “{{title}}”",
-    "emptyContextualRules": "No field rules.",
-    "kindDisplayNote": "Chat / Editor / Terminal labels are for readability; matching uses each rule's AX conditions."
+    "emptyContextualRules": "No field rules."
   },
   "diagnostics": {
     "copyLogs": "Copy logs",

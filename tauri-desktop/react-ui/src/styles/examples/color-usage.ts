@@ -94,6 +94,9 @@ export const colorValues = {
   warningColor: "colors.status.warning.main",
   errorColor: "colors.status.error.main",
   attentionColor: "colors.status.attention.main",
+  infoColor: "colors.status.info.main",
+  infoSoft: "colors.status.info.soft",
+  infoSoftBorder: "colors.status.info.softBorder",
 
   // テーマ対応カラーの値を取得
   textMain: "colors.text.main",
