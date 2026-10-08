@@ -12,7 +12,7 @@ alwaysApply: false
 | 項目 | 内容 |
 |------|------|
 | Runner | `cargo test` |
-| ユニット配置 | **モジュール隣接** `#[cfg(test)] mod tests`（公式デフォルト。`src` 内） |
+| ユニット配置 | **モジュール隣接** `foo/mod.rs` + `foo/tests.rs`（`#[cfg(test)] mod tests;`。`src` 内） |
 | 統合配置 | クレート直下 `tests/*.rs`（**公開 API のみ**。別クレート扱い） |
 | Mock | 手書きテストダブル、または必要なら mockall 等（追加は承認必須） |
 
@@ -53,33 +53,37 @@ cd tauri-desktop && cargo test
 
 ### ユニット（推奨・デフォルト）
 
-対象コードと**同じファイル**（または同じモジュール配下の `tests.rs`）に置く。`use super::*` で private を検証できる。
-
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parse_rejects_empty() {
-        assert!(GuestName::parse("").is_err());
-        assert!(GuestName::parse("   ").is_err());
-    }
-
-    #[test]
-    fn parse_trims_and_accepts() {
-        let name = GuestName::parse("  Alice  ").expect("valid");
-        assert_eq!(name.as_str(), "Alice");
-    }
-}
-```
-
-ファイルが長くなったら、モジュール分割を優先する。どうしてもテストだけ切り出す場合は **同じモジュール内**で:
+対象モジュールと**隣接する `tests.rs`** に置く。`use super::*` で private を検証できる。
 
 ```text
 src/foo/
-  mod.rs          # 本番
-  tests.rs        # #[cfg(test)] mod tests; から読む（まだクレート内部）
+  mod.rs              # 本番
+  tests.rs            # #[cfg(test)] mod tests; から読む（クレート内部）
+```
+
+本番側（`mod.rs`）:
+
+```rust
+#[cfg(test)]
+mod tests;
+```
+
+`tests.rs`:
+
+```rust
+use super::*;
+
+#[test]
+fn parse_rejects_empty() {
+    assert!(GuestName::parse("").is_err());
+    assert!(GuestName::parse("   ").is_err());
+}
+
+#[test]
+fn parse_trims_and_accepts() {
+    let name = GuestName::parse("  Alice  ").expect("valid");
+    assert_eq!(name.as_str(), "Alice");
+}
 ```
 
 空の `rust-native/tests/` を先に作らない。

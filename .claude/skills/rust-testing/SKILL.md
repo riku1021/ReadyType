@@ -11,7 +11,7 @@ description: >-
 
 ## 優先順位
 
-1. domain / use case の純粋ロジック（**ソース隣接** `#[cfg(test)]`）
+1. domain / use case の純粋ロジック（**ソース隣接** `foo/mod.rs` + `foo/tests.rs`）
 2. port は Fake / ダブルで差し替え
 3. Tauri コマンドは薄いので最小限
 4. UI / IPC の見た目側は Vitest（フロント）
@@ -27,21 +27,27 @@ cargo clippy --all-targets -- -D warnings
 
 ## テンプレ（隣接テスト）
 
+本番側（`foo/mod.rs`）:
+
 ```rust
 #[cfg(test)]
-mod tests {
-    use super::*;
+mod tests;
+```
 
-    #[test]
-    fn parse_rejects_empty() {
-        assert!(GuestName::parse("").is_err());
-    }
+`foo/tests.rs`:
 
-    #[test]
-    fn parse_accepts_trimmed() {
-        let name = GuestName::parse("  A  ").expect("ok");
-        assert_eq!(name.as_str(), "A");
-    }
+```rust
+use super::*;
+
+#[test]
+fn parse_rejects_empty() {
+    assert!(GuestName::parse("").is_err());
+}
+
+#[test]
+fn parse_accepts_trimmed() {
+    let name = GuestName::parse("  A  ").expect("ok");
+    assert_eq!(name.as_str(), "A");
 }
 ```
 

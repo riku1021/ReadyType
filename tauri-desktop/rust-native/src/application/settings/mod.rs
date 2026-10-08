@@ -1,0 +1,186 @@
+use std::collections::BTreeMap;
+
+use crate::application::tray_strings::{self, map_language_tag};
+use crate::domain::{
+    errors::DomainError,
+    input_source::{default_rules, FocusRule, InputSourceId, LanguageTag, RuleSet},
+};
+
+pub use crate::application::tray_strings::{
+    DEFAULT_RESOLVED_UI_LOCALE, DEFAULT_UI_LOCALE_PREFERENCE,
+};
+
+pub const CURRENT_SCHEMA_VERSION: u32 = 1;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SwitcherSettings {
+    pub schema_version: u32,
+    pub enabled: bool,
+    /// Per-language preferred input source. `None` value = unset.
+    /// Empty map = not yet seeded from OS (see `seed_language_preferences_from_sources`).
+    pub language_preferences: BTreeMap<LanguageTag, Option<InputSourceId>>,
+    pub rules: Vec<FocusRule>,
+    pub debug_logging: bool,
+    pub snoozed_until_unix_ms: Option<u64>,
+    /// UI language preference (`system` | tray.json pack code).
+    pub ui_locale: String,
+}
+
+impl SwitcherSettings {
+    pub fn defaults() -> Self {
+        Self {
+            schema_version: CURRENT_SCHEMA_VERSION,
+            enabled: true,
+            language_preferences: BTreeMap::new(),
+            rules: default_rules(),
+            debug_logging: false,
+            snoozed_until_unix_ms: None,
+            ui_locale: DEFAULT_UI_LOCALE_PREFERENCE.to_owned(),
+        }
+    }
+
+    pub fn preferred(&self, tag: &LanguageTag) -> Option<&InputSourceId> {
+        self.language_preferences
+            .get(tag)
+            .and_then(|value| value.as_ref())
+    }
+
+    /// Normalize a stored preference to `system` or a tray-supported UI pack.
+    pub fn normalize_ui_locale(locale: &str) -> String {
+        if locale == "system" || tray_strings::is_supported_ui_locale(locale) {
+            return locale.to_owned();
+        }
+        DEFAULT_UI_LOCALE_PREFERENCE.to_owned()
+    }
+
+    /// Resolve preference to a concrete UI language pack.
+    pub fn resolve_ui_locale(preference: &str) -> String {
+        let normalized = Self::normalize_ui_locale(preference);
+        if tray_strings::is_supported_ui_locale(&normalized) {
+            return normalized;
+        }
+        resolve_os_ui_locale()
+    }
+
+    pub fn validate(&self) -> Result<(), DomainError> {
+        if self.schema_version != CURRENT_SCHEMA_VERSION {
+            return Err(DomainError::InvalidInput(format!(
+                "unsupported settings schema version: {}",
+                self.schema_version
+            )));
+        }
+        RuleSet::new(self.rules.clone())?;
+        Ok(())
+    }
+}
+
+/// OS 駆動の初期シード。言語ホワイトリストは持たない。
+/// 現在の入力ソースの言語を 1 スロット。無ければ一覧の先頭言語グループを 1 つ。
+pub fn seed_language_preferences_from_sources(
+    sources: &[crate::application::ports::input_source::AvailableInputSource],
+    current: Option<&InputSourceId>,
+) -> BTreeMap<LanguageTag, Option<InputSourceId>> {
+    let by_language = group_sources_by_language(sources);
+
+    let mut preferences = BTreeMap::new();
+    if let Some(current_id) = current {
+        if let Some(current_source) = sources.iter().find(|source| &source.id == current_id) {
+            if let Some(code) = current_source.language_code.as_deref() {
+                if let Ok(tag) = LanguageTag::parse(code) {
+                    if let Some(group) = by_language.get(&tag) {
+                        preferences.insert(tag, pick_default_source_id(group));
+                        return preferences;
+                    }
+                }
+            }
+        }
+    }
+
+    if let Some((tag, group)) = by_language.into_iter().next() {
+        preferences.insert(tag, pick_default_source_id(&group));
+    }
+    preferences
+}
+
+/// OS 一覧と突き合わせ、消失・言語不一致の preference を差し替える。
+pub fn reconcile_language_preferences(
+    preferences: &BTreeMap<LanguageTag, Option<InputSourceId>>,
+    sources: &[crate::application::ports::input_source::AvailableInputSource],
+) -> BTreeMap<LanguageTag, Option<InputSourceId>> {
+    let by_language = group_sources_by_language(sources);
+    let mut result = BTreeMap::new();
+    for (tag, preferred) in preferences {
+        let still_valid = preferred.as_ref().is_some_and(|id| {
+            sources.iter().any(|source| {
+                source.available
+                    && &source.id == id
+                    && source
+                        .language_code
+                        .as_deref()
+                        .and_then(|code| LanguageTag::parse(code).ok())
+                        .as_ref()
+                        == Some(tag)
+            })
+        });
+        if still_valid {
+            result.insert(tag.clone(), preferred.clone());
+        } else {
+            let replacement = by_language
+                .get(tag)
+                .and_then(|group| pick_default_source_id(group));
+            result.insert(tag.clone(), replacement);
+        }
+    }
+    result
+}
+
+pub(crate) fn group_sources_by_language(
+    sources: &[crate::application::ports::input_source::AvailableInputSource],
+) -> BTreeMap<LanguageTag, Vec<&crate::application::ports::input_source::AvailableInputSource>> {
+    let mut by_language: BTreeMap<
+        LanguageTag,
+        Vec<&crate::application::ports::input_source::AvailableInputSource>,
+    > = BTreeMap::new();
+    for source in sources {
+        let Some(code) = source.language_code.as_deref() else {
+            continue;
+        };
+        let Ok(tag) = LanguageTag::parse(code) else {
+            continue;
+        };
+        by_language.entry(tag).or_default().push(source);
+    }
+    by_language
+}
+
+pub(crate) fn pick_default_source_id(
+    group: &[&crate::application::ports::input_source::AvailableInputSource],
+) -> Option<InputSourceId> {
+    let available = group
+        .iter()
+        .copied()
+        .filter(|source| source.available)
+        .collect::<Vec<_>>();
+    available
+        .iter()
+        .find(|source| !crate::domain::input_source::is_ime_latin_mode(source.id.as_str()))
+        .or_else(|| available.first())
+        .map(|source| source.id.clone())
+}
+
+fn resolve_os_ui_locale() -> String {
+    for tag in sys_locale::get_locales() {
+        if let Some(resolved) = map_language_tag(&tag) {
+            return resolved.to_owned();
+        }
+    }
+    if let Some(tag) = sys_locale::get_locale() {
+        if let Some(resolved) = map_language_tag(&tag) {
+            return resolved.to_owned();
+        }
+    }
+    DEFAULT_RESOLVED_UI_LOCALE.to_owned()
+}
+
+#[cfg(test)]
+mod tests;
