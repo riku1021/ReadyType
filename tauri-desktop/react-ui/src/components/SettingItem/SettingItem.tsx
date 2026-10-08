@@ -4,6 +4,7 @@ import { FiExternalLink } from "react-icons/fi";
 import { IoChevronForward } from "react-icons/io5";
 import { MdUnfoldMore } from "react-icons/md";
 
+import { Button } from "@/components/Button";
 import { SelectionMenu } from "@/components/SelectionMenu";
 import { Toggle } from "@/components/Toggle";
 import { cx } from "@/styled-system/css";
@@ -11,8 +12,9 @@ import { cx } from "@/styled-system/css";
 import * as styles from "./SettingItem.styles";
 
 type SettingItemBase = {
-  icon: IconType;
+  icon?: IconType;
   title: string;
+  description?: string;
   danger?: boolean;
 };
 
@@ -45,12 +47,21 @@ type ActionSettingItem = SettingItemBase & {
   onClick?: () => void;
 };
 
+/** 行全体は非インタラクティブ。末尾の Button で操作する */
+type ButtonSettingItem = SettingItemBase & {
+  type: "button";
+  buttonLabel: string;
+  onClick: () => void;
+  disabled?: boolean;
+};
+
 export type SettingItemProps =
   | NavigationSettingItem
   | ExternalLinkSettingItem
   | SelectionSettingItem
   | ToggleSettingItem
-  | ActionSettingItem;
+  | ActionSettingItem
+  | ButtonSettingItem;
 
 function renderTrailing(props: SettingItemProps) {
   switch (props.type) {
@@ -83,27 +94,38 @@ function renderTrailing(props: SettingItemProps) {
           aria-label={props.title}
         />
       );
+    case "button":
+      return (
+        <Button variant="neutral" disabled={props.disabled} onClick={props.onClick}>
+          {props.buttonLabel}
+        </Button>
+      );
     case "action":
       return null;
   }
 }
 
 export function SettingItem(props: SettingItemProps) {
-  const { icon: Icon, title, danger = false, type } = props;
+  const { icon: Icon, title, description, danger = false, type } = props;
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const content = (
     <>
-      <span className={cx(styles.icon, danger ? styles.iconError : undefined)} aria-hidden>
-        <Icon />
+      {Icon ? (
+        <span className={cx(styles.icon, danger ? styles.iconError : undefined)} aria-hidden>
+          <Icon />
+        </span>
+      ) : null}
+      <span className={styles.textStack}>
+        <span className={cx(styles.title, danger ? styles.titleError : undefined)}>{title}</span>
+        {description ? <span className={styles.description}>{description}</span> : null}
       </span>
-      <span className={cx(styles.title, danger ? styles.titleError : undefined)}>{title}</span>
       {renderTrailing(props)}
     </>
   );
 
-  if (type === "toggle") {
+  if (type === "toggle" || type === "button") {
     return <div className={styles.row({ density: "compact", interactive: false })}>{content}</div>;
   }
 

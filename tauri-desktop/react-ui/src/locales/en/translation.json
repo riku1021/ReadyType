@@ -142,9 +142,14 @@
     "logSkipped": "Skipped"
   },
   "update": {
-    "heading": "Updates",
-    "lead": "Update checks and release notes will be added here."
+    "autoCheck": "Automatically check for updates",
+    "autoDownload": "Automatically download updates",
+    "checkNow": "Check for Updates Now",
+    "lastChecked": "Last checked: {{datetime}}",
+    "checkButton": "Check for Updates...",
+    "checking": "Checking..."
   },
+
   "lab": {
     "heading": "Lab",
     "lead": "Page for verifying shared components and in-app input-source auto-switching.",

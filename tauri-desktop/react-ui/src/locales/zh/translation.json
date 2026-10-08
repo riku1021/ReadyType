@@ -142,9 +142,14 @@
     "logSkipped": "未执行"
   },
   "update": {
-    "heading": "更新",
-    "lead": "应用更新检查与发布说明将陆续添加到此处。"
+    "autoCheck": "自动检查更新",
+    "autoDownload": "自动下载更新",
+    "checkNow": "立即检查更新",
+    "lastChecked": "上次检查: {{datetime}}",
+    "checkButton": "检查更新...",
+    "checking": "正在检查..."
   },
+
   "lab": {
     "heading": "开发确认",
     "lead": "用于确认共用组件，以及在本应用内测试输入源自动切换。",

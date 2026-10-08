@@ -69,15 +69,26 @@ export const iconError = css({
   color: "status.error.main",
 });
 
-export const title = css({
+export const textStack = css({
+  display: "flex",
+  flexDirection: "column",
   flex: "1",
   minWidth: "0",
+  gap: "2px",
+});
+
+export const title = css({
   fontSize: "base",
   color: "text.main",
 });
 
 export const titleError = css({
   color: "status.error.main",
+});
+
+export const description = css({
+  fontSize: "sm",
+  color: "text.placeholder",
 });
 
 export const trailing = css({
