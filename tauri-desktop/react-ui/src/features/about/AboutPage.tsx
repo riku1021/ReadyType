@@ -3,17 +3,19 @@ import { isTauri } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FaFileShield } from "react-icons/fa6";
-import { MdDescription, MdMailOutline } from "react-icons/md";
+import { FaFileShield, FaYoutube } from "react-icons/fa6";
+import { MdDescription, MdMailOutline, MdPublic } from "react-icons/md";
 
 import { SettingItem } from "@/components/SettingItem";
 import { SettingsSection } from "@/components/SettingsSection";
 
 import * as styles from "./AboutPage.styles";
 import {
+  ABOUT_INTRO_VIDEO_URL,
   ABOUT_PRIVACY_POLICY_URL,
   ABOUT_SUPPORT_MAILTO,
   ABOUT_TERMS_OF_USE_URL,
+  ABOUT_WEBSITE_URL,
 } from "./placeholders";
 
 async function openExternal(url: string): Promise<void> {
@@ -61,6 +63,22 @@ export function AboutPage() {
       </header>
 
       <SettingsSection>
+        <SettingItem
+          icon={MdPublic}
+          title={t("about.website")}
+          type="externalLink"
+          onClick={() => {
+            void openExternal(ABOUT_WEBSITE_URL);
+          }}
+        />
+        <SettingItem
+          icon={FaYoutube}
+          title={t("about.introVideo")}
+          type="externalLink"
+          onClick={() => {
+            void openExternal(ABOUT_INTRO_VIDEO_URL);
+          }}
+        />
         <SettingItem
           icon={FaFileShield}
           title={t("about.privacyPolicy")}

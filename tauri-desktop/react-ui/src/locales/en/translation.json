@@ -228,6 +228,8 @@
     "appName": "ReadyType",
     "version": "v{{version}}",
     "copyright": "© 2026 ReadyType",
+    "website": "Website",
+    "introVideo": "Introduction Video",
     "privacyPolicy": "Privacy Policy",
     "termsOfUse": "Terms of Use",
     "support": "Support",
