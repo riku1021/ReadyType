@@ -1,11 +1,13 @@
 use super::{
-    reconcile_language_preferences, seed_language_preferences_from_sources, SwitcherSettings,
-    CURRENT_SCHEMA_VERSION, DEFAULT_UI_LOCALE_PREFERENCE,
+    ensure_preferences_for_rule_languages, reconcile_language_preferences,
+    seed_language_preferences_from_sources, SwitcherSettings, CURRENT_SCHEMA_VERSION,
+    DEFAULT_UI_LOCALE_PREFERENCE,
 };
 use crate::{
     application::ports::input_source::AvailableInputSource,
     domain::input_source::{
-        canonicalize_language_codes_by_family, is_ime_latin_mode, InputSourceId, LanguageTag,
+        canonicalize_language_codes_by_family, is_ime_latin_mode, FocusRule, InputSourceId,
+        LanguageTag, Platform, RuleTarget,
     },
 };
 
@@ -130,6 +132,91 @@ fn family_canonicalization_maps_ime_latin_modes_without_language_whitelist() {
     assert_eq!(entries[3].1.as_deref(), Some("ko"));
     assert_eq!(entries[4].1.as_deref(), Some("ko")); // Korean IME latin → ko
     assert_eq!(entries[5].1.as_deref(), Some("fr"));
+}
+
+#[test]
+fn ensure_preferences_fills_missing_rule_languages_without_touching_existing() {
+    let abc = InputSourceId::parse("com.apple.keylayout.ABC").expect("abc");
+    let base = InputSourceId::parse("com.google.inputmethod.Japanese.base").expect("base");
+    let mut preferences = std::collections::BTreeMap::new();
+    preferences.insert(LanguageTag::en(), Some(abc.clone()));
+
+    let sources = vec![
+        AvailableInputSource {
+            id: abc.clone(),
+            name: "ABC".to_owned(),
+            language_code: Some("en".to_owned()),
+            available: true,
+        },
+        AvailableInputSource {
+            id: base.clone(),
+            name: "Hiragana".to_owned(),
+            language_code: Some("ja".to_owned()),
+            available: true,
+        },
+    ];
+    let rules = vec![
+        FocusRule::new(
+            "en-rule",
+            "EN",
+            true,
+            Platform::MacOs,
+            "com.example.en",
+            0,
+            Vec::new(),
+            RuleTarget::PreferredLanguage(LanguageTag::en()),
+        )
+        .expect("en rule"),
+        FocusRule::new(
+            "ja-rule",
+            "JA",
+            true,
+            Platform::MacOs,
+            "com.example.ja",
+            1,
+            Vec::new(),
+            RuleTarget::PreferredLanguage(LanguageTag::ja()),
+        )
+        .expect("ja rule"),
+    ];
+
+    let ensured = ensure_preferences_for_rule_languages(&preferences, &sources, &rules);
+    assert_eq!(
+        ensured.get(&LanguageTag::en()).cloned().flatten(),
+        Some(abc)
+    );
+    assert_eq!(
+        ensured.get(&LanguageTag::ja()).cloned().flatten(),
+        Some(base)
+    );
+}
+
+#[test]
+fn ensure_preferences_leaves_explicit_unset_alone() {
+    let base = InputSourceId::parse("com.google.inputmethod.Japanese.base").expect("base");
+    let mut preferences = std::collections::BTreeMap::new();
+    preferences.insert(LanguageTag::ja(), None);
+
+    let sources = vec![AvailableInputSource {
+        id: base,
+        name: "Hiragana".to_owned(),
+        language_code: Some("ja".to_owned()),
+        available: true,
+    }];
+    let rules = vec![FocusRule::new(
+        "ja-rule",
+        "JA",
+        true,
+        Platform::MacOs,
+        "com.example.ja",
+        0,
+        Vec::new(),
+        RuleTarget::PreferredLanguage(LanguageTag::ja()),
+    )
+    .expect("ja rule")];
+
+    let ensured = ensure_preferences_for_rule_languages(&preferences, &sources, &rules);
+    assert_eq!(ensured.get(&LanguageTag::ja()).cloned().flatten(), None);
 }
 
 #[test]

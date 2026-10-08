@@ -122,7 +122,7 @@ where
         let list_locale = SwitcherSettings::resolve_ui_locale(&settings.ui_locale);
         if let Ok(mut guard) = gateway.lock() {
             if let Ok(sources) = guard.list(false, &list_locale) {
-                let next_preferences = if settings.language_preferences.is_empty() {
+                let seeded_or_reconciled = if settings.language_preferences.is_empty() {
                     let current = guard.current().ok();
                     super::settings::seed_language_preferences_from_sources(
                         &sources,
@@ -134,6 +134,11 @@ where
                         &sources,
                     )
                 };
+                let next_preferences = super::settings::ensure_preferences_for_rule_languages(
+                    &seeded_or_reconciled,
+                    &sources,
+                    &settings.rules,
+                );
                 if !next_preferences.is_empty() && next_preferences != settings.language_preferences
                 {
                     settings.language_preferences = next_preferences;

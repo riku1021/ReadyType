@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use crate::application::tray_strings::{self, map_language_tag};
 use crate::domain::{
     errors::DomainError,
-    input_source::{default_rules, FocusRule, InputSourceId, LanguageTag, RuleSet},
+    input_source::{default_rules, FocusRule, InputSourceId, LanguageTag, RuleSet, RuleTarget},
 };
 
 pub use crate::application::tray_strings::{
@@ -130,6 +130,30 @@ pub fn reconcile_language_preferences(
                 .and_then(|group| pick_default_source_id(group));
             result.insert(tag.clone(), replacement);
         }
+    }
+    result
+}
+
+/// ルールが参照する PreferredLanguage で、preference にキーが無い言語を OS から埋める。
+/// 既存キー（明示的な unset 含む）は触らない。シードが 1 言語だけのとき ja ルール等が空解決になるのを防ぐ。
+pub fn ensure_preferences_for_rule_languages(
+    preferences: &BTreeMap<LanguageTag, Option<InputSourceId>>,
+    sources: &[crate::application::ports::input_source::AvailableInputSource],
+    rules: &[FocusRule],
+) -> BTreeMap<LanguageTag, Option<InputSourceId>> {
+    let by_language = group_sources_by_language(sources);
+    let mut result = preferences.clone();
+    for rule in rules {
+        let RuleTarget::PreferredLanguage(tag) = rule.target() else {
+            continue;
+        };
+        if result.contains_key(tag) {
+            continue;
+        }
+        let picked = by_language
+            .get(tag)
+            .and_then(|group| pick_default_source_id(group));
+        result.insert(tag.clone(), picked);
     }
     result
 }

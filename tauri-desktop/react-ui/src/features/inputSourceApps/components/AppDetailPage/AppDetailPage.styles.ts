@@ -15,6 +15,17 @@ export const detailHeader = css({
   justifyContent: "space-between",
   gap: "sm",
   flexShrink: "0",
+  paddingInline: "sm",
+  paddingBlock: "sm",
+});
+
+/** カード内のサブセクション（デフォルト入力言語など） */
+export const cardSection = css({
+  display: "flex",
+  flexDirection: "column",
+  gap: "xs",
+  paddingInline: "sm",
+  paddingBlock: "sm",
 });
 
 export const detailIdentity = css({
@@ -45,13 +56,6 @@ export const detailPath = css({
   wordBreak: "break-all",
 });
 
-export const sectionHeader = css({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: "sm",
-});
-
 export const fieldBlock = css({
   display: "flex",
   flexDirection: "column",
@@ -64,12 +68,6 @@ export const fieldLabel = css({
   fontSize: "sm",
   fontWeight: "semibold",
   color: "text.main",
-});
-
-export const fieldHelp = css({
-  margin: "0",
-  fontSize: "xs",
-  color: "text.secondary",
 });
 
 export const infoBox = css({

@@ -1,15 +1,17 @@
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { IoAdd, IoEllipsisHorizontal, IoInformationCircle } from "react-icons/io5";
+import { IoEllipsisHorizontal, IoInformationCircle } from "react-icons/io5";
 
-import { Button } from "@/components/Button";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { AlertDialog, SuccessDialog } from "@/components/Dialog";
 import { SelectionMenu } from "@/components/SelectionMenu";
+import { SettingsSection } from "@/components/SettingsSection";
 import { Toggle } from "@/components/Toggle";
 import {
   buildInputSourceOptions,
   type InputSourceDto,
+  type Platform,
   type RuleDto,
   useInputSourceState,
 } from "@/features/inputSource";
@@ -71,9 +73,18 @@ function RuleActionsMenu({ title, onDelete }: { title: string; onDelete: () => v
   );
 }
 
+function sanitizeRuleIdPart(value: string): string {
+  return value.replace(/[^a-zA-Z0-9._-]+/g, "-");
+}
+
+function resolveAppPlatform(rules: readonly RuleDto[], appId: string): Platform {
+  return rules.find((rule) => rule.appId === appId)?.platform ?? "macOs";
+}
+
 export function AppDetailPage({ appId }: AppDetailPageProps) {
   const { t, i18n } = useTranslation();
-  const { state, updateRule, deleteRule, fetchInputSources } = useInputSourceState();
+  const navigate = useNavigate();
+  const { state, createRule, updateRule, deleteRule, fetchInputSources } = useInputSourceState();
   const rules = state?.rules ?? [];
   const groups = useMemo(() => groupRulesByApp(rules, t), [rules, t]);
   const selectedBase = groups.find((group) => group.appId === appId) ?? null;
@@ -142,6 +153,40 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
     await updateRule({ ...rule, target });
   };
 
+  const setDefaultInputLanguage = async (inputSourceId: string) => {
+    if (!selected) {
+      return;
+    }
+    if (inputSourceId.length === 0) {
+      if (!selected.defaultRule) {
+        return;
+      }
+      const onlyRuleForApp =
+        selected.contextualRules.length === 0 &&
+        rules.filter((rule) => rule.appId === selected.appId).length === 1;
+      await deleteRule(selected.defaultRule.id);
+      if (onlyRuleForApp) {
+        void navigate({ to: "/apps" });
+      }
+      return;
+    }
+    if (selected.defaultRule) {
+      await setRuleTarget(selected.defaultRule, inputSourceId);
+      return;
+    }
+    const target = ruleTargetFromInputSourceId(inputSourceId, languagePreferences);
+    await createRule({
+      id: `app-default-${sanitizeRuleIdPart(selected.appId)}-${Date.now()}`,
+      name: t("rules.defaultTitle"),
+      enabled: selected.enabled,
+      platform: resolveAppPlatform(rules, selected.appId),
+      appId: selected.appId,
+      priority: 0,
+      conditions: [],
+      target,
+    });
+  };
+
   const ruleColumns: DataTableColumn<RuleDisplay>[] = [
     {
       id: "rule",
@@ -199,53 +244,44 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
 
   return (
     <section className={styles.page} aria-label={t("apps.detailAria")}>
-      <div className={styles.detailHeader}>
-        <div className={styles.detailIdentity}>
-          <AppIconView src={presentations[selected.appId]?.icon} label={selected.label} large />
-          <div className={styles.detailTitleBlock}>
-            <h2 className={styles.detailName}>{selected.label}</h2>
-            <p className={styles.detailPath}>{selected.appId}</p>
+      <SettingsSection>
+        <div className={styles.detailHeader}>
+          <div className={styles.detailIdentity}>
+            <AppIconView src={presentations[selected.appId]?.icon} label={selected.label} large />
+            <div className={styles.detailTitleBlock}>
+              <h2 className={styles.detailName}>{selected.label}</h2>
+              <p className={styles.detailPath}>{selected.appId}</p>
+            </div>
           </div>
+          <Toggle
+            checked={selected.enabled}
+            aria-label={t("common.enableAppAria", { label: selected.label })}
+            onChange={(enabled) => {
+              void setAppEnabled(selected, enabled);
+            }}
+          />
         </div>
-        <Toggle
-          checked={selected.enabled}
-          aria-label={t("common.enableAppAria", { label: selected.label })}
-          onChange={(enabled) => {
-            void setAppEnabled(selected, enabled);
-          }}
-        />
-      </div>
-
-      {selected.defaultRule ? (
-        <div className={styles.fieldBlock}>
+        <div className={styles.cardSection}>
           <p className={styles.fieldLabel}>{t("apps.defaultInputLanguage")}</p>
-          <p className={styles.fieldHelp}>{t("apps.defaultInputLanguageHelp")}</p>
           <LanguageSelect
-            value={resolvedInputSourceId(selected.defaultRule.target, languagePreferences)}
+            value={
+              selected.defaultRule
+                ? resolvedInputSourceId(selected.defaultRule.target, languagePreferences)
+                : ""
+            }
             label={t("apps.defaultInputLanguage")}
             options={languageOptions}
             wide
+            noneLabel={t("apps.defaultInputLanguageNone")}
             onChange={(value) => {
-              if (selected.defaultRule) {
-                void setRuleTarget(selected.defaultRule, value);
-              }
+              void setDefaultInputLanguage(value);
             }}
           />
-          <div className={styles.infoBox}>
-            <IoInformationCircle className={styles.infoIcon} aria-hidden="true" />
-            <span>{t("apps.contextualOverrideNote")}</span>
-          </div>
         </div>
-      ) : null}
+      </SettingsSection>
 
       <div className={styles.fieldBlock}>
-        <div className={styles.sectionHeader}>
-          <p className={styles.fieldLabel}>{t("apps.contextualRules")}</p>
-          <Button variant="secondary" iconLeft={<IoAdd />} onClick={() => undefined} disabled>
-            {t("apps.addRule")}
-          </Button>
-        </div>
-        <p className={styles.fieldHelp}>{t("apps.contextualRulesHelp")}</p>
+        <p className={styles.fieldLabel}>{t("apps.contextualRules")}</p>
       </div>
 
       <DataTable

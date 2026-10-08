@@ -93,18 +93,25 @@ export function LanguageSelect({
   options,
   onChange,
   wide = false,
+  noneLabel,
 }: {
   value: string;
   label: string;
   options: readonly InputSourceOption[];
   onChange: (value: string) => void;
   wide?: boolean;
+  /** 指定時、value="" の「設定しない」相当を選択肢に含める（選択中は常に最上段） */
+  noneLabel?: string;
 }) {
   const visibleOptions = visibleInputSourceOptions(options, value);
   const selected = visibleOptions.find((option) => option.value === value);
-  const pinned =
+  const languagePinned =
     selected ?? (value.length > 0 ? { value, label: value, available: false as const } : null);
-  const others = visibleOptions.filter((option) => option.value !== value);
+  const languageOthers = visibleOptions.filter((option) => option.value !== value);
+  const noneOption = noneLabel != null ? { value: "", label: noneLabel } : null;
+  const noneSelected = noneOption != null && value.length === 0;
+  const pinned = noneSelected ? noneOption : languagePinned;
+  const others = [...(noneOption != null && !noneSelected ? [noneOption] : []), ...languageOthers];
 
   return (
     <select
@@ -112,16 +119,16 @@ export function LanguageSelect({
       aria-label={label}
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      disabled={visibleOptions.length === 0 && !pinned}
+      disabled={visibleOptions.length === 0 && pinned == null}
     >
       {pinned ? (
-        <option key={pinned.value} value={pinned.value}>
+        <option key={pinned.value === "" ? "__none__" : pinned.value} value={pinned.value}>
           {pinned.label}
         </option>
       ) : null}
       {pinned && others.length > 0 ? <hr /> : null}
       {others.map((option) => (
-        <option key={option.value} value={option.value}>
+        <option key={option.value === "" ? "__none__" : option.value} value={option.value}>
           {option.label}
         </option>
       ))}
