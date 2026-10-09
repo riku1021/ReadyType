@@ -6,15 +6,24 @@ use tauri::{AppHandle, Emitter, State};
 use crate::{
     application::{
         ports::switcher_events::SwitcherEventPublisher,
+        settings::SwitcherSettings,
         switcher_controller::{ControllerError, SwitcherController},
         switcher_state::SwitcherState,
     },
     domain::input_source::FocusRule,
+    infrastructure::desktop::quick_set_shortcut,
     presentation::input_source_dto::{
         FocusSnapshotDto, InputSourceDto, PermissionDto, RuleDto, SettingsDto, StateDto,
         StateEventDto, SwitchLogDto,
     },
 };
+
+fn settings_dto_with_registration(app: &AppHandle, settings: &SwitcherSettings) -> SettingsDto {
+    let mut dto = SettingsDto::from(settings);
+    dto.quick_set_shortcut_registered =
+        quick_set_shortcut::is_registered(app, &settings.quick_set_shortcut);
+    dto
+}
 
 pub const STATE_EVENT_NAME: &str = "input-source-switcher://state";
 
@@ -184,11 +193,12 @@ pub fn reset_default_rules(
 
 #[tauri::command]
 pub fn get_input_source_settings(
+    app: AppHandle,
     controller: State<'_, Arc<SwitcherController>>,
 ) -> Result<SettingsDto, IpcError> {
     controller
         .settings()
-        .map(|settings| SettingsDto::from(&settings))
+        .map(|settings| settings_dto_with_registration(&app, &settings))
         .map_err(IpcError::from)
 }
 
@@ -256,12 +266,13 @@ pub fn set_debug_logging(
 #[tauri::command]
 pub fn set_ui_locale(
     locale: String,
+    app: AppHandle,
     controller: State<'_, Arc<SwitcherController>>,
 ) -> Result<SettingsDto, IpcError> {
     controller.set_ui_locale(&locale).map_err(IpcError::from)?;
     controller
         .settings()
-        .map(|settings| SettingsDto::from(&settings))
+        .map(|settings| settings_dto_with_registration(&app, &settings))
         .map_err(IpcError::from)
 }
 

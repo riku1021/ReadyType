@@ -84,6 +84,10 @@ export interface InputSourceSettingsDto {
   uiLocale: string;
   /** Resolved display language pack code */
   resolvedUiLocale: string;
+  /** Quick Set グローバルショートカット（Tauri accelerator） */
+  quickSetShortcut: string;
+  /** 起動時登録を含め、現在 OS に登録されているか */
+  quickSetShortcutRegistered: boolean;
 }
 
 export interface SwitchLogDto {

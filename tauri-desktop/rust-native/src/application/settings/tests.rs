@@ -1,7 +1,7 @@
 use super::{
     ensure_preferences_for_rule_languages, reconcile_language_preferences,
     seed_language_preferences_from_sources, SwitcherSettings, CURRENT_SCHEMA_VERSION,
-    DEFAULT_UI_LOCALE_PREFERENCE,
+    DEFAULT_QUICK_SET_SHORTCUT, DEFAULT_UI_LOCALE_PREFERENCE,
 };
 use crate::{
     application::ports::input_source::AvailableInputSource,
@@ -38,6 +38,7 @@ fn defaults_start_with_empty_language_preferences() {
     assert!(settings.language_preferences.is_empty());
     assert!(!settings.debug_logging);
     assert_eq!(settings.snoozed_until_unix_ms, None);
+    assert_eq!(settings.quick_set_shortcut, DEFAULT_QUICK_SET_SHORTCUT);
     assert_eq!(settings.ui_locale, DEFAULT_UI_LOCALE_PREFERENCE);
     assert!(settings.validate().is_ok());
 }

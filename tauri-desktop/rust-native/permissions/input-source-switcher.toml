@@ -36,4 +36,5 @@ commands.allow = [
   "apply_quick_set_source",
   "hide_quick_set",
   "open_quick_set_advanced",
+  "set_quick_set_shortcut",
 ]

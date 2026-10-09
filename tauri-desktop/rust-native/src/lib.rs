@@ -38,6 +38,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(autostart.build())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
             let config_directory = app.path().app_config_dir()?;
@@ -51,6 +52,7 @@ pub fn run() {
                 eprintln!("settings: {warning}");
             }
             let settings = load_outcome.settings().clone();
+            let quick_set_shortcut = settings.quick_set_shortcut.clone();
             let ui_locale_preference = settings.ui_locale.clone();
             let resolved_ui_locale =
                 application::settings::SwitcherSettings::resolve_ui_locale(&ui_locale_preference);
@@ -194,25 +196,11 @@ pub fn run() {
 
             let _ = infrastructure::desktop::quick_set_window::ensure_window(app.handle());
 
-            {
-                use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
-                let shortcut = "CommandOrControl+Alt+L"
-                    .parse::<Shortcut>()
-                    .map_err(|error| format!("invalid quick-set shortcut: {error}"))?;
-                let handle = app.handle().clone();
-                app.handle().global_shortcut().on_shortcut(
-                    shortcut,
-                    move |_app, _shortcut, event| {
-                        if event.state != ShortcutState::Pressed {
-                            return;
-                        }
-                        if let Err(error) =
-                            infrastructure::desktop::quick_set_window::open(&handle)
-                        {
-                            eprintln!("quick-set open failed: {error}");
-                        }
-                    },
-                )?;
+            if let Err(error) = infrastructure::desktop::quick_set_shortcut::register(
+                app.handle(),
+                &quick_set_shortcut,
+            ) {
+                eprintln!("quick-set shortcut: {error}");
             }
 
             Ok(())
@@ -272,6 +260,7 @@ pub fn run() {
             presentation::commands::quick_set::apply_quick_set_source,
             presentation::commands::quick_set::hide_quick_set,
             presentation::commands::quick_set::open_quick_set_advanced,
+            presentation::commands::quick_set_shortcut::set_quick_set_shortcut,
             presentation::commands::sync_window_chrome::sync_window_chrome_theme,
         ])
         .run(tauri::generate_context!())

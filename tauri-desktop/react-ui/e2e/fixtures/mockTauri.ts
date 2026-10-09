@@ -70,6 +70,18 @@ export async function installTauriMocks(page: Page): Promise<void> {
           return "granted";
         case "get_input_source_settings":
           return { ...data.settings };
+        case "set_quick_set_shortcut": {
+          const shortcut =
+            typeof args?.shortcut === "string" && args.shortcut.length > 0
+              ? args.shortcut
+              : data.settings.quickSetShortcut;
+          data.settings = {
+            ...data.settings,
+            quickSetShortcut: shortcut,
+            quickSetShortcutRegistered: true,
+          };
+          return shortcut;
+        }
         case "set_ui_locale": {
           const locale =
             typeof args?.locale === "string" && data.languagePreferences.includes(args.locale)

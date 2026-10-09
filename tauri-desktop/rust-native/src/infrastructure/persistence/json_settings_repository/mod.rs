@@ -170,6 +170,10 @@ fn default_ui_locale() -> String {
     crate::application::settings::DEFAULT_UI_LOCALE_PREFERENCE.to_owned()
 }
 
+fn default_quick_set_shortcut() -> String {
+    crate::application::settings::DEFAULT_QUICK_SET_SHORTCUT.to_owned()
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct SettingsDto {
@@ -188,6 +192,8 @@ struct SettingsDto {
     snoozed_until_unix_ms: Option<u64>,
     #[serde(default = "default_ui_locale")]
     ui_locale: String,
+    #[serde(default = "default_quick_set_shortcut")]
+    quick_set_shortcut: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -286,6 +292,7 @@ impl From<&SwitcherSettings> for SettingsDto {
             debug_logging: settings.debug_logging,
             snoozed_until_unix_ms: settings.snoozed_until_unix_ms,
             ui_locale: settings.ui_locale.clone(),
+            quick_set_shortcut: settings.quick_set_shortcut.clone(),
         }
     }
 }
@@ -295,6 +302,11 @@ impl TryFrom<SettingsDto> for SwitcherSettings {
 
     fn try_from(dto: SettingsDto) -> Result<Self, Self::Error> {
         let language_preferences = parse_language_preferences(&dto)?;
+        let quick_set_shortcut =
+            crate::application::quick_set_shortcut::normalize_quick_set_shortcut(
+                &dto.quick_set_shortcut,
+            )
+            .map_err(invalid_settings)?;
         let settings = Self {
             schema_version: dto.schema_version,
             enabled: dto.enabled,
@@ -307,6 +319,7 @@ impl TryFrom<SettingsDto> for SwitcherSettings {
             debug_logging: dto.debug_logging,
             snoozed_until_unix_ms: dto.snoozed_until_unix_ms,
             ui_locale: SwitcherSettings::normalize_ui_locale(&dto.ui_locale),
+            quick_set_shortcut,
         };
         settings.validate().map_err(invalid_settings)?;
         Ok(settings)

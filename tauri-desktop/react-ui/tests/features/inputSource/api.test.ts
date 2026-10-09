@@ -98,6 +98,8 @@ describe("input source IPC", () => {
           debugLogging: false,
           uiLocale: "ja",
           resolvedUiLocale: "ja",
+          quickSetShortcut: "CommandOrControl+Shift+L",
+          quickSetShortcutRegistered: true,
         };
       }
       if (command === "get_focus_snapshot" || command === "open_accessibility_settings") {

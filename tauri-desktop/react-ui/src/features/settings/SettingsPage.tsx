@@ -17,6 +17,7 @@ import {
   languageOptionLabels,
 } from "./languageLabels";
 import * as styles from "./SettingsPage.styles";
+import { ShortcutRecorder } from "./ShortcutRecorder";
 import { getThemeLabel, THEME_OPTIONS, themeFromTranslatedLabel } from "./themeLabels";
 
 export function SettingsPage() {
@@ -121,6 +122,10 @@ export function SettingsPage() {
               .finally(() => setPending(false));
           }}
         />
+      </SettingsSection>
+
+      <SettingsSection title={t("settings.sectionShortcuts")}>
+        <ShortcutRecorder />
       </SettingsSection>
 
       <SettingsSection title={t("settings.sectionOther")}>

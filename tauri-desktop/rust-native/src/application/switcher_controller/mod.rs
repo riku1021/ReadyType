@@ -445,6 +445,13 @@ impl SwitcherController {
         Ok(state)
     }
 
+    pub fn set_quick_set_shortcut(&self, shortcut: &str) -> Result<SwitcherState, ControllerError> {
+        self.mutate_switcher(|switcher| {
+            switcher.set_quick_set_shortcut(shortcut)?;
+            Ok(switcher.state().clone())
+        })
+    }
+
     pub fn focus_snapshot(&self) -> Result<Option<FocusSnapshot>, ControllerError> {
         Ok(self.lock_last_snapshot()?.clone())
     }

@@ -7,7 +7,11 @@ import { createRoot } from "react-dom/client";
 import { useInputSourceBootstrap } from "@/features/inputSource";
 import { useRevealMainWindow } from "@/hooks/useRevealMainWindow";
 import { useThemeManager } from "@/hooks/useThemeManager";
+import { getHostOs } from "@/platform";
 import { routeTree } from "@/routeTree.gen";
+
+// ホスト OS は起動時に1回取得してキャッシュ
+getHostOs();
 
 const router = createRouter({ routeTree });
 

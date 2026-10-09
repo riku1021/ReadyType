@@ -6,6 +6,7 @@ use crate::domain::{
     input_source::{default_rules, FocusRule, InputSourceId, LanguageTag, RuleSet, RuleTarget},
 };
 
+pub use crate::application::quick_set_shortcut::DEFAULT_QUICK_SET_SHORTCUT;
 pub use crate::application::tray_strings::{
     DEFAULT_RESOLVED_UI_LOCALE, DEFAULT_UI_LOCALE_PREFERENCE,
 };
@@ -24,6 +25,8 @@ pub struct SwitcherSettings {
     pub snoozed_until_unix_ms: Option<u64>,
     /// UI language preference (`system` | tray.json pack code).
     pub ui_locale: String,
+    /// Quick Set グローバルショートカット（Tauri accelerator 文字列）。
+    pub quick_set_shortcut: String,
 }
 
 impl SwitcherSettings {
@@ -36,6 +39,7 @@ impl SwitcherSettings {
             debug_logging: false,
             snoozed_until_unix_ms: None,
             ui_locale: DEFAULT_UI_LOCALE_PREFERENCE.to_owned(),
+            quick_set_shortcut: DEFAULT_QUICK_SET_SHORTCUT.to_owned(),
         }
     }
 
@@ -70,6 +74,9 @@ impl SwitcherSettings {
             )));
         }
         RuleSet::new(self.rules.clone())?;
+        crate::application::quick_set_shortcut::normalize_quick_set_shortcut(
+            &self.quick_set_shortcut,
+        )?;
         Ok(())
     }
 }

@@ -259,6 +259,13 @@ where
         self.commit_settings(candidate, None)
     }
 
+    /// `shortcut` は呼び出し側で正規化済みであること。
+    pub fn set_quick_set_shortcut(&mut self, shortcut: &str) -> Result<(), ApplicationError> {
+        let mut candidate = self.settings.clone();
+        candidate.quick_set_shortcut = shortcut.to_owned();
+        self.commit_settings(candidate, None)
+    }
+
     pub fn clear_logs(&mut self) {
         self.state.logs.clear();
         self.bump_state();

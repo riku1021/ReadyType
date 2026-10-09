@@ -352,6 +352,10 @@ pub struct SettingsDto {
     pub ui_locale: String,
     /// Resolved display language from shared i18n registry.
     pub resolved_ui_locale: String,
+    /// Quick Set グローバルショートカット（Tauri accelerator）。
+    pub quick_set_shortcut: String,
+    /// 起動時登録などを含め、現在 OS に登録されているか。
+    pub quick_set_shortcut_registered: bool,
 }
 
 impl From<&SwitcherSettings> for SettingsDto {
@@ -371,6 +375,9 @@ impl From<&SwitcherSettings> for SettingsDto {
             debug_logging: settings.debug_logging,
             ui_locale: settings.ui_locale.clone(),
             resolved_ui_locale: SwitcherSettings::resolve_ui_locale(&settings.ui_locale),
+            quick_set_shortcut: settings.quick_set_shortcut.clone(),
+            // AppHandle なしでは不明。コマンド側で上書きする。
+            quick_set_shortcut_registered: false,
         }
     }
 }
