@@ -27,6 +27,11 @@ export default defineConfig(() => ({
 
   assetsInclude: ["**/*.lottie"],
 
+  // Playwright レポート等の HTML を dep scan のエントリに含めない
+  optimizeDeps: {
+    entries: ["index.html"],
+  },
+
   test: {
     environment: "node",
     include: ["tests/**/*.{test,spec}.{ts,tsx}"],
@@ -49,8 +54,8 @@ export default defineConfig(() => ({
         }
       : undefined,
     watch: {
-      // 3. tell Vite to ignore watching the Tauri Rust project
-      ignored: ["**/rust-native/**"],
+      // 3. tell Vite to ignore watching the Tauri Rust project / e2e artifacts
+      ignored: ["**/rust-native/**", "**/playwright-report/**", "**/test-results/**"],
     },
   },
 }));
