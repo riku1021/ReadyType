@@ -5,7 +5,7 @@ export type NavLabelKey =
   | "nav.accessibility"
   | "nav.apps"
   | "nav.diagnostics"
-  | "nav.settings"
+  | "nav.general"
   | "nav.about"
   | "nav.update"
   | "nav.lab";

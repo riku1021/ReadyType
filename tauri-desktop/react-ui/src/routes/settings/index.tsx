@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { SettingsPage } from "@/features/settings";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
+/** 旧パス互換。表示名は「一般」、正規ルートは `/general`。 */
 export const Route = createFileRoute("/settings/")({
-  staticData: { title: "nav.settings" },
-  component: SettingsPage,
+  beforeLoad: () => {
+    throw redirect({ to: "/general" });
+  },
 });

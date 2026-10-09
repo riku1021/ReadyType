@@ -8,14 +8,14 @@ describe("getNavLinkByPath", () => {
     expect(getNavLinkByPath("/accessibility")?.labelKey).toBe("nav.accessibility");
     expect(getNavLinkByPath("/apps")?.labelKey).toBe("nav.apps");
     expect(getNavLinkByPath("/diagnostics")?.labelKey).toBe("nav.diagnostics");
-    expect(getNavLinkByPath("/settings")?.labelKey).toBe("nav.settings");
+    expect(getNavLinkByPath("/general")?.labelKey).toBe("nav.general");
     expect(getNavLinkByPath("/about")?.labelKey).toBe("nav.about");
     expect(getNavLinkByPath("/update")?.labelKey).toBe("nav.update");
     expect(getNavLinkByPath("/lab")?.labelKey).toBe("nav.lab");
   });
 
   it("ネストされたパスは最長プレフィックスでマッチする", () => {
-    expect(getNavLinkByPath("/settings/theme")?.to).toBe("/settings");
+    expect(getNavLinkByPath("/general/theme")?.to).toBe("/general");
     expect(getNavLinkByPath("/apps/com.apple.Terminal")?.to).toBe("/apps");
   });
 
@@ -23,13 +23,13 @@ describe("getNavLinkByPath", () => {
     expect(getNavLinkByPath("/unknown")).toBeUndefined();
   });
 
-  it("navLinks はホーム・アクセシビリティ・アプリごとの設定・診断・設定・アプリについて・アップデート・開発確認を含む", () => {
+  it("navLinks はホーム・アクセシビリティ・アプリごとの設定・診断・一般・アプリについて・アップデート・開発確認を含む", () => {
     expect(navLinks.map((link) => link.to)).toEqual([
       "/",
       "/accessibility",
       "/apps",
       "/diagnostics",
-      "/settings",
+      "/general",
       "/about",
       "/update",
       "/lab",
@@ -39,7 +39,7 @@ describe("getNavLinkByPath", () => {
       "nav.accessibility",
       "nav.apps",
       "nav.diagnostics",
-      "nav.settings",
+      "nav.general",
       "nav.about",
       "nav.update",
       "nav.lab",

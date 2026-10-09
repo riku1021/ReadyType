@@ -36,8 +36,8 @@ export const navLinks: NavLink[] = [
     icon: Diagnostics,
   },
   {
-    to: "/settings",
-    labelKey: "nav.settings",
+    to: "/general",
+    labelKey: "nav.general",
     icon: Settings,
   },
   {
