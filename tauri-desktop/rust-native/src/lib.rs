@@ -263,6 +263,18 @@ pub fn run() {
             presentation::commands::quick_set_shortcut::set_quick_set_shortcut,
             presentation::commands::sync_window_chrome::sync_window_chrome_theme,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            // macOS Dock: hide 後にアイコンをクリックすると Reopen が来る。
+            // 可視ウィンドウが無いときだけ main を戻す（close-to-tray の定番）。
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen {
+                has_visible_windows: false,
+                ..
+            } = event
+            {
+                infrastructure::desktop::main_window::show_main_window(app_handle, None);
+            }
+        });
 }
