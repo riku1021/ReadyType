@@ -31,16 +31,27 @@ fn current_platform_name() -> &'static str {
 pub fn run() {
     let _ = current_platform_name();
 
-    let autostart = tauri_plugin_autostart::Builder::new().arg("--autostart");
-    #[cfg(target_os = "macos")]
-    let autostart = autostart.macos_launcher(tauri_plugin_autostart::MacosLauncher::LaunchAgent);
+    #[cfg_attr(target_os = "macos", allow(unused_mut))]
+    let mut builder = tauri::Builder::default();
 
-    tauri::Builder::default()
-        .plugin(autostart.build())
+    #[cfg(not(target_os = "macos"))]
+    {
+        builder = builder.plugin(
+            tauri_plugin_autostart::Builder::new()
+                .arg("--autostart")
+                .build(),
+        );
+    }
+
+    builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
+            // AE は消費され得るので setup 先頭で一度だけキャッシュ（DidFinishLaunching 相当）。
+            #[cfg(target_os = "macos")]
+            infrastructure::desktop::autostart::capture_login_launch_apple_event();
+
             let config_directory = app.path().app_config_dir()?;
             std::fs::create_dir_all(&config_directory)?;
             let repository: Arc<dyn SettingsRepository> =
@@ -163,12 +174,16 @@ pub fn run() {
                 &resolved_ui_locale,
             )?;
 
-            // Accessory だと Dock にも出ず、visible:false のウィンドウが
-            // show() しても前面に来ない。通常起動は Regular、ログイン起動だけ Accessory。
+            #[cfg(target_os = "macos")]
+            infrastructure::desktop::autostart::migrate_legacy_launch_agent();
+
+            let silent_login =
+                infrastructure::desktop::autostart::is_silent_login_launch(std::env::args());
+
+            // ログイン起動は Accessory（Dock なし・窓なし）。手動起動は Regular（窓＋Dock）。
             #[cfg(target_os = "macos")]
             {
-                let is_autostart = std::env::args().any(|argument| argument == "--autostart");
-                let policy = if is_autostart {
+                let policy = if silent_login {
                     tauri::ActivationPolicy::Accessory
                 } else {
                     tauri::ActivationPolicy::Regular
@@ -186,8 +201,8 @@ pub fn run() {
                 infrastructure::platform::macos::set_window_background_main(&window, is_dark);
             }
 
-            // ACL / フロント準備前でも通常起動では窓を出す（visible:false のフォールバック）
-            if infrastructure::desktop::tray::should_show_main_window_on_launch(std::env::args()) {
+            // ACL / フロント準備前でも手動起動では窓を出す（visible:false のフォールバック）
+            if !silent_login {
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.show();
                     let _ = window.set_focus();
@@ -219,7 +234,9 @@ pub fn run() {
                 {
                     infrastructure::desktop::quick_set_window::hide(window.app_handle());
                 } else {
-                    let _ = window.hide();
+                    // 他の可視窓が残ると Accessory と矛盾するので quick-set も先に隠す。
+                    infrastructure::desktop::quick_set_window::hide(window.app_handle());
+                    infrastructure::desktop::main_window::enter_background(window.app_handle());
                 }
             }
             _ => {}

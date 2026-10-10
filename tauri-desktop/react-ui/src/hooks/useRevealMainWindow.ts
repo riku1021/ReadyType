@@ -18,6 +18,8 @@ function readResolvedTheme(): "light" | "dark" {
  * 起動時は `visible: false` のため、ネイティブ背景の準備後に表示する。
  * `data-theme` は `index.html` のインライン script が先行適用済み。
  *
+ * 窓を出すかどうかは Rust の `should_show_main_window_on_launch` が正本（ログイン起動 AE / `--autostart`）。
+ *
  * 注意: 非表示ウィンドウでは `requestAnimationFrame` が発火しない／遅延するため使わない。
  */
 export function useRevealMainWindow() {

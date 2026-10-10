@@ -1,7 +1,8 @@
-# macOS コード署名（TCC / Accessibility 対策）
+# macOS コード署名（TCC / Accessibility / ログイン起動）
 
-ReadyType は Accessibility（macOS 27+ では Device Control）権限に依存する。  
-TCC はアプリのパスや Bundle ID ではなく、**designated requirement（DR）** で許可を照合する。
+ReadyType は Accessibility（macOS 27+ では Device Control）権限と、ログイン起動（`SMAppService.mainApp`）に依存する。  
+TCC はアプリのパスや Bundle ID ではなく、**designated requirement（DR）** で許可を照合する。  
+SMAppService も **有効なコード署名** を前提とし、ad-hoc / 未署名では `kSMErrorInvalidSignature` などで失敗し得る。
 
 | 署名 | DR のアンカー | 再ビルド後 |
 |------|----------------|------------|
@@ -90,6 +91,23 @@ codesign -d -r- tauri-desktop/rust-native/target/release/bundle/macos/ReadyType.
 成功時は `designated =>` に **`certificate leaf = H"..."`** が含まれる。  
 `cdhash H"..."` **だけ**の場合は ad-hoc のままなので、identity / runner / env を見直す。
 
+## ログイン起動（SMAppService）
+
+ログイン項目の登録は OS API（`SMAppService.mainApp`）が正本。署名配線は TCC と同じ（`ReadyType Code Signing` / `APPLE_SIGNING_IDENTITY`）。
+
+| 環境 | 期待 |
+|------|------|
+| `mise run dev`（ensure + codesign） | トグル操作・System Settings 承認までは試せる。実行ファイルが素の `target/...` の場合、アプリは register を拒否する（開発パスを Login Items に刺さない） |
+| `mise run build` の署名付き `.app` | ログイン起動の本確認（推奨） |
+| `cargo run` 直叩き / ad-hoc / ensure なし | 期待しない。失敗してよい |
+
+アプリ側のガード:
+
+- **`.app` バンドル内でない**ときの register → エラー（手順を docs へ誘導）
+- **`kSMErrorInvalidSignature`** → 署名手順（本ドキュメント / `ensure-signing-identity.sh`）へ誘導するメッセージ
+
+未署名向けの LaunchAgent フォールバックは行わない。
+
 ## 次段（配布・CI）
 
 このドキュメントの配線を再利用する。
@@ -100,4 +118,4 @@ codesign -d -r- tauri-desktop/rust-native/target/release/bundle/macos/ReadyType.
 4. CI では `.p12` を base64 化した `APPLE_CERTIFICATE` と `APPLE_CERTIFICATE_PASSWORD` を使う
 5. 必要なら `hardenedRuntime` と entitlements を有効化する（公証要件に応じて）
 
-ローカルの TCC 安定化だけが目的なら、self-signed のままでよい（Apple TN2206: 安定性は DR で決まり、CA が Apple である必要はない）。
+ローカルの TCC / ログイン起動確認だけが目的なら、self-signed のままでよい（Apple TN2206: 安定性は DR で決まり、CA が Apple である必要はない）。配布・公証では Developer ID に切り替える。

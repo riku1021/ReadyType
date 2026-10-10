@@ -1,3 +1,5 @@
+import { isTauri } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useAtom } from "jotai";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -32,7 +34,8 @@ export function SettingsPage() {
     resetDefaultRules,
   } = useInputSourceState();
 
-  const [autostartEnabled, setAutostartEnabledState] = useState(false);
+  /** `null` until native state is loaded (avoids flashing the wrong toggle). */
+  const [autostartEnabled, setAutostartEnabledState] = useState<boolean | null>(null);
   const [pending, setPending] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,8 +55,20 @@ export function SettingsPage() {
       }
     };
     void load();
+
+    // System Settings でログイン項目を変えたあと、フォーカス復帰で OS 状態を取り直す。
+    const unlistenFocusPromise = isTauri()
+      ? getCurrentWindow().onFocusChanged(({ payload: focused }) => {
+          if (focused) {
+            void load();
+          }
+        })
+      : undefined;
+
     return () => {
       cancelled = true;
+      // `.then` 代入前に unmount しても解除できるよう Promise を待つ。
+      void unlistenFocusPromise?.then((unlisten) => unlisten());
     };
   }, [fetchAutostartEnabled, t]);
 
@@ -91,7 +106,8 @@ export function SettingsPage() {
           icon={MdRocketLaunch}
           title={t("settings.launchAtLogin")}
           type="toggle"
-          toggleValue={autostartEnabled}
+          toggleValue={autostartEnabled ?? false}
+          disabled={autostartEnabled === null || pending}
           onToggleChanged={(enabled) => {
             setPending(true);
             void setAutostartEnabled(enabled)

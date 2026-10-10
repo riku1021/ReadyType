@@ -20,3 +20,15 @@ pub fn show_main_window(app: &AppHandle, route: Option<&str>) {
         }
     }
 }
+
+/// Hide the main window and drop the Dock icon (macOS Accessory).
+/// Call after any other visible windows are hidden so Accessory does not fight a foreground window.
+pub fn enter_background(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
+        let _ = window.hide();
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+    }
+}

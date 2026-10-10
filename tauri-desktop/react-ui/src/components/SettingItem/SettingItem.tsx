@@ -39,6 +39,7 @@ type ToggleSettingItem = SettingItemBase & {
   type: "toggle";
   toggleValue: boolean;
   onToggleChanged: (value: boolean) => void;
+  disabled?: boolean;
 };
 
 type ActionSettingItem = SettingItemBase & {
@@ -90,6 +91,7 @@ function renderTrailing(props: SettingItemProps) {
         <Toggle
           checked={props.toggleValue}
           onChange={props.onToggleChanged}
+          disabled={props.disabled}
           aria-label={props.title}
         />
       );

@@ -1,4 +1,4 @@
-use super::{should_show_main_window_on_launch, TrayMenuModel, SNOOZE_MINUTES};
+use super::{TrayMenuModel, SNOOZE_MINUTES};
 use crate::{
     application::switcher_state::SwitcherState,
     domain::input_source::{Platform, PlatformAppId},
@@ -68,13 +68,4 @@ fn tray_model_reflects_enabled_state_and_current_target() {
 #[test]
 fn tray_has_expected_snooze_durations() {
     assert_eq!(SNOOZE_MINUTES, [5, 15, 60]);
-}
-
-#[test]
-fn login_launch_argument_keeps_main_window_hidden() {
-    assert!(should_show_main_window_on_launch(["ReadyType".to_owned()]));
-    assert!(!should_show_main_window_on_launch([
-        "ReadyType".to_owned(),
-        "--autostart".to_owned(),
-    ]));
 }

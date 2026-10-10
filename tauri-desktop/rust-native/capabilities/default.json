@@ -12,7 +12,6 @@
     "opener:default",
     "os:allow-platform",
     "os:allow-version",
-    "autostart:default",
     "global-shortcut:allow-is-registered",
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",

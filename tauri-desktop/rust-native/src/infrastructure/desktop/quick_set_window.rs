@@ -67,10 +67,8 @@ pub fn open(app: &AppHandle) -> Result<(), String> {
 
     position_near_focus(app, &window, &session)?;
 
-    #[cfg(target_os = "macos")]
-    {
-        let _ = app.set_activation_policy(tauri::ActivationPolicy::Regular);
-    }
+    // Keep Accessory while Quick Set is open so the Dock stays hidden in BG residency.
+    // Main UI still switches to Regular via `show_main_window` / `show_main_for_app`.
 
     let dto = QuickSetSessionDto::from(&session);
     // Webview-targeted emit; FE listens via getCurrentWebviewWindow().listen.

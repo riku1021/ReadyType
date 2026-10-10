@@ -91,10 +91,6 @@ fn resolve_ui_locale(app: &AppHandle) -> String {
         .unwrap_or_else(|| DEFAULT_RESOLVED_UI_LOCALE.to_owned())
 }
 
-pub fn should_show_main_window_on_launch(args: impl IntoIterator<Item = String>) -> bool {
-    !args.into_iter().any(|argument| argument == "--autostart")
-}
-
 pub fn install(app: &AppHandle, state: &SwitcherState, locale: &str) -> tauri::Result<()> {
     let menu = build_menu(app, state, locale)?;
     let mut builder = TrayIconBuilder::with_id(TRAY_ID)

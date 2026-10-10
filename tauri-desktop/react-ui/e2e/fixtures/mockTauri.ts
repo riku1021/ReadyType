@@ -121,8 +121,9 @@ export async function installTauriMocks(page: Page): Promise<void> {
         case "should_show_main_window_on_launch":
           return true;
         case "get_autostart_enabled":
+          return true;
         case "set_autostart_enabled":
-          return false;
+          return Boolean(args?.enabled);
         case "get_app_presentations": {
           const ids = Array.isArray(args?.bundleIds) ? args.bundleIds : [];
           const presentations: Record<string, { icon: string; displayName: string }> = {};
