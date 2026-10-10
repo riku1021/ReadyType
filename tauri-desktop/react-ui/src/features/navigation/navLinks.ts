@@ -3,7 +3,6 @@ import {
   IoShieldCheckmark as Accessibility,
   IoApps as Apps,
   IoPulse as Diagnostics,
-  IoHome as Home,
   IoFlask as Lab,
   IoSettingsSharp as Settings,
   IoSync as Update,
@@ -15,11 +14,6 @@ import type { NavLink } from "./types";
  * アプリケーション全体で使用するナビゲーションリンクの定義
  */
 export const navLinks: NavLink[] = [
-  {
-    to: "/",
-    labelKey: "nav.home",
-    icon: Home,
-  },
   {
     to: "/accessibility",
     labelKey: "nav.accessibility",
@@ -68,6 +62,6 @@ export function getNavLinkByPath(pathname: string): NavLink | undefined {
   }
 
   return navLinks
-    .filter((link) => link.to !== "/" && pathname.startsWith(`${link.to}/`))
+    .filter((link) => pathname.startsWith(`${link.to}/`))
     .sort((a, b) => b.to.length - a.to.length)[0];
 }

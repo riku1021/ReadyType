@@ -16,7 +16,7 @@ export function NotFoundPage() {
       <NotFoundAnimation className={styles.animation} />
       <h2 className={styles.heading}>{t("notFound.heading")}</h2>
       <p className={styles.paragraph}>{t("notFound.body")}</p>
-      <Link to="/" className={cx(button({ variant: "secondary" }), styles.homeLink)}>
+      <Link to="/apps" className={cx(button({ variant: "secondary" }), styles.homeLink)}>
         <IoHome className={styles.homeIcon} /> {t("notFound.goHome")}
       </Link>
       <div className={styles.backButtonWrap}>

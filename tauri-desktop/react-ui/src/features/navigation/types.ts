@@ -1,7 +1,6 @@
 import type { IconType } from "react-icons";
 
 export type NavLabelKey =
-  | "nav.home"
   | "nav.accessibility"
   | "nav.apps"
   | "nav.diagnostics"

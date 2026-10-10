@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { HomePage } from "@/features/home";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
-  staticData: { title: "nav.home" },
-  component: HomePage,
+  beforeLoad: () => {
+    throw redirect({ to: "/apps" });
+  },
 });

@@ -2,7 +2,14 @@ import { useNavigate } from "@tanstack/react-router";
 import { useAtom } from "jotai";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MdBugReport, MdContrast, MdInfoOutline, MdLanguage, MdRocketLaunch } from "react-icons/md";
+import {
+  MdBugReport,
+  MdContrast,
+  MdInfoOutline,
+  MdLanguage,
+  MdRocketLaunch,
+  MdSwapHoriz,
+} from "react-icons/md";
 
 import { themeAtom } from "@/atoms/theme";
 import { AlertDialog } from "@/components/Dialog";
@@ -26,6 +33,7 @@ export function SettingsPage() {
   const [theme, setTheme] = useAtom(themeAtom);
   const {
     state,
+    setEnabled,
     setDebugLogging,
     setUiLocale,
     fetchAutostartEnabled,
@@ -68,6 +76,26 @@ export function SettingsPage() {
   return (
     <div className={styles.page}>
       <SettingsSection title={t("settings.sectionStartup")}>
+        <SettingItem
+          icon={MdSwapHoriz}
+          title={t("settings.autoSwitch")}
+          description={t("settings.autoSwitchDescription")}
+          type="toggle"
+          toggleValue={state?.enabled ?? false}
+          onToggleChanged={(enabled) => {
+            if (!state || state.permission === "unsupported") {
+              return;
+            }
+            setPending(true);
+            void setEnabled(enabled)
+              .catch((updateError) => {
+                setError(
+                  updateError instanceof Error ? updateError.message : t("common.saveFailed")
+                );
+              })
+              .finally(() => setPending(false));
+          }}
+        />
         <SettingItem
           icon={MdRocketLaunch}
           title={t("settings.launchAtLogin")}

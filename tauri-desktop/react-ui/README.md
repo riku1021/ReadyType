@@ -20,10 +20,10 @@ pnpm build
 
 ## 入力ソース自動切替 UI
 
-- ホーム: ON/OFF・権限案内・現在状態
-- アプリごとの設定: `/apps` でアプリ別の言語・個別ルール
+- アクセシビリティ: `/accessibility` で権限案内・システム設定誘導
+- アプリごとの設定: `/apps` でアプリ別の言語・個別ルール（`/` はここへリダイレクト）
 - 診断: `/diagnostics` でログと AX スナップショット
-- 設定: 既定入力ソース・ログイン起動・デバッグログ
+- 一般: `/general` で自動切替 ON/OFF・ログイン起動・外観・ショートカット等
 
 手動検証: `docs/input-source-switcher-manual-test.md`  
 ルールメンテ: `docs/input-source-rule-maintenance.md`

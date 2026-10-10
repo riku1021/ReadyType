@@ -84,13 +84,14 @@ export const textStack = css({
   flexDirection: "column",
   flex: "1",
   minWidth: "0",
-  gap: "2px",
+  gap: "0",
 });
 
 export const title = cva({
   base: {
     fontSize: "base",
     color: "text.main",
+    lineHeight: "tight",
   },
   variants: {
     tone: {
@@ -108,6 +109,7 @@ export const title = cva({
 export const description = css({
   fontSize: "sm",
   color: "text.placeholder",
+  lineHeight: "tight",
 });
 
 export const trailing = css({

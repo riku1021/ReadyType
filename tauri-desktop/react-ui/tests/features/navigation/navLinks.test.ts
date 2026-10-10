@@ -4,7 +4,6 @@ import { getNavLinkByPath, navLinks } from "@/features/navigation/navLinks";
 
 describe("getNavLinkByPath", () => {
   it("完全一致のパスを返す", () => {
-    expect(getNavLinkByPath("/")?.labelKey).toBe("nav.home");
     expect(getNavLinkByPath("/accessibility")?.labelKey).toBe("nav.accessibility");
     expect(getNavLinkByPath("/apps")?.labelKey).toBe("nav.apps");
     expect(getNavLinkByPath("/diagnostics")?.labelKey).toBe("nav.diagnostics");
@@ -21,11 +20,11 @@ describe("getNavLinkByPath", () => {
 
   it("未知のパスは undefined", () => {
     expect(getNavLinkByPath("/unknown")).toBeUndefined();
+    expect(getNavLinkByPath("/")).toBeUndefined();
   });
 
-  it("navLinks はホーム・アクセシビリティ・アプリごとの設定・診断・一般・アプリについて・アップデート・開発確認を含む", () => {
+  it("navLinks はアクセシビリティ・アプリごとの設定・診断・一般・アプリについて・アップデート・開発確認を含む", () => {
     expect(navLinks.map((link) => link.to)).toEqual([
-      "/",
       "/accessibility",
       "/apps",
       "/diagnostics",
@@ -35,7 +34,6 @@ describe("getNavLinkByPath", () => {
       "/lab",
     ]);
     expect(navLinks.map((link) => link.labelKey)).toEqual([
-      "nav.home",
       "nav.accessibility",
       "nav.apps",
       "nav.diagnostics",

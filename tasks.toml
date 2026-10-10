@@ -12,12 +12,34 @@ run = "pnpm install"
 [dev]
 description = "Start Tauri development (Vite + Rust)"
 dir = "tauri-desktop/react-ui"
-run = "pnpm tauri dev"
+run = """
+if [ "$(uname -s)" = Darwin ]; then
+  export APPLE_SIGNING_IDENTITY="$(bash ../rust-native/scripts/macos/ensure-signing-identity.sh)"
+fi
+pnpm tauri dev
+"""
 
 [build]
-description = "Build the Tauri application"
+description = "Build the signed Tauri .app (macOS: skips flaky DMG)"
 dir = "tauri-desktop/react-ui"
-run = "pnpm tauri build"
+run = """
+if [ "$(uname -s)" = Darwin ]; then
+  export APPLE_SIGNING_IDENTITY="$(bash ../rust-native/scripts/macos/ensure-signing-identity.sh)"
+  pnpm tauri build --bundles app
+else
+  pnpm tauri build
+fi
+"""
+
+["build:dmg"]
+description = "Build signed .app + DMG (unmount leftover /Volumes/dmg.* if hdiutil busy)"
+dir = "tauri-desktop/react-ui"
+run = """
+if [ "$(uname -s)" = Darwin ]; then
+  export APPLE_SIGNING_IDENTITY="$(bash ../rust-native/scripts/macos/ensure-signing-identity.sh)"
+fi
+pnpm tauri build --bundles app,dmg
+"""
 
 ["react-ui:typecheck"]
 description = "Type-check react-ui"

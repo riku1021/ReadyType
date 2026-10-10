@@ -1,6 +1,5 @@
 {
   "nav": {
-    "home": "主页",
     "accessibility": "辅助功能",
     "apps": "按应用设置",
     "diagnostics": "诊断",
@@ -10,6 +9,12 @@
     "lab": "开发确认",
     "mainNavigationAria": "主导航",
     "backToList": "返回列表"
+  },
+  "os": {
+    "permissionPane": {
+      "accessibility": "辅助功能",
+      "deviceControl": "设备的控制与数据访问"
+    }
   },
   "common": {
     "closeAria": "关闭",
@@ -24,9 +29,7 @@
     "initSwitcherFailed": "输入源切换初始化失败",
     "inputSourceUnavailable": "{{id}}（不可用）",
     "enableAppAria": "启用 {{label}}",
-    "ruleCount": "{{count}} 个",
-    "requestPermission": "请求权限",
-    "openSystemSettings": "打开系统设置"
+    "ruleCount": "{{count}} 个"
   },
   "dialog": {
     "confirmDefault": "是",
@@ -37,6 +40,8 @@
   "settings": {
     "debugLogging": "调试日志",
     "sectionStartup": "启动",
+    "autoSwitch": "自动切换",
+    "autoSwitchDescription": "根据焦点自动切换输入源。",
     "launchAtLogin": "登录时启动",
     "sectionAppearance": "外观",
     "theme": "主题",
@@ -58,47 +63,16 @@
     "resetConfirmText": "规则列表将恢复为默认预设。",
     "resetConfirmButton": "重置"
   },
-  "home": {
-    "permissionBannerTitle": "需要辅助功能权限",
-    "permissionBannerText": "焦点监视和输入源切换需要在系统设置中授权。",
-    "autoSwitchAria": "自动切换",
-    "labelCurrentApp": "当前应用",
-    "labelMatchedRule": "匹配规则",
-    "labelCurrentSource": "当前输入源",
-    "labelTargetSource": "切换目标",
-    "labelLastResult": "最近结果",
-    "headlineLoading": "正在加载状态…",
-    "headlineUnsupported": "当前操作系统不支持",
-    "headlinePermissionRequired": "需要辅助功能权限",
-    "headlineSnoozed": "已暂停",
-    "headlineDisabled": "自动切换已关闭",
-    "headlineRunning": "自动切换已开启",
-    "decisionIgnored": "已忽略",
-    "decisionDisabled": "已跳过（已关闭）",
-    "decisionSnoozed": "已跳过（已暂停）",
-    "decisionNoRule": "无匹配规则",
-    "decisionAlreadySelected": "已是目标输入源",
-    "decisionSwitched": "切换成功",
-    "decisionFailed": "切换失败",
-    "noSwitchYet": "尚未切换"
-  },
   "accessibility": {
-    "labelCurrentStatus": "当前状态",
-    "statusLoading": "确认中",
+    "usageDescription": "用于检测输入框焦点，并根据应用或输入框自动切换到合适的输入语言。",
     "statusGranted": "已授权",
-    "statusDenied": "未授权",
-    "statusUnsupported": "不支持",
-    "statusError": "错误",
-    "recheckStatus": "重新确认状态",
-    "headlineLoading": "正在确认状态…",
-    "descriptionLoading": "正在读取辅助功能权限状态。",
-    "headlineError": "无法获取状态",
-    "headlineUnsupported": "当前操作系统不支持",
-    "descriptionUnsupported": "基于辅助功能权限的焦点监视目前仅支持 macOS。",
-    "headlineGranted": "辅助功能已授权",
-    "descriptionGranted": "已具备焦点监视和输入源自动切换所需的权限。若在系统设置中撤销，请重新打开此页面或点击「重新确认状态」。",
-    "headlineDenied": "需要辅助功能权限",
-    "descriptionDenied": "ReadyType 需要检测焦点应用。请在系统设置的「隐私与安全性 > 辅助功能」中允许 ReadyType。"
+    "statusRequired": "需要授权",
+    "deniedGuidance": "焦点监视和输入源切换需要在系统设置的「{{pane}}」中授权。",
+    "openSystemSettings": "打开系统设置...",
+    "privacyTitle": "关于隐私",
+    "privacyDescription": "不会读取或保存您输入的文本内容。仅使用应用和输入框类型等信息。",
+    "descriptionLoading": "正在读取{{pane}}权限状态。",
+    "descriptionUnsupported": "基于{{pane}}权限的焦点监视目前仅支持 macOS。"
   },
   "apps": {
     "intro": "根据应用或输入区域自动切换输入语言。",
@@ -196,7 +170,7 @@
   "notFound": {
     "heading": "找不到页面",
     "body": "您访问的页面不存在，或 URL 有误。",
-    "goHome": "返回主页",
+    "goHome": "前往应用设置",
     "goBack": "返回"
   },
   "switcher": {

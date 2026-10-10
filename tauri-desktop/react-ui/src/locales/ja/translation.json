@@ -1,6 +1,5 @@
 {
   "nav": {
-    "home": "ホーム",
     "accessibility": "アクセシビリティ",
     "apps": "アプリごとの設定",
     "diagnostics": "診断",
@@ -10,6 +9,12 @@
     "lab": "開発確認",
     "mainNavigationAria": "メインナビゲーション",
     "backToList": "一覧に戻る"
+  },
+  "os": {
+    "permissionPane": {
+      "accessibility": "アクセシビリティ",
+      "deviceControl": "デバイスの制御とデータへのアクセス"
+    }
   },
   "common": {
     "closeAria": "閉じる",
@@ -24,9 +29,7 @@
     "initSwitcherFailed": "入力ソース切替の初期化に失敗しました",
     "inputSourceUnavailable": "{{id}}（利用不可）",
     "enableAppAria": "{{label}} を有効化",
-    "ruleCount": "{{count}}個",
-    "requestPermission": "権限を要求",
-    "openSystemSettings": "システム設定を開く"
+    "ruleCount": "{{count}}個"
   },
   "dialog": {
     "confirmDefault": "はい",
@@ -37,6 +40,8 @@
   "settings": {
     "debugLogging": "デバッグログ",
     "sectionStartup": "起動",
+    "autoSwitch": "自動切替",
+    "autoSwitchDescription": "フォーカスに応じて入力ソースを自動で切り替えます。",
     "launchAtLogin": "ログイン時に起動",
     "sectionAppearance": "外観",
     "theme": "テーマ",
@@ -58,47 +63,16 @@
     "resetConfirmText": "ルール一覧を既定プリセットへ戻します。",
     "resetConfirmButton": "リセット"
   },
-  "home": {
-    "permissionBannerTitle": "アクセシビリティ権限が必要です",
-    "permissionBannerText": "フォーカス監視と入力ソース切替には、システム設定での許可が必要です。",
-    "autoSwitchAria": "自動切替",
-    "labelCurrentApp": "現在のアプリ",
-    "labelMatchedRule": "一致ルール",
-    "labelCurrentSource": "現在の入力ソース",
-    "labelTargetSource": "切替先",
-    "labelLastResult": "直近の結果",
-    "headlineLoading": "状態を読み込み中…",
-    "headlineUnsupported": "このOSでは未対応です",
-    "headlinePermissionRequired": "アクセシビリティ権限が必要です",
-    "headlineSnoozed": "一時停止中",
-    "headlineDisabled": "自動切替はOFFです",
-    "headlineRunning": "自動切替は有効です",
-    "decisionIgnored": "無視",
-    "decisionDisabled": "無効のため未切替",
-    "decisionSnoozed": "一時停止中のため未切替",
-    "decisionNoRule": "一致ルールなし",
-    "decisionAlreadySelected": "すでに切替済み",
-    "decisionSwitched": "切替成功",
-    "decisionFailed": "切替失敗",
-    "noSwitchYet": "まだ切替していません"
-  },
   "accessibility": {
-    "labelCurrentStatus": "現在の状態",
-    "statusLoading": "確認中",
+    "usageDescription": "入力欄のフォーカスを検出し、アプリや入力欄に応じて適切な入力言語を自動で切り替えるために使用します。",
     "statusGranted": "許可済み",
-    "statusDenied": "未許可",
-    "statusUnsupported": "未対応",
-    "statusError": "エラー",
-    "recheckStatus": "状態を再確認",
-    "headlineLoading": "状態を確認しています…",
-    "descriptionLoading": "アクセシビリティ権限の状態を読み込んでいます。",
-    "headlineError": "状態を取得できませんでした",
-    "headlineUnsupported": "このOSでは未対応です",
-    "descriptionUnsupported": "アクセシビリティ権限によるフォーカス監視は、現在 macOS のみ対応しています。",
-    "headlineGranted": "アクセシビリティは許可されています",
-    "descriptionGranted": "フォーカス監視と入力ソースの自動切替に必要な権限が付与されています。システム設定で取り消した場合は、この画面を開き直すか「状態を再確認」を押してください。",
-    "headlineDenied": "アクセシビリティ権限が必要です",
-    "descriptionDenied": "ReadyType がフォーカス中のアプリを検知するには、システム設定の「プライバシーとセキュリティ > アクセシビリティ」で ReadyType を許可してください。"
+    "statusRequired": "許可が必要です",
+    "deniedGuidance": "フォーカス監視と入力ソース切替には、システム設定の「{{pane}}」での許可が必要です。",
+    "openSystemSettings": "システム設定を開く...",
+    "privacyTitle": "プライバシーについて",
+    "privacyDescription": "入力したテキストの内容を読み取ったり、保存したりすることはありません。アプリや入力欄の種類などの情報のみを使用します。",
+    "descriptionLoading": "{{pane}}権限の状態を読み込んでいます。",
+    "descriptionUnsupported": "{{pane}}権限によるフォーカス監視は、現在 macOS のみ対応しています。"
   },
   "apps": {
     "intro": "アプリや入力欄に応じて、入力言語を自動で切り替えます。",
@@ -196,7 +170,7 @@
   "notFound": {
     "heading": "ページが見つかりません",
     "body": "お探しのページは存在しないか、URLが間違っている可能性があります。",
-    "goHome": "ホームへ",
+    "goHome": "アプリ設定へ",
     "goBack": "戻る"
   },
   "switcher": {

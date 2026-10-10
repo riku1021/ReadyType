@@ -1,6 +1,5 @@
 {
   "nav": {
-    "home": "Home",
     "accessibility": "Accessibility",
     "apps": "App Settings",
     "diagnostics": "Diagnostics",
@@ -10,6 +9,12 @@
     "lab": "Lab",
     "mainNavigationAria": "Main navigation",
     "backToList": "Back to list"
+  },
+  "os": {
+    "permissionPane": {
+      "accessibility": "Accessibility",
+      "deviceControl": "Device Control and Data Access"
+    }
   },
   "common": {
     "closeAria": "Close",
@@ -24,9 +29,7 @@
     "initSwitcherFailed": "Failed to initialize input source switching",
     "inputSourceUnavailable": "{{id}} (unavailable)",
     "enableAppAria": "Enable {{label}}",
-    "ruleCount": "{{count}}",
-    "requestPermission": "Request permission",
-    "openSystemSettings": "Open System Settings"
+    "ruleCount": "{{count}}"
   },
   "dialog": {
     "confirmDefault": "Yes",
@@ -37,6 +40,8 @@
   "settings": {
     "debugLogging": "Debug logging",
     "sectionStartup": "Startup",
+    "autoSwitch": "Auto switch",
+    "autoSwitchDescription": "Automatically switch the input source based on focus.",
     "launchAtLogin": "Launch at login",
     "sectionAppearance": "Appearance",
     "theme": "Theme",
@@ -58,47 +63,16 @@
     "resetConfirmText": "This will restore the rule list to the default preset.",
     "resetConfirmButton": "Reset"
   },
-  "home": {
-    "permissionBannerTitle": "Accessibility permission required",
-    "permissionBannerText": "Focus monitoring and input source switching require permission in System Settings.",
-    "autoSwitchAria": "Auto switch",
-    "labelCurrentApp": "Current app",
-    "labelMatchedRule": "Matched rule",
-    "labelCurrentSource": "Current input source",
-    "labelTargetSource": "Target",
-    "labelLastResult": "Last result",
-    "headlineLoading": "Loading status…",
-    "headlineUnsupported": "Not supported on this OS",
-    "headlinePermissionRequired": "Accessibility permission required",
-    "headlineSnoozed": "Paused",
-    "headlineDisabled": "Auto switch is off",
-    "headlineRunning": "Auto switch is on",
-    "decisionIgnored": "Ignored",
-    "decisionDisabled": "Skipped (disabled)",
-    "decisionSnoozed": "Skipped (paused)",
-    "decisionNoRule": "No matching rule",
-    "decisionAlreadySelected": "Already selected",
-    "decisionSwitched": "Switched",
-    "decisionFailed": "Switch failed",
-    "noSwitchYet": "No switch yet"
-  },
   "accessibility": {
-    "labelCurrentStatus": "Current status",
-    "statusLoading": "Checking",
+    "usageDescription": "Used to detect input field focus and automatically switch to the appropriate input language based on the app or field.",
     "statusGranted": "Granted",
-    "statusDenied": "Not granted",
-    "statusUnsupported": "Unsupported",
-    "statusError": "Error",
-    "recheckStatus": "Recheck status",
-    "headlineLoading": "Checking status…",
-    "descriptionLoading": "Loading accessibility permission status.",
-    "headlineError": "Could not retrieve status",
-    "headlineUnsupported": "Not supported on this OS",
-    "descriptionUnsupported": "Focus monitoring via accessibility permission is currently supported on macOS only.",
-    "headlineGranted": "Accessibility is granted",
-    "descriptionGranted": "Permission for focus monitoring and automatic input source switching is granted. If you revoke it in System Settings, reopen this screen or tap Recheck status.",
-    "headlineDenied": "Accessibility permission required",
-    "descriptionDenied": "To detect the focused app, allow ReadyType in System Settings under Privacy & Security > Accessibility."
+    "statusRequired": "Permission required",
+    "deniedGuidance": "Focus monitoring and input source switching require permission under System Settings → {{pane}}.",
+    "openSystemSettings": "Open System Settings...",
+    "privacyTitle": "About privacy",
+    "privacyDescription": "We do not read or save the content of text you type. Only information such as the app and input field type is used.",
+    "descriptionLoading": "Loading {{pane}} permission status.",
+    "descriptionUnsupported": "Focus monitoring via {{pane}} permission is currently supported on macOS only."
   },
   "apps": {
     "intro": "Automatically switch input language based on the app and field.",
@@ -196,7 +170,7 @@
   "notFound": {
     "heading": "Page not found",
     "body": "The page you are looking for does not exist, or the URL may be incorrect.",
-    "goHome": "Go home",
+    "goHome": "Go to apps",
     "goBack": "Back"
   },
   "switcher": {

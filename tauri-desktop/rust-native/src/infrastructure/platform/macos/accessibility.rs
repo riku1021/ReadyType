@@ -30,14 +30,20 @@ pub fn is_process_trusted() -> bool {
     unsafe { AXIsProcessTrusted() }
 }
 
+/// TCC にこのプロセスを認識させ、現在の信頼状態を返す。
+///
+/// `kAXTrustedCheckOptionPrompt: true` は使わない。ad-hoc 署名や再ビルド後に
+/// System Settings のトグルを OFF に戻す既知の不具合があるため。
 pub fn request_process_trust() -> bool {
     let prompt = unsafe { kAXTrustedCheckOptionPrompt };
-    let enabled = CFBoolean::new(true);
-    let options = CFDictionary::from_slices(&[prompt], &[enabled]);
+    let disabled = CFBoolean::new(false);
+    let options = CFDictionary::from_slices(&[prompt], &[disabled]);
     // SAFETY: type erasure preserves the CFDictionary object and its entries.
     let options: CFRetained<CFDictionary> = unsafe { CFRetained::cast_unchecked(options) };
     // SAFETY: the dictionary uses the documented CFString key and CFBoolean value.
-    unsafe { AXIsProcessTrustedWithOptions(Some(&options)) }
+    // 戻り値はキャッシュ由来で古いことがあるので、直後に AXIsProcessTrusted を正とする。
+    let _ = unsafe { AXIsProcessTrustedWithOptions(Some(&options)) };
+    is_process_trusted()
 }
 
 pub fn application_element(pid: i32) -> CFRetained<AXUIElement> {

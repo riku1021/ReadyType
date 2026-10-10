@@ -15,8 +15,11 @@ describe("toAccessibilityViewModel", () => {
       t
     );
     expect(view.kind).toBe("loading");
-    expect(view.headline).toBe("accessibility.headlineLoading");
-    expect(view.showPromptActions).toBe(false);
+    expect(view.cardTone).toBe("default");
+    expect(view.showOpenSettings).toBe(false);
+    expect(view.requestBeforeOpenSettings).toBe(false);
+    expect(view.showPrivacy).toBe(false);
+    expect(view.detailMessage).toBe("accessibility.descriptionLoading");
   });
 
   it("granted", () => {
@@ -29,11 +32,17 @@ describe("toAccessibilityViewModel", () => {
       t
     );
     expect(view.kind).toBe("granted");
-    expect(view.headline).toBe("accessibility.headlineGranted");
-    expect(view.showPromptActions).toBe(false);
+    expect(view.cardTone).toBe("default");
+    expect(view.showGrantedBadge).toBe(true);
+    expect(view.showRequiredStatus).toBe(false);
+    expect(view.showOpenSettings).toBe(true);
+    expect(view.requestBeforeOpenSettings).toBe(false);
+    expect(view.openSettingsVariant).toBe("neutral");
+    expect(view.showPrivacy).toBe(true);
+    expect(view.detailMessage).toBeNull();
   });
 
-  it("denied prompts for settings", () => {
+  it("denied prompts for settings after TCC registration", () => {
     const view = toAccessibilityViewModel(
       {
         ready: true,
@@ -43,8 +52,14 @@ describe("toAccessibilityViewModel", () => {
       t
     );
     expect(view.kind).toBe("denied");
-    expect(view.showPromptActions).toBe(true);
-    expect(view.description).toBe("accessibility.descriptionDenied");
+    expect(view.cardTone).toBe("alert");
+    expect(view.showRequiredStatus).toBe(true);
+    expect(view.showGrantedBadge).toBe(false);
+    expect(view.showOpenSettings).toBe(true);
+    expect(view.requestBeforeOpenSettings).toBe(true);
+    expect(view.openSettingsVariant).toBe("primary");
+    expect(view.showPrivacy).toBe(true);
+    expect(view.detailMessage).toBe("accessibility.deniedGuidance");
   });
 
   it("unsupported", () => {
@@ -57,7 +72,9 @@ describe("toAccessibilityViewModel", () => {
       t
     );
     expect(view.kind).toBe("unsupported");
-    expect(view.showPromptActions).toBe(false);
+    expect(view.cardTone).toBe("default");
+    expect(view.showOpenSettings).toBe(false);
+    expect(view.detailMessage).toBe("accessibility.descriptionUnsupported");
   });
 
   it("error", () => {
@@ -70,7 +87,7 @@ describe("toAccessibilityViewModel", () => {
       t
     );
     expect(view.kind).toBe("error");
-    expect(view.headline).toBe("accessibility.headlineError");
-    expect(view.description).toBe("boom");
+    expect(view.detailMessage).toBe("boom");
+    expect(view.showOpenSettings).toBe(false);
   });
 });

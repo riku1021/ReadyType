@@ -1,0 +1,6 @@
+{
+  "$schema": "../react-ui/node_modules/@tauri-apps/cli/config.schema.json",
+  "build": {
+    "runner": "./scripts/macos/dev-runner.sh"
+  }
+}
