@@ -1,15 +1,7 @@
-import { useNavigate } from "@tanstack/react-router";
 import { useAtom } from "jotai";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  MdBugReport,
-  MdContrast,
-  MdInfoOutline,
-  MdLanguage,
-  MdRocketLaunch,
-  MdSwapHoriz,
-} from "react-icons/md";
+import { MdBugReport, MdContrast, MdLanguage, MdRocketLaunch, MdSwapHoriz } from "react-icons/md";
 
 import { themeAtom } from "@/atoms/theme";
 import { AlertDialog } from "@/components/Dialog";
@@ -29,7 +21,6 @@ import { getThemeLabel, THEME_OPTIONS, themeFromTranslatedLabel } from "./themeL
 
 export function SettingsPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [theme, setTheme] = useAtom(themeAtom);
   const {
     state,
@@ -171,14 +162,6 @@ export function SettingsPage() {
                 );
               })
               .finally(() => setPending(false));
-          }}
-        />
-        <SettingItem
-          icon={MdInfoOutline}
-          title={t("settings.aboutApp")}
-          type="navigation"
-          onClick={() => {
-            void navigate({ to: "/about" });
           }}
         />
         <SettingItem

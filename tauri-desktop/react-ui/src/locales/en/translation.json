@@ -57,7 +57,6 @@
     "shortcutLoadFailed": "Failed to load shortcut",
     "shortcutRegisterFailed": "Failed to register the shortcut. Try a different combination",
     "sectionOther": "Other",
-    "aboutApp": "About",
     "resetToDefaults": "Reset to defaults",
     "resetConfirmTitle": "Reset to defaults?",
     "resetConfirmText": "This will restore the rule list to the default preset.",

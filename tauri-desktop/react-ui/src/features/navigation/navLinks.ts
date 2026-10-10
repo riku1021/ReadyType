@@ -1,5 +1,4 @@
 import {
-  IoInformationCircle as About,
   IoShieldCheckmark as Accessibility,
   IoApps as Apps,
   IoPulse as Diagnostics,
@@ -7,6 +6,7 @@ import {
   IoSettingsSharp as Settings,
   IoSync as Update,
 } from "react-icons/io5";
+import { MdInfoOutline as About } from "react-icons/md";
 
 import type { NavLink } from "./types";
 

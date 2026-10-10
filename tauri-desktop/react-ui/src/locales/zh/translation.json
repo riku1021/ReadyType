@@ -57,7 +57,6 @@
     "shortcutLoadFailed": "无法加载快捷键",
     "shortcutRegisterFailed": "快捷键注册失败。请尝试其他组合",
     "sectionOther": "其他",
-    "aboutApp": "关于应用",
     "resetToDefaults": "重置为默认设置",
     "resetConfirmTitle": "要重置为默认设置吗？",
     "resetConfirmText": "规则列表将恢复为默认预设。",

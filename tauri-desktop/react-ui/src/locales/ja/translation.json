@@ -57,7 +57,6 @@
     "shortcutLoadFailed": "ショートカットの読み込みに失敗しました",
     "shortcutRegisterFailed": "ショートカットの登録に失敗しました。別の組み合わせを試してください",
     "sectionOther": "その他",
-    "aboutApp": "アプリについて",
     "resetToDefaults": "既定設定へリセット",
     "resetConfirmTitle": "既定設定へ戻しますか？",
     "resetConfirmText": "ルール一覧を既定プリセットへ戻します。",
