@@ -57,7 +57,7 @@ export function AboutPage() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <img className={styles.appIcon} src="/pngs/logo.png" alt="" width={96} height={96} />
+        <img className={styles.appIcon} src="/pngs/logo.png" alt="" width={96} />
         <h1 className={styles.appName}>{t("about.appName")}</h1>
         <p className={styles.version}>{versionLabel}</p>
         <p className={styles.copyright}>{t("about.copyright")}</p>

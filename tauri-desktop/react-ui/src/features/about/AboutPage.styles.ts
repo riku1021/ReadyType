@@ -20,9 +20,8 @@ export const header = css({
 
 export const appIcon = css({
   width: "96px",
-  height: "96px",
-  borderRadius: "22px",
-  objectFit: "cover",
+  height: "auto",
+  objectFit: "contain",
 });
 
 export const appName = css({
