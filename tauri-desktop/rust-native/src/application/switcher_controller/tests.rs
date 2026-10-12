@@ -203,6 +203,26 @@ fn debug_options_and_duplicate_rules_are_validated() {
 }
 
 #[test]
+fn complete_onboarding_sets_flag() {
+    let controller = controller(Arc::new(MonitorData::default()));
+    assert!(
+        !controller
+            .settings()
+            .expect("settings")
+            .onboarding_completed
+    );
+
+    controller.complete_onboarding().expect("complete");
+
+    assert!(
+        controller
+            .settings()
+            .expect("settings")
+            .onboarding_completed
+    );
+}
+
+#[test]
 fn zero_minute_snooze_expires_without_a_focus_event() {
     let controller = controller(Arc::new(MonitorData::default()));
     controller.set_snooze_minutes(0).expect("snooze");

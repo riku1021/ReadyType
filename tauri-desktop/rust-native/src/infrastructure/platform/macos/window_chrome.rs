@@ -3,7 +3,7 @@
 use tauri::{Runtime, WebviewWindow};
 
 /// CSS `colors.background.main` と揃える（`react-ui/src/styles/tokens/color.ts`）。
-const BACKGROUND_MAIN_LIGHT: (f64, f64, f64) = (0xEA as f64, 0xEA as f64, 0xEA as f64);
+const BACKGROUND_MAIN_LIGHT: (f64, f64, f64) = (0xF9 as f64, 0xF9 as f64, 0xF9 as f64);
 const BACKGROUND_MAIN_DARK: (f64, f64, f64) = (0x22 as f64, 0x22 as f64, 0x22 as f64);
 
 /// Transparent タイトルバー越しに見える NSWindow 背景をアプリの `background.main` に合わせる。

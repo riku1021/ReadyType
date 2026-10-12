@@ -144,6 +144,8 @@
       "ja": "Japanese",
       "en": "English"
     },
+    "sectionOnboarding": "Onboarding preview",
+    "buttonShowOnboarding": "Show onboarding",
     "sectionDialogs": "Dialog / modal checks",
     "buttonSuccess": "Success",
     "buttonError": "Error",
@@ -209,6 +211,75 @@
   },
   "rules": {
     "defaultTitle": "Default"
+  },
+  "onboarding": {
+    "title": "Get started",
+    "progress": "{{current}}/{{total}}",
+    "back": "Back",
+    "next": "Next",
+    "welcome": {
+      "heading": "Welcome to <accent>{{appName}}</accent>",
+      "description": "Automatically switches input sources such as Japanese and English to match where you type.",
+      "skip": "Skip",
+      "start": "Get started",
+      "demoMessageApp": "Messages",
+      "demoMessageText": "Hello there!",
+      "demoJaGlyph": "あ",
+      "demoJaPill": "Switched to Japanese",
+      "demoEnGlyph": "A",
+      "demoEnPill": "Switched to English",
+      "featureAuto": "Switches automatically\nwith every focus",
+      "featureApps": "Works across\nyour apps",
+      "featureSetup": "Set it up once,\nthen stay comfortable"
+    },
+    "permissionAsk": {
+      "heading": "To <accent>detect input fields</accent>",
+      "description": "{{appName}} uses macOS Accessibility permission\nto recognize the input field that currently has focus.",
+      "heroPlaceholder": "Ask anything...",
+      "flowChatTitle": "AI Chat",
+      "flowChatText": "Hello",
+      "focusBadge": "Detect focus",
+      "langGlyph": "あ",
+      "langLabel": "Japanese",
+      "resultNote": "This field will\nauto-switch to Japanese.",
+      "privacyTitle": "We don’t read what you type",
+      "privacyBody": "{{appName}} only uses information needed to identify the input field.\nWe never collect typed content or personal data.",
+      "openSettings": "Open System Settings",
+      "settingsNote": "Opens System Settings › Privacy & Security › Accessibility."
+    },
+    "permissionConfirm": {
+      "headingGranted": "Accessibility <accent>has been enabled</accent>",
+      "leadGranted": "{{appName}} can now detect input fields\nand switch input sources automatically.",
+      "statusFeature": "Input field detection",
+      "statusReady": "You’re all set",
+      "title": "Checking Accessibility permission",
+      "description": "After enabling it in System Settings, tap “Confirm permission”.",
+      "check": "Confirm permission",
+      "later": "Set up later"
+    },
+    "quickSet": {
+      "heading": "Let’s <accent>set a rule</accent> for an input field",
+      "lead": "Place the cursor in a field and press <chip>{{shortcut}}</chip>\nto configure the input source.",
+      "demoChatTitle": "AI Chat",
+      "demoPlaceholder": "Type a message...",
+      "panelNameLabel": "Name for this field (optional)",
+      "panelNameValue": "Chat",
+      "panelSourceLabel": "Input source for this field",
+      "step1Title": "Focus the field",
+      "step1Body": "Place the cursor in the\nfield you want to configure.",
+      "step2Title": "Press {{shortcut}}",
+      "step2Body": "Open the settings panel\nwith the keyboard shortcut.",
+      "step3Title": "Choose a language",
+      "step3Body": "Select an input source\nand save the setting.",
+      "info": "After setup, you can configure fields in any app with this shortcut."
+    },
+    "tips": {
+      "heading": "{{appName}} is <accent>ready</accent>.",
+      "description": "From here, just type as usual.\nWhen you focus a configured field, the best input source switches automatically.",
+      "shortcutTipTitle": "You can set <accent>rules</accent> for new input fields",
+      "shortcutTipBody": "Fields you haven’t configured yet can be added anytime with this shortcut.",
+      "finish": "Start using ReadyType"
+    }
   },
   "about": {
     "appName": "ReadyType",

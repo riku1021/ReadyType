@@ -144,6 +144,8 @@
       "ja": "日本語",
       "en": "英語"
     },
+    "sectionOnboarding": "オンボーディング確認",
+    "buttonShowOnboarding": "オンボーディングを表示",
     "sectionDialogs": "ダイアログ / モーダル確認",
     "buttonSuccess": "成功",
     "buttonError": "エラー",
@@ -209,6 +211,75 @@
   },
   "rules": {
     "defaultTitle": "デフォルト"
+  },
+  "onboarding": {
+    "title": "はじめに",
+    "progress": "{{current}}/{{total}}",
+    "back": "戻る",
+    "next": "次へ",
+    "welcome": {
+      "heading": "{{appName}} <accent>へようこそ</accent>",
+      "description": "入力する場所に合わせて、日本語や英語などの\n入力ソースを自動で切り替えます。",
+      "skip": "スキップ",
+      "start": "はじめる",
+      "demoMessageApp": "メッセージ",
+      "demoMessageText": "お疲れさまです！",
+      "demoJaGlyph": "あ",
+      "demoJaPill": "日本語に自動で切り替え",
+      "demoEnGlyph": "A",
+      "demoEnPill": "英語に自動で切り替え",
+      "featureAuto": "入力のたびに\n自動で切り替え",
+      "featureApps": "あらゆるアプリで\n使えます",
+      "featureSetup": "一度設定すれば\nあとは自動で快適に"
+    },
+    "permissionAsk": {
+      "heading": "<accent>入力欄を検出</accent>するために",
+      "description": "{{appName}}は、現在フォーカスしている入力欄を認識するために、\nmacOSのアクセシビリティ権限を使用します。",
+      "heroPlaceholder": "Ask anything...",
+      "flowChatTitle": "AI Chat",
+      "flowChatText": "こんにちは",
+      "focusBadge": "フォーカスを検出",
+      "langGlyph": "あ",
+      "langLabel": "日本語",
+      "resultNote": "この入力欄では\n日本語に自動で切り替えます。",
+      "privacyTitle": "入力した文章の内容は読み取りません",
+      "privacyBody": "{{appName}}が使用するのは、入力欄を識別するために必要な情報のみです。\n入力内容や個人データを収集することはありません。",
+      "openSettings": "システム設定を開く",
+      "settingsNote": "システム設定 › プライバシーとセキュリティ › アクセシビリティ が開きます。"
+    },
+    "permissionConfirm": {
+      "headingGranted": "アクセシビリティが<accent>許可されました</accent>",
+      "leadGranted": "{{appName}}で入力欄を検出し、\n入力ソースを自動で切り替えられる状態になりました。",
+      "statusFeature": "入力欄の検出",
+      "statusReady": "準備ができました",
+      "title": "アクセシビリティ権限を確認しています",
+      "description": "システム設定で許可したら、「許可を確認する」を押してください。",
+      "check": "許可を確認する",
+      "later": "あとで設定する"
+    },
+    "quickSet": {
+      "heading": "入力欄に<accent>ルールを設定</accent>してみましょう",
+      "lead": "入力欄にカーソルを置いて、<chip>{{shortcut}}</chip> を押すだけで\n入力ソースを設定できます。",
+      "demoChatTitle": "AI Chat",
+      "demoPlaceholder": "メッセージを入力...",
+      "panelNameLabel": "この入力欄の名前（任意）",
+      "panelNameValue": "Chat",
+      "panelSourceLabel": "この入力欄で使用する入力ソース",
+      "step1Title": "入力欄にフォーカス",
+      "step1Body": "設定したい入力欄に\nカーソルを置きます。",
+      "step2Title": "{{shortcut}} を押す",
+      "step2Body": "キーボードショートカットで\n設定画面を開きます。",
+      "step3Title": "言語を選択",
+      "step3Body": "入力ソースを選んで\n設定を保存します。",
+      "info": "セットアップ後は、どのアプリでもこのショートカットで入力欄を設定できます。"
+    },
+    "tips": {
+      "heading": "{{appName}}の<accent>準備ができました</accent>。",
+      "description": "後は、いつも通り入力するだけです。\n設定した入力欄にフォーカスすると、最適な入力ソースに自動で切り替わります。",
+      "shortcutTipTitle": "新しい入力欄に<accent>ルール</accent>を設定できます",
+      "shortcutTipBody": "まだ設定していない入力欄は、このショートカットでいつでも追加できます。",
+      "finish": "ReadyTypeを使い始める"
+    }
   },
   "about": {
     "appName": "ReadyType",

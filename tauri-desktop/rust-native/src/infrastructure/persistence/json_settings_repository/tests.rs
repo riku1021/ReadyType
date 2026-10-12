@@ -108,6 +108,39 @@ fn schema_v1_legacy_json_decodes_into_language_preferences() {
 }
 
 #[test]
+fn missing_onboarding_completed_defaults_to_true_for_existing_files() {
+    let directory = TestDirectory::new("onboarding-missing");
+    write_settings(
+        &directory.join("settings.json"),
+        r#"{
+            "schemaVersion": 1,
+            "enabled": true,
+            "languagePreferences": {},
+            "rules": [],
+            "debugLogging": false,
+            "snoozedUntilUnixMs": null
+        }"#,
+    );
+
+    let outcome = repository(&directory).load().expect("decode");
+
+    assert!(outcome.settings().onboarding_completed);
+}
+
+#[test]
+fn onboarding_completed_false_round_trips() {
+    let directory = TestDirectory::new("onboarding-false");
+    let repository = repository(&directory);
+    let expected = SwitcherSettings::defaults();
+    assert!(!expected.onboarding_completed);
+
+    repository.save(&expected).expect("save");
+    let outcome = repository.load().expect("load");
+
+    assert!(!outcome.settings().onboarding_completed);
+}
+
+#[test]
 fn language_preferences_form_decodes_and_legacy_targets_migrate() {
     let directory = TestDirectory::new("language-preferences");
     let path = directory.join("settings.json");

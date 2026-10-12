@@ -1,7 +1,8 @@
-import { useRouter } from "@tanstack/react-router";
+import { useRouter, useRouterState } from "@tanstack/react-router";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { type ReactNode, useEffect, useState } from "react";
+import { useOnboardingGate } from "@/features/onboarding";
 import { NAVIGATE_EVENT, QUICK_SET_EVENT } from "@/features/quickSet";
 import { RootLayout } from "@/layouts/RootLayout";
 
@@ -9,9 +10,21 @@ type AppShellProps = {
   children: ReactNode;
 };
 
+function isShellLessPath(pathname: string): boolean {
+  return (
+    pathname === "/onboarding" ||
+    pathname.startsWith("/onboarding/") ||
+    pathname === "/quick-set" ||
+    pathname.startsWith("/quick-set/")
+  );
+}
+
 export function AppShell({ children }: AppShellProps) {
   const [windowLabel, setWindowLabel] = useState<string | null>(null);
   const router = useRouter();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+
+  useOnboardingGate();
 
   useEffect(() => {
     try {
@@ -62,7 +75,7 @@ export function AppShell({ children }: AppShellProps) {
     };
   }, [router, windowLabel]);
 
-  if (windowLabel === "quick-set") {
+  if (windowLabel === "quick-set" || isShellLessPath(pathname)) {
     return <>{children}</>;
   }
 

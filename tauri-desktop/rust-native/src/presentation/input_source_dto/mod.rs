@@ -356,6 +356,8 @@ pub struct SettingsDto {
     pub quick_set_shortcut: String,
     /// 起動時登録などを含め、現在 OS に登録されているか。
     pub quick_set_shortcut_registered: bool,
+    /// 初回オンボーディング完了済みか。
+    pub onboarding_completed: bool,
 }
 
 impl From<&SwitcherSettings> for SettingsDto {
@@ -378,6 +380,7 @@ impl From<&SwitcherSettings> for SettingsDto {
             quick_set_shortcut: settings.quick_set_shortcut.clone(),
             // AppHandle なしでは不明。コマンド側で上書きする。
             quick_set_shortcut_registered: false,
+            onboarding_completed: settings.onboarding_completed,
         }
     }
 }

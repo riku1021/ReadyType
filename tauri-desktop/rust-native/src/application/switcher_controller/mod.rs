@@ -452,6 +452,13 @@ impl SwitcherController {
         })
     }
 
+    pub fn complete_onboarding(&self) -> Result<SwitcherState, ControllerError> {
+        self.mutate_switcher(|switcher| {
+            switcher.complete_onboarding()?;
+            Ok(switcher.state().clone())
+        })
+    }
+
     pub fn focus_snapshot(&self) -> Result<Option<FocusSnapshot>, ControllerError> {
         Ok(self.lock_last_snapshot()?.clone())
     }

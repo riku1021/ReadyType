@@ -88,6 +88,8 @@ export interface InputSourceSettingsDto {
   quickSetShortcut: string;
   /** 起動時登録を含め、現在 OS に登録されているか */
   quickSetShortcutRegistered: boolean;
+  /** 初回オンボーディング完了済みか */
+  onboardingCompleted: boolean;
 }
 
 export interface SwitchLogDto {

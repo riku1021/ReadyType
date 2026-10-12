@@ -1,4 +1,5 @@
 import { adjustLightness, adjustOklchLightness, createColorSurface } from "../utils/color-utils";
+import backgroundMain from "./background.main.json";
 
 /**
  * 色のトークン定義
@@ -82,11 +83,12 @@ export const colorTokens = {
   },
 
   // 背景カラー（セマンティックトークン）
+  // background.main の正本は background.main.json（Rust window chrome も参照）
   background: {
     main: {
       value: {
-        base: "#EAEAEA",
-        _dark: "#222222",
+        base: backgroundMain.light,
+        _dark: backgroundMain.dark,
       },
     },
     sub: {

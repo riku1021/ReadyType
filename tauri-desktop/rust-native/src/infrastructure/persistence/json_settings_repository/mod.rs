@@ -174,6 +174,11 @@ fn default_quick_set_shortcut() -> String {
     crate::application::settings::DEFAULT_QUICK_SET_SHORTCUT.to_owned()
 }
 
+/// 既存の設定ファイル（フィールドなし）では初回オンボーディングを強制しない。
+fn default_onboarding_completed() -> bool {
+    true
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct SettingsDto {
@@ -194,6 +199,8 @@ struct SettingsDto {
     ui_locale: String,
     #[serde(default = "default_quick_set_shortcut")]
     quick_set_shortcut: String,
+    #[serde(default = "default_onboarding_completed")]
+    onboarding_completed: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -293,6 +300,7 @@ impl From<&SwitcherSettings> for SettingsDto {
             snoozed_until_unix_ms: settings.snoozed_until_unix_ms,
             ui_locale: settings.ui_locale.clone(),
             quick_set_shortcut: settings.quick_set_shortcut.clone(),
+            onboarding_completed: settings.onboarding_completed,
         }
     }
 }
@@ -320,6 +328,7 @@ impl TryFrom<SettingsDto> for SwitcherSettings {
             snoozed_until_unix_ms: dto.snoozed_until_unix_ms,
             ui_locale: SwitcherSettings::normalize_ui_locale(&dto.ui_locale),
             quick_set_shortcut,
+            onboarding_completed: dto.onboarding_completed,
         };
         settings.validate().map_err(invalid_settings)?;
         Ok(settings)

@@ -43,6 +43,7 @@ export const setDebugLogging = (enabled: boolean) =>
   invoke<SwitcherStateDto>("set_debug_logging", { enabled });
 export const setUiLocale = (locale: string) =>
   invoke<InputSourceSettingsDto>("set_ui_locale", { locale });
+export const completeOnboarding = () => invoke<InputSourceSettingsDto>("complete_onboarding");
 export const getFocusSnapshot = () => invoke<FocusSnapshotDto | null>("get_focus_snapshot");
 /** Lab 切替プリセットを既存ルールへ upsert。 */
 export const ensureLabSwitchRules = () => invoke<SwitcherStateDto>("ensure_lab_switch_rules");

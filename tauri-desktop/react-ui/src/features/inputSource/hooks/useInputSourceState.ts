@@ -11,6 +11,7 @@ import i18n, {
 import {
   applyNewerStateEvent,
   clearSwitchLogs as clearSwitchLogsApi,
+  completeOnboarding as completeOnboardingApi,
   createRule as createRuleApi,
   deleteRule as deleteRuleApi,
   getAccessibilityPermission,
@@ -305,6 +306,12 @@ export function useInputSourceState() {
     [setFeature]
   );
 
+  const completeOnboarding = useCallback(async () => {
+    const settings = await completeOnboardingApi();
+    setFeature((current) => ({ ...current, settings }));
+    return settings;
+  }, [setFeature]);
+
   const startDebugCapture = useCallback(async () => {
     const switcher = await startDebugCaptureApi();
     applySwitcher(setFeature, switcher);
@@ -394,6 +401,7 @@ export function useInputSourceState() {
     resetDefaultRules,
     setDebugLogging,
     setUiLocale,
+    completeOnboarding,
     startDebugCapture,
     stopDebugCapture,
     clearSwitchLogs,

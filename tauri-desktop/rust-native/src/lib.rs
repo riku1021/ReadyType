@@ -268,6 +268,7 @@ pub fn run() {
             presentation::commands::input_source_switcher::stop_debug_capture,
             presentation::commands::input_source_switcher::set_debug_logging,
             presentation::commands::input_source_switcher::set_ui_locale,
+            presentation::commands::input_source_switcher::complete_onboarding,
             presentation::commands::input_source_switcher::get_focus_snapshot,
             presentation::commands::input_source_switcher::ensure_lab_switch_rules,
             presentation::commands::input_source_switcher::open_lab_switch_window,

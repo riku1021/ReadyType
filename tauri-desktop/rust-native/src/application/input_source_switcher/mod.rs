@@ -266,6 +266,12 @@ where
         self.commit_settings(candidate, None)
     }
 
+    pub fn complete_onboarding(&mut self) -> Result<(), ApplicationError> {
+        let mut candidate = self.settings.clone();
+        candidate.onboarding_completed = true;
+        self.commit_settings(candidate, None)
+    }
+
     pub fn clear_logs(&mut self) {
         self.state.logs.clear();
         self.bump_state();

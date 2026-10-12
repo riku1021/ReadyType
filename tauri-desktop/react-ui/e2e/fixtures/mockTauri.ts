@@ -82,6 +82,10 @@ export async function installTauriMocks(page: Page): Promise<void> {
           };
           return shortcut;
         }
+        case "complete_onboarding": {
+          data.settings = { ...data.settings, onboardingCompleted: true };
+          return { ...data.settings };
+        }
         case "set_ui_locale": {
           const locale =
             typeof args?.locale === "string" && data.languagePreferences.includes(args.locale)

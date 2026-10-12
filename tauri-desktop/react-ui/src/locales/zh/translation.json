@@ -144,6 +144,8 @@
       "ja": "日语",
       "en": "英语"
     },
+    "sectionOnboarding": "引导流程确认",
+    "buttonShowOnboarding": "显示引导流程",
     "sectionDialogs": "对话框 / 模态框确认",
     "buttonSuccess": "成功",
     "buttonError": "错误",
@@ -209,6 +211,75 @@
   },
   "rules": {
     "defaultTitle": "默认"
+  },
+  "onboarding": {
+    "title": "开始使用",
+    "progress": "{{current}}/{{total}}",
+    "back": "返回",
+    "next": "下一步",
+    "welcome": {
+      "heading": "欢迎使用 <accent>{{appName}}</accent>",
+      "description": "根据输入位置，自动切换日语、英语等输入源。",
+      "skip": "跳过",
+      "start": "开始",
+      "demoMessageApp": "信息",
+      "demoMessageText": "辛苦了！",
+      "demoJaGlyph": "あ",
+      "demoJaPill": "已自动切换为日语",
+      "demoEnGlyph": "A",
+      "demoEnPill": "已自动切换为英语",
+      "featureAuto": "每次输入时\n自动切换",
+      "featureApps": "适用于\n各类应用",
+      "featureSetup": "设置一次后\n即可自动舒适使用"
+    },
+    "permissionAsk": {
+      "heading": "为了<accent>检测输入框</accent>",
+      "description": "{{appName}} 使用 macOS 辅助功能权限，\n以识别当前聚焦的输入框。",
+      "heroPlaceholder": "Ask anything...",
+      "flowChatTitle": "AI Chat",
+      "flowChatText": "你好",
+      "focusBadge": "检测焦点",
+      "langGlyph": "あ",
+      "langLabel": "日语",
+      "resultNote": "此输入框将\n自动切换为日语。",
+      "privacyTitle": "不会读取你输入的内容",
+      "privacyBody": "{{appName}} 仅使用识别输入框所需的信息。\n不会收集输入内容或个人数据。",
+      "openSettings": "打开系统设置",
+      "settingsNote": "将打开 系统设置 › 隐私与安全性 › 辅助功能。"
+    },
+    "permissionConfirm": {
+      "headingGranted": "辅助功能<accent>已启用</accent>",
+      "leadGranted": "{{appName}} 现已可以检测输入框，\n并自动切换输入源。",
+      "statusFeature": "输入框检测",
+      "statusReady": "已准备就绪",
+      "title": "正在确认辅助功能权限",
+      "description": "在系统设置中开启后，请点击“确认权限”。",
+      "check": "确认权限",
+      "later": "稍后设置"
+    },
+    "quickSet": {
+      "heading": "试着为输入框<accent>设置规则</accent>",
+      "lead": "将光标放在输入框中，按下 <chip>{{shortcut}}</chip>\n即可设置输入源。",
+      "demoChatTitle": "AI Chat",
+      "demoPlaceholder": "输入消息...",
+      "panelNameLabel": "此输入框的名称（可选）",
+      "panelNameValue": "Chat",
+      "panelSourceLabel": "此输入框使用的输入源",
+      "step1Title": "聚焦输入框",
+      "step1Body": "将光标放在要设置的\n输入框中。",
+      "step2Title": "按下 {{shortcut}}",
+      "step2Body": "使用键盘快捷键\n打开设置界面。",
+      "step3Title": "选择语言",
+      "step3Body": "选择输入源\n并保存设置。",
+      "info": "设置完成后，可在任何应用中用此快捷键配置输入框。"
+    },
+    "tips": {
+      "heading": "{{appName}}<accent>已准备就绪</accent>。",
+      "description": "接下来，像平时一样输入即可。\n聚焦已设置的输入框时，会自动切换到最合适的输入源。",
+      "shortcutTipTitle": "可为新的输入框设置<accent>规则</accent>",
+      "shortcutTipBody": "尚未设置的输入框，随时可用此快捷键添加。",
+      "finish": "开始使用 ReadyType"
+    }
   },
   "about": {
     "appName": "ReadyType",

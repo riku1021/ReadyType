@@ -277,6 +277,18 @@ pub fn set_ui_locale(
 }
 
 #[tauri::command]
+pub fn complete_onboarding(
+    app: AppHandle,
+    controller: State<'_, Arc<SwitcherController>>,
+) -> Result<SettingsDto, IpcError> {
+    controller.complete_onboarding().map_err(IpcError::from)?;
+    controller
+        .settings()
+        .map(|settings| settings_dto_with_registration(&app, &settings))
+        .map_err(IpcError::from)
+}
+
+#[tauri::command]
 pub fn get_focus_snapshot(
     controller: State<'_, Arc<SwitcherController>>,
 ) -> Result<Option<FocusSnapshotDto>, IpcError> {

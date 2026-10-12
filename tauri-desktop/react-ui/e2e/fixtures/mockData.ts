@@ -22,6 +22,7 @@ export const mockSettings = {
   resolvedUiLocale: "ja",
   quickSetShortcut: "CommandOrControl+Shift+L",
   quickSetShortcutRegistered: true,
+  onboardingCompleted: true,
 } as const;
 
 const axContains = (attribute: string, value: string) => ({

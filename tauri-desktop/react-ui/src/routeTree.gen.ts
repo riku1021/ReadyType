@@ -16,6 +16,7 @@ import { Route as AppsIndexRouteImport } from './routes/apps/index'
 import { Route as DiagnosticsIndexRouteImport } from './routes/diagnostics/index'
 import { Route as GeneralIndexRouteImport } from './routes/general/index'
 import { Route as LabIndexRouteImport } from './routes/lab/index'
+import { Route as OnboardingIndexRouteImport } from './routes/onboarding/index'
 import { Route as QuickSetIndexRouteImport } from './routes/quick-set/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as UpdateIndexRouteImport } from './routes/update/index'
@@ -56,6 +57,11 @@ const LabIndexRoute = LabIndexRouteImport.update({
   path: '/lab/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
+  id: '/onboarding/',
+  path: '/onboarding/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const QuickSetIndexRoute = QuickSetIndexRouteImport.update({
   id: '/quick-set/',
   path: '/quick-set/',
@@ -85,6 +91,7 @@ export interface FileRoutesByFullPath {
   '/diagnostics/': typeof DiagnosticsIndexRoute
   '/general/': typeof GeneralIndexRoute
   '/lab/': typeof LabIndexRoute
+  '/onboarding/': typeof OnboardingIndexRoute
   '/quick-set/': typeof QuickSetIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/update/': typeof UpdateIndexRoute
@@ -98,6 +105,7 @@ export interface FileRoutesByTo {
   '/diagnostics': typeof DiagnosticsIndexRoute
   '/general': typeof GeneralIndexRoute
   '/lab': typeof LabIndexRoute
+  '/onboarding': typeof OnboardingIndexRoute
   '/quick-set': typeof QuickSetIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/update': typeof UpdateIndexRoute
@@ -112,6 +120,7 @@ export interface FileRoutesById {
   '/diagnostics/': typeof DiagnosticsIndexRoute
   '/general/': typeof GeneralIndexRoute
   '/lab/': typeof LabIndexRoute
+  '/onboarding/': typeof OnboardingIndexRoute
   '/quick-set/': typeof QuickSetIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/update/': typeof UpdateIndexRoute
@@ -127,6 +136,7 @@ export interface FileRouteTypes {
     | '/diagnostics/'
     | '/general/'
     | '/lab/'
+    | '/onboarding/'
     | '/quick-set/'
     | '/settings/'
     | '/update/'
@@ -140,6 +150,7 @@ export interface FileRouteTypes {
     | '/diagnostics'
     | '/general'
     | '/lab'
+    | '/onboarding'
     | '/quick-set'
     | '/settings'
     | '/update'
@@ -153,6 +164,7 @@ export interface FileRouteTypes {
     | '/diagnostics/'
     | '/general/'
     | '/lab/'
+    | '/onboarding/'
     | '/quick-set/'
     | '/settings/'
     | '/update/'
@@ -167,6 +179,7 @@ export interface RootRouteChildren {
   DiagnosticsIndexRoute: typeof DiagnosticsIndexRoute
   GeneralIndexRoute: typeof GeneralIndexRoute
   LabIndexRoute: typeof LabIndexRoute
+  OnboardingIndexRoute: typeof OnboardingIndexRoute
   QuickSetIndexRoute: typeof QuickSetIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
   UpdateIndexRoute: typeof UpdateIndexRoute
@@ -224,6 +237,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LabIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding/': {
+      id: '/onboarding/'
+      path: '/onboarding'
+      fullPath: '/onboarding/'
+      preLoaderRoute: typeof OnboardingIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/quick-set/': {
       id: '/quick-set/'
       path: '/quick-set'
@@ -263,6 +283,7 @@ const rootRouteChildren: RootRouteChildren = {
   DiagnosticsIndexRoute: DiagnosticsIndexRoute,
   GeneralIndexRoute: GeneralIndexRoute,
   LabIndexRoute: LabIndexRoute,
+  OnboardingIndexRoute: OnboardingIndexRoute,
   QuickSetIndexRoute: QuickSetIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
   UpdateIndexRoute: UpdateIndexRoute,

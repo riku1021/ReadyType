@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -11,6 +12,7 @@ import { LAB_SWITCH_FIELDS } from "./labSwitchFields";
 
 export function LabPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [infoResult, setInfoResult] = useState("");
   const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
   const [isErrorDialogOpen, setIsErrorDialogOpen] = useState(false);
@@ -91,6 +93,18 @@ export function LabPage() {
           );
         })}
       </ul>
+
+      <h2 className={styles.sectionTitle}>{t("lab.sectionOnboarding")}</h2>
+      <div className={styles.buttonGroup}>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            void navigate({ to: "/onboarding", search: { preview: true } });
+          }}
+        >
+          {t("lab.buttonShowOnboarding")}
+        </Button>
+      </div>
 
       <h2 className={styles.sectionTitle}>{t("lab.sectionDialogs")}</h2>
       <div className={styles.buttonGroup}>

@@ -27,6 +27,8 @@ pub struct SwitcherSettings {
     pub ui_locale: String,
     /// Quick Set グローバルショートカット（Tauri accelerator 文字列）。
     pub quick_set_shortcut: String,
+    /// 初回オンボーディングを完了したか。
+    pub onboarding_completed: bool,
 }
 
 impl SwitcherSettings {
@@ -40,6 +42,7 @@ impl SwitcherSettings {
             snoozed_until_unix_ms: None,
             ui_locale: DEFAULT_UI_LOCALE_PREFERENCE.to_owned(),
             quick_set_shortcut: DEFAULT_QUICK_SET_SHORTCUT.to_owned(),
+            onboarding_completed: false,
         }
     }
 

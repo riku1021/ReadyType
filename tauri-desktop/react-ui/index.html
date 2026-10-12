@@ -21,7 +21,8 @@
             (stored !== "light" &&
               window.matchMedia("(prefers-color-scheme: dark)").matches);
           resolved = dark ? "dark" : "light";
-          bg = dark ? "#222222" : "#EAEAEA";
+          // background.main.json（Panda / Rust window chrome と揃える）
+          bg = dark ? "#222222" : "#F9F9F9";
           document.documentElement.setAttribute("data-theme", resolved);
           document.documentElement.style.backgroundColor = bg;
         } catch {
