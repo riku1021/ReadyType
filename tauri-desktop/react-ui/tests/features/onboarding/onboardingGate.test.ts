@@ -70,21 +70,4 @@ describe("resolveOnboardingNavigation", () => {
       })
     ).toBeNull();
   });
-
-  it("does not redirect quick-set routes even when onboarding is incomplete", () => {
-    expect(
-      resolveOnboardingNavigation({
-        ready: true,
-        onboardingCompleted: false,
-        pathname: "/quick-set",
-      })
-    ).toBeNull();
-    expect(
-      resolveOnboardingNavigation({
-        ready: true,
-        onboardingCompleted: false,
-        pathname: "/quick-set/",
-      })
-    ).toBeNull();
-  });
 });

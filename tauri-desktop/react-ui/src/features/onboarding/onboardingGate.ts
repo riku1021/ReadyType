@@ -13,11 +13,7 @@ function isOnboardingPath(pathname: string): boolean {
   return pathname === "/onboarding" || pathname.startsWith("/onboarding/");
 }
 
-function isQuickSetPath(pathname: string): boolean {
-  return pathname === "/quick-set" || pathname.startsWith("/quick-set/");
-}
-
-/** 起動ゲートの遷移先。不要なら null。 */
+/** 起動ゲートの遷移先。不要なら null。MainShell 専用。 */
 export function resolveOnboardingNavigation({
   ready,
   onboardingCompleted,
@@ -25,11 +21,6 @@ export function resolveOnboardingNavigation({
   preview = false,
 }: ResolveArgs): OnboardingNavTarget | null {
   if (!ready || onboardingCompleted == null) {
-    return null;
-  }
-
-  // Quick Set 窓専用ルート。メインのオンボーディング誘導対象外。
-  if (isQuickSetPath(pathname)) {
     return null;
   }
 

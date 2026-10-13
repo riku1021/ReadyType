@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useAtomValue } from "jotai";
 import { useEffect } from "react";
 import { themeAtom } from "@/atoms/theme";
+import { useWindowKind } from "@/platform";
 
 async function syncNativeWindowChrome(resolved: "light" | "dark") {
   try {
@@ -16,21 +17,24 @@ const ENABLE_TRANSITIONS_MS = 150;
 
 /**
  * `data-theme` を html 要素へ同期し、Panda CSS の light/dark 条件を有効化する。
- * macOS の Transparent タイトルバー背景も `background.main` に揃える。
+ * メイン窓では macOS の Transparent タイトルバー背景も `background.main` に揃える。
+ * quick-set 窓は透過 NSWindow のため native chrome sync は行わない。
  *
  * 起動時のネイティブ同期は `useRevealMainWindow` が await する。
  * ここでは値が変わったときだけ同期し、二重 invoke を避ける。
  */
 export const useThemeManager = () => {
   const theme = useAtomValue(themeAtom);
+  const windowKind = useWindowKind();
 
   useEffect(() => {
     const root = document.documentElement;
+    const syncChrome = windowKind === "main";
 
     const applyTheme = (value: "light" | "dark") => {
       const previous = root.getAttribute("data-theme");
       root.setAttribute("data-theme", value);
-      if (previous !== value) {
+      if (syncChrome && previous !== value) {
         void syncNativeWindowChrome(value);
       }
     };
@@ -55,7 +59,7 @@ export const useThemeManager = () => {
 
     applyTheme(theme);
     return () => window.clearTimeout(transitionsTimer);
-  }, [theme]);
+  }, [theme, windowKind]);
 
   return { theme };
 };

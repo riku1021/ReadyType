@@ -19,6 +19,7 @@ function readResolvedTheme(): "light" | "dark" {
  * `data-theme` は `index.html` のインライン script が先行適用済み。
  *
  * 窓を出すかどうかは Rust の `should_show_main_window_on_launch` が正本（ログイン起動 AE / `--autostart`）。
+ * MainApp 専用（QuickSetApp ではマウントしない）。
  *
  * 注意: 非表示ウィンドウでは `requestAnimationFrame` が発火しない／遅延するため使わない。
  */
@@ -31,15 +32,6 @@ export function useRevealMainWindow() {
     let cancelled = false;
 
     const reveal = async () => {
-      try {
-        if (getCurrentWindow().label !== "main") {
-          clearBootstrapBackground();
-          return;
-        }
-      } catch {
-        // browser / non-tauri
-      }
-
       const theme = readResolvedTheme();
 
       try {

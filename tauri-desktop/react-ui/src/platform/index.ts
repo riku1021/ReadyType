@@ -6,3 +6,5 @@ export {
   parseOsMajorVersion,
   usesMacOsDeviceControlPermissionLabel,
 } from "./hostOsVersion";
+export { useWindowKind, type WindowKind, WindowKindProvider } from "./windowKind";
+export { isQuickSetWindow, resolveWindowLabel } from "./windowLabel";
