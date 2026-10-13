@@ -41,6 +41,23 @@ fi
 pnpm tauri build --bundles app,dmg
 """
 
+["install:app"]
+description = "Copy built ReadyType.app into /Applications (macOS; run after build or build:dmg)"
+run = """
+if [ "$(uname -s)" != Darwin ]; then
+  echo "install:app is macOS-only" >&2
+  exit 1
+fi
+APP="tauri-desktop/rust-native/target/release/bundle/macos/ReadyType.app"
+if [ ! -d "$APP" ]; then
+  echo "Missing $APP — run: mise run build" >&2
+  exit 1
+fi
+rm -rf /Applications/ReadyType.app
+cp -R "$APP" /Applications/
+echo "Installed /Applications/ReadyType.app"
+"""
+
 ["react-ui:typecheck"]
 description = "Type-check react-ui"
 dir = "tauri-desktop/react-ui"
