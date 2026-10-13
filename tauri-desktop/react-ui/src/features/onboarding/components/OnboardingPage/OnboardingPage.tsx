@@ -7,11 +7,11 @@ import { IoShieldCheckmark } from "react-icons/io5";
 import { Button } from "@/components/Button";
 import { useInputSourceState } from "@/features/inputSource";
 
+import { PermissionAskStep } from "../PermissionAskStep/PermissionAskStep";
+import { PermissionConfirmStep } from "../PermissionConfirmStep/PermissionConfirmStep";
+import { QuickSetTutorialStep } from "../QuickSetTutorialStep/QuickSetTutorialStep";
+import { WelcomeStep } from "../WelcomeStep/WelcomeStep";
 import * as styles from "./OnboardingPage.styles";
-import { PermissionAskStep } from "./PermissionAskStep";
-import { PermissionConfirmStep } from "./PermissionConfirmStep";
-import { QuickSetTutorialStep } from "./QuickSetTutorialStep";
-import { WelcomeStep } from "./WelcomeStep";
 
 const STEP_IDS = ["welcome", "permissionAsk", "permissionConfirm", "quickSet", "tips"] as const;
 

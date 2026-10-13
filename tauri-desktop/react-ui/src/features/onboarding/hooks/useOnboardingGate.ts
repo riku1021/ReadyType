@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 import { inputSourceStateAtom } from "@/features/inputSource";
 
-import { resolveOnboardingNavigation } from "./onboardingGate";
+import { resolveOnboardingNavigation } from "../onboardingGate";
 
 function readPreviewFlag(search: object): boolean {
   if (!("preview" in search)) {
