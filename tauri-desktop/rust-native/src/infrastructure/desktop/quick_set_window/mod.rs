@@ -1,11 +1,15 @@
 //! Quick Set Level-1 popover window (hotkey-driven).
+//!
+//! On macOS the webview is converted to an `NSPanel` so it can appear on a
+//! fullscreen Space (`FullScreenAuxiliary`) without kicking the frontmost app
+//! out of fullscreen (non-activating + `orderFrontRegardless`).
 
 use std::sync::Arc;
 
-use tauri::{
-    AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, Monitor, WebviewUrl,
-    WebviewWindowBuilder,
-};
+use tauri::{AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, Monitor};
+
+#[cfg(not(target_os = "macos"))]
+use tauri::{WebviewUrl, WebviewWindowBuilder};
 
 use crate::application::{quick_set::QuickSetSession, switcher_controller::SwitcherController};
 use crate::infrastructure::desktop::main_window;
@@ -19,36 +23,117 @@ const WINDOW_WIDTH: f64 = 320.0;
 const WINDOW_HEIGHT: f64 = 448.0;
 const GAP: f64 = 8.0;
 
+#[cfg(target_os = "macos")]
+mod panel_macos {
+    use tauri::{AppHandle, LogicalSize, Manager, WebviewUrl};
+    use tauri_nspanel::{
+        tauri_panel, CollectionBehavior, ManagerExt, PanelBuilder, PanelLevel, StyleMask,
+    };
+
+    use super::{QUICK_SET_WINDOW_LABEL, WINDOW_HEIGHT, WINDOW_WIDTH};
+
+    tauri_panel! {
+        panel!(QuickSetPanel {
+            config: {
+                can_become_key_window: true,
+                can_become_main_window: false,
+                is_floating_panel: true
+            }
+        })
+    }
+
+    pub(super) fn ensure_panel(app: &AppHandle) -> Result<(), String> {
+        PanelBuilder::<_, QuickSetPanel>::new(app, QUICK_SET_WINDOW_LABEL)
+            .url(WebviewUrl::App("index.html".into()))
+            .title("ReadyType")
+            .size(tauri::Size::Logical(LogicalSize::new(
+                WINDOW_WIDTH,
+                WINDOW_HEIGHT,
+            )))
+            .with_window(|window| {
+                window
+                    .resizable(false)
+                    .maximizable(false)
+                    .minimizable(false)
+                    .closable(true)
+                    .decorations(false)
+                    .transparent(true)
+                    .visible(false)
+                    .skip_taskbar(true)
+            })
+            // Creation must not flip Accessory → Regular (Dock flash / leave fullscreen).
+            .no_activate(true)
+            .floating(true)
+            .level(PanelLevel::Floating)
+            .hides_on_deactivate(false)
+            .transparent(true)
+            // Ephemeral overlay: follow the active Space (incl. fullscreen) without lingering
+            // on every Space the way CanJoinAllSpaces + Stationary would.
+            .collection_behavior(
+                CollectionBehavior::new()
+                    .full_screen_auxiliary()
+                    .move_to_active_space()
+                    .ignores_cycle(),
+            )
+            .add_style_mask(StyleMask::empty().nonactivating_panel())
+            .build()
+            .map_err(|error| error.to_string())?;
+
+        if let Some(window) = app.get_webview_window(QUICK_SET_WINDOW_LABEL) {
+            crate::infrastructure::platform::macos::set_window_background_transparent(&window);
+        }
+
+        Ok(())
+    }
+
+    pub(super) fn show(app: &AppHandle) -> Result<(), String> {
+        let panel = app
+            .get_webview_panel(QUICK_SET_WINDOW_LABEL)
+            .map_err(|error| format!("quick-set panel missing: {error:?}"))?;
+        // orderFrontRegardless + makeKeyWindow — does not activate the app like set_focus().
+        panel.show_and_make_key();
+        Ok(())
+    }
+
+    pub(super) fn hide(app: &AppHandle) {
+        if let Ok(panel) = app.get_webview_panel(QUICK_SET_WINDOW_LABEL) {
+            panel.hide();
+        }
+    }
+}
+
 pub fn ensure_window(app: &AppHandle) -> Result<(), String> {
     if app.get_webview_window(QUICK_SET_WINDOW_LABEL).is_some() {
         return Ok(());
     }
 
-    let window = WebviewWindowBuilder::new(
-        app,
-        QUICK_SET_WINDOW_LABEL,
-        WebviewUrl::App("index.html".into()),
-    )
-    .title("ReadyType")
-    .inner_size(WINDOW_WIDTH, WINDOW_HEIGHT)
-    .resizable(false)
-    .maximizable(false)
-    .minimizable(false)
-    .closable(true)
-    .decorations(false)
-    .transparent(true)
-    .always_on_top(true)
-    .visible(false)
-    .skip_taskbar(true)
-    .build()
-    .map_err(|error| error.to_string())?;
-
     #[cfg(target_os = "macos")]
     {
-        crate::infrastructure::platform::macos::set_window_background_transparent(&window);
+        panel_macos::ensure_panel(app)
     }
 
-    Ok(())
+    #[cfg(not(target_os = "macos"))]
+    {
+        WebviewWindowBuilder::new(
+            app,
+            QUICK_SET_WINDOW_LABEL,
+            WebviewUrl::App("index.html".into()),
+        )
+        .title("ReadyType")
+        .inner_size(WINDOW_WIDTH, WINDOW_HEIGHT)
+        .resizable(false)
+        .maximizable(false)
+        .minimizable(false)
+        .closable(true)
+        .decorations(false)
+        .transparent(true)
+        .always_on_top(true)
+        .visible(false)
+        .skip_taskbar(true)
+        .build()
+        .map(|_| ())
+        .map_err(|error| error.to_string())
+    }
 }
 
 pub fn open(app: &AppHandle) -> Result<(), String> {
@@ -85,14 +170,29 @@ pub fn open(app: &AppHandle) -> Result<(), String> {
 
     // Webview-targeted emit; FE listens via getCurrentWebviewWindow().listen.
     let _ = app.emit_to(QUICK_SET_WINDOW_LABEL, QUICK_SET_EVENT, &event);
-    let _ = window.show();
-    let _ = window.set_focus();
+
+    #[cfg(target_os = "macos")]
+    {
+        panel_macos::show(app)?;
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
     Ok(())
 }
 
 pub fn hide(app: &AppHandle) {
-    if let Some(window) = app.get_webview_window(QUICK_SET_WINDOW_LABEL) {
-        let _ = window.hide();
+    #[cfg(target_os = "macos")]
+    {
+        panel_macos::hide(app);
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        if let Some(window) = app.get_webview_window(QUICK_SET_WINDOW_LABEL) {
+            let _ = window.hide();
+        }
     }
     if let Some(controller) = app.try_state::<Arc<SwitcherController>>() {
         let _ = controller.clear_quick_set_session();

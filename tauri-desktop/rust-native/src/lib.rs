@@ -31,8 +31,13 @@ fn current_platform_name() -> &'static str {
 pub fn run() {
     let _ = current_platform_name();
 
-    #[cfg_attr(target_os = "macos", allow(unused_mut))]
     let mut builder = tauri::Builder::default();
+
+    #[cfg(target_os = "macos")]
+    {
+        // Quick Set NSPanel (fullscreen Space overlay). Main window stays a regular NSWindow.
+        builder = builder.plugin(tauri_nspanel::init());
+    }
 
     #[cfg(not(target_os = "macos"))]
     {
