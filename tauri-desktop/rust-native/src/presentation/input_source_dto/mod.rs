@@ -523,5 +523,16 @@ impl From<&crate::application::quick_set::QuickSetSession> for QuickSetSessionDt
     }
 }
 
+/// Hotkey open payload: always show the window; session may be unavailable.
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum QuickSetOpenEventDto {
+    #[serde(rename_all = "camelCase")]
+    Ready {
+        session: Box<QuickSetSessionDto>,
+    },
+    Unavailable,
+}
+
 #[cfg(test)]
 mod tests;

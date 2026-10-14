@@ -8,7 +8,7 @@ use tauri::{
 
 use crate::application::{quick_set::QuickSetSession, switcher_controller::SwitcherController};
 use crate::infrastructure::desktop::main_window;
-use crate::presentation::input_source_dto::QuickSetSessionDto;
+use crate::presentation::input_source_dto::{QuickSetOpenEventDto, QuickSetSessionDto};
 
 pub const QUICK_SET_WINDOW_LABEL: &str = "quick-set";
 pub const QUICK_SET_EVENT: &str = "readytype://quick-set";
@@ -55,24 +55,35 @@ pub fn open(app: &AppHandle) -> Result<(), String> {
         .try_state::<Arc<SwitcherController>>()
         .ok_or_else(|| "switcher controller unavailable".to_owned())?;
 
-    // Capture focus BEFORE showing ReadyType UI.
-    let session = controller
-        .prepare_quick_set_session()
-        .map_err(|error| error.to_string())?;
+    // Capture focus BEFORE showing ReadyType UI. On failure still open the window with an
+    // empty state (Raycast-style feedback) — never apply a stale foreign snapshot.
+    let prepared = controller.prepare_quick_set_session();
+    let event = match &prepared {
+        Ok(session) => QuickSetOpenEventDto::Ready {
+            session: Box::new(QuickSetSessionDto::from(session)),
+        },
+        Err(error) => {
+            eprintln!("quick-set session unavailable: {error}");
+            let _ = controller.clear_quick_set_session();
+            QuickSetOpenEventDto::Unavailable
+        }
+    };
 
     ensure_window(app)?;
     let window = app
         .get_webview_window(QUICK_SET_WINDOW_LABEL)
         .ok_or_else(|| "quick-set window missing".to_owned())?;
 
-    position_near_focus(app, &window, &session)?;
+    match &prepared {
+        Ok(session) => position_near_focus(app, &window, session)?,
+        Err(_) => position_centered(app, &window)?,
+    }
 
     // Keep Accessory while Quick Set is open so the Dock stays hidden in BG residency.
     // Main UI still switches to Regular via `show_main_window` / `show_main_for_app`.
 
-    let dto = QuickSetSessionDto::from(&session);
     // Webview-targeted emit; FE listens via getCurrentWebviewWindow().listen.
-    let _ = app.emit_to(QUICK_SET_WINDOW_LABEL, QUICK_SET_EVENT, &dto);
+    let _ = app.emit_to(QUICK_SET_WINDOW_LABEL, QUICK_SET_EVENT, &event);
     let _ = window.show();
     let _ = window.set_focus();
     Ok(())
@@ -136,7 +147,17 @@ fn position_near_focus(
             }
         }
         (x, y)
-    } else if let Some(monitor) = app.primary_monitor().ok().flatten() {
+    } else {
+        return position_centered(app, window);
+    };
+
+    let _ = window.set_size(LogicalSize::new(WINDOW_WIDTH, WINDOW_HEIGHT));
+    let _ = window.set_position(LogicalPosition::new(x, y));
+    Ok(())
+}
+
+fn position_centered(app: &AppHandle, window: &tauri::WebviewWindow) -> Result<(), String> {
+    let (x, y) = if let Some(monitor) = app.primary_monitor().ok().flatten() {
         let scale = monitor.scale_factor();
         let size = monitor.size();
         let position = monitor.position();

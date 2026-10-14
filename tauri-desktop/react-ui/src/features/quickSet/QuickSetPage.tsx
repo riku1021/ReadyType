@@ -41,7 +41,7 @@ import {
   shell,
 } from "./QuickSetPage.styles";
 import { buildQuickSetOptions, type QuickSetUiPhase } from "./quickSetViewModel";
-import { QUICK_SET_EVENT, type QuickSetSessionDto } from "./types";
+import { QUICK_SET_EVENT, type QuickSetOpenEventDto, type QuickSetSessionDto } from "./types";
 
 function itemKey(child: ReactNode, index: number): string {
   if (isValidElement(child) && child.key != null) {
@@ -63,6 +63,7 @@ function withDividers(items: ReactNode[]): ReactNode[] {
 export function QuickSetPage() {
   const { t } = useTranslation();
   const [session, setSession] = useState<QuickSetSessionDto | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
   const [ruleName, setRuleName] = useState("");
   const [phase, setPhase] = useState<QuickSetUiPhase>({ kind: "idle" });
   const [error, setError] = useState<string | null>(null);
@@ -76,10 +77,25 @@ export function QuickSetPage() {
   const adoptSession = useCallback(
     (next: QuickSetSessionDto | null) => {
       setSession(next);
+      setUnavailable(false);
       setRuleName(next?.proposedName ?? "");
       resetInteraction();
     },
     [resetInteraction]
+  );
+
+  const adoptOpenEvent = useCallback(
+    (event: QuickSetOpenEventDto) => {
+      if (event.kind === "ready") {
+        adoptSession(event.session);
+        return;
+      }
+      setSession(null);
+      setUnavailable(true);
+      setRuleName("");
+      resetInteraction();
+    },
+    [adoptSession, resetInteraction]
   );
 
   const loadSession = useCallback(async () => {
@@ -94,16 +110,16 @@ export function QuickSetPage() {
   useEffect(() => {
     void loadSession();
     // emit_to(quick-set) と対になる webview 専用 listen
-    const unlistenPromise = getCurrentWebviewWindow().listen<QuickSetSessionDto>(
+    const unlistenPromise = getCurrentWebviewWindow().listen<QuickSetOpenEventDto>(
       QUICK_SET_EVENT,
       (event) => {
-        adoptSession(event.payload);
+        adoptOpenEvent(event.payload);
       }
     );
     return () => {
       void unlistenPromise.then((unlisten) => unlisten());
     };
-  }, [adoptSession, loadSession]);
+  }, [adoptOpenEvent, loadSession]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -278,7 +294,12 @@ export function QuickSetPage() {
           </div>
         </>
       ) : (
-        <p className={emptyState}>{error ?? t("quickSet.waiting")}</p>
+        <div className={headerBlock}>
+          <BrandLogo />
+          <p className={emptyState}>
+            {unavailable ? t("quickSet.noFocusTarget") : (error ?? t("quickSet.waiting"))}
+          </p>
+        </div>
       )}
       <SuccessDialog
         isOpen={successLabel !== null}

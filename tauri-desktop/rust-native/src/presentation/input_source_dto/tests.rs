@@ -1,4 +1,4 @@
-use super::{RuleDto, StateDto};
+use super::{QuickSetOpenEventDto, RuleDto, StateDto};
 use crate::{
     application::switcher_state::SwitcherState,
     domain::input_source::{Platform, PlatformAppId},
@@ -35,6 +35,12 @@ fn invalid_rule_dto_is_rejected() {
     });
     let dto: RuleDto = serde_json::from_value(json).expect("wire shape");
     assert!(crate::domain::input_source::FocusRule::try_from(dto).is_err());
+}
+
+#[test]
+fn quick_set_open_event_unavailable_uses_kind_tag() {
+    let json = serde_json::to_value(QuickSetOpenEventDto::Unavailable).expect("serialize");
+    assert_eq!(json, serde_json::json!({ "kind": "unavailable" }));
 }
 
 #[test]

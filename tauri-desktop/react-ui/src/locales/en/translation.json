@@ -204,6 +204,7 @@
     "deleteRule": "Delete this rule",
     "saved": "Set to {{language}}",
     "waiting": "Detecting target…",
+    "noFocusTarget": "Focus a text field in the app you want to configure, then press the shortcut again.",
     "noLanguages": "No preferred languages are configured. Check preferred input sources in Settings.",
     "loadFailed": "Could not open Quick Set",
     "saveFailed": "Failed to save",

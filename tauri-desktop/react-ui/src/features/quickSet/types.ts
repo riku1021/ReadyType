@@ -18,5 +18,10 @@ export type QuickSetSessionDto = {
   languagePreferences: LanguageInputPreferences;
 };
 
+/** Native hotkey open payload (`emit_to` quick-set). */
+export type QuickSetOpenEventDto =
+  | { kind: "ready"; session: QuickSetSessionDto }
+  | { kind: "unavailable" };
+
 export const QUICK_SET_EVENT = "readytype://quick-set";
 export const NAVIGATE_EVENT = "readytype://navigate";
