@@ -3,7 +3,8 @@
 use std::sync::Arc;
 
 use tauri::{
-    AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, WebviewUrl, WebviewWindowBuilder,
+    AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, Monitor, WebviewUrl,
+    WebviewWindowBuilder,
 };
 
 use crate::application::{quick_set::QuickSetSession, switcher_controller::SwitcherController};
@@ -76,7 +77,7 @@ pub fn open(app: &AppHandle) -> Result<(), String> {
 
     match &prepared {
         Ok(session) => position_near_focus(app, &window, session)?,
-        Err(_) => position_centered(app, &window)?,
+        Err(_) => position_centered_near_cursor(app, &window)?,
     }
 
     // Keep Accessory while Quick Set is open so the Dock stays hidden in BG residency.
@@ -104,6 +105,101 @@ pub fn show_main_for_app(app: &AppHandle, app_id: &str) {
     main_window::show_main_window(app, Some(&route));
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct LogicalRect {
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+}
+
+impl LogicalRect {
+    fn contains(&self, x: f64, y: f64) -> bool {
+        x >= self.x && x < self.x + self.width && y >= self.y && y < self.y + self.height
+    }
+}
+
+fn monitor_logical_rect(monitor: &Monitor) -> LogicalRect {
+    let scale = monitor.scale_factor();
+    let position = monitor.position();
+    let size = monitor.size();
+    LogicalRect {
+        x: f64::from(position.x) / scale,
+        y: f64::from(position.y) / scale,
+        width: f64::from(size.width) / scale,
+        height: f64::from(size.height) / scale,
+    }
+}
+
+fn primary_monitor_rect(app: &AppHandle) -> Option<LogicalRect> {
+    app.primary_monitor()
+        .ok()
+        .flatten()
+        .map(|monitor| monitor_logical_rect(&monitor))
+}
+
+fn monitor_contains_physical(monitor: &Monitor, x: f64, y: f64) -> bool {
+    let position = monitor.position();
+    let size = monitor.size();
+    let left = f64::from(position.x);
+    let top = f64::from(position.y);
+    let right = left + f64::from(size.width);
+    let bottom = top + f64::from(size.height);
+    x >= left && x < right && y >= top && y < bottom
+}
+
+fn monitor_rect_for_logical_point(app: &AppHandle, x: f64, y: f64) -> Option<LogicalRect> {
+    app.available_monitors()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|monitor| monitor_logical_rect(&monitor))
+        .find(|rect| rect.contains(x, y))
+        .or_else(|| primary_monitor_rect(app))
+}
+
+fn monitor_rect_for_physical_point(app: &AppHandle, x: f64, y: f64) -> Option<LogicalRect> {
+    app.available_monitors()
+        .unwrap_or_default()
+        .into_iter()
+        .find(|monitor| monitor_contains_physical(monitor, x, y))
+        .map(|monitor| monitor_logical_rect(&monitor))
+        .or_else(|| primary_monitor_rect(app))
+}
+
+/// Place the popover near an AX frame, flipped above when it would overflow the bottom.
+fn place_near_anchor(anchor: LogicalRect, monitor: LogicalRect) -> (f64, f64) {
+    let mut x = anchor.x;
+    let mut y = anchor.y + anchor.height + GAP;
+    if y + WINDOW_HEIGHT > monitor.y + monitor.height {
+        y = anchor.y - WINDOW_HEIGHT - GAP;
+    }
+    if x + WINDOW_WIDTH > monitor.x + monitor.width {
+        x = monitor.x + monitor.width - WINDOW_WIDTH - GAP;
+    }
+    if x < monitor.x {
+        x = monitor.x + GAP;
+    }
+    if y < monitor.y {
+        y = monitor.y + GAP;
+    }
+    if y + WINDOW_HEIGHT > monitor.y + monitor.height {
+        y = (monitor.y + monitor.height - WINDOW_HEIGHT - GAP).max(monitor.y + GAP);
+    }
+    (x, y)
+}
+
+fn center_on_monitor(monitor: LogicalRect) -> (f64, f64) {
+    (
+        monitor.x + (monitor.width - WINDOW_WIDTH) / 2.0,
+        monitor.y + (monitor.height - WINDOW_HEIGHT) / 2.0,
+    )
+}
+
+fn apply_window_position(window: &tauri::WebviewWindow, x: f64, y: f64) {
+    let _ = window.set_size(LogicalSize::new(WINDOW_WIDTH, WINDOW_HEIGHT));
+    let _ = window.set_position(LogicalPosition::new(x, y));
+}
+
 fn position_near_focus(
     app: &AppHandle,
     window: &tauri::WebviewWindow,
@@ -121,60 +217,39 @@ fn position_near_focus(
         }
     };
 
-    let (x, y) = if let Some(frame) = frame {
-        let mut x = frame.x;
-        let mut y = frame.y + frame.height + GAP;
-        // Prefer aligning to the left of the field; clamp later via monitor if available.
-        if let Some(monitor) = app.primary_monitor().ok().flatten() {
-            let scale = monitor.scale_factor();
-            let size = monitor.size();
-            let position = monitor.position();
-            let screen_x = f64::from(position.x) / scale;
-            let screen_y = f64::from(position.y) / scale;
-            let screen_w = f64::from(size.width) / scale;
-            let screen_h = f64::from(size.height) / scale;
-            if y + WINDOW_HEIGHT > screen_y + screen_h {
-                y = frame.y - WINDOW_HEIGHT - GAP;
-            }
-            if x + WINDOW_WIDTH > screen_x + screen_w {
-                x = screen_x + screen_w - WINDOW_WIDTH - GAP;
-            }
-            if x < screen_x {
-                x = screen_x + GAP;
-            }
-            if y < screen_y {
-                y = screen_y + GAP;
-            }
-        }
-        (x, y)
-    } else {
-        return position_centered(app, window);
+    let Some(frame) = frame else {
+        return position_centered_near_cursor(app, window);
     };
 
-    let _ = window.set_size(LogicalSize::new(WINDOW_WIDTH, WINDOW_HEIGHT));
-    let _ = window.set_position(LogicalPosition::new(x, y));
+    let anchor = LogicalRect {
+        x: frame.x,
+        y: frame.y,
+        width: frame.width,
+        height: frame.height,
+    };
+    let probe_x = frame.x + frame.width / 2.0;
+    let probe_y = frame.y + frame.height / 2.0;
+    let monitor = monitor_rect_for_logical_point(app, probe_x, probe_y)
+        .ok_or_else(|| "no monitor available for quick-set placement".to_owned())?;
+    let (x, y) = place_near_anchor(anchor, monitor);
+    apply_window_position(window, x, y);
     Ok(())
 }
 
-fn position_centered(app: &AppHandle, window: &tauri::WebviewWindow) -> Result<(), String> {
-    let (x, y) = if let Some(monitor) = app.primary_monitor().ok().flatten() {
-        let scale = monitor.scale_factor();
-        let size = monitor.size();
-        let position = monitor.position();
-        let screen_x = f64::from(position.x) / scale;
-        let screen_y = f64::from(position.y) / scale;
-        let screen_w = f64::from(size.width) / scale;
-        let screen_h = f64::from(size.height) / scale;
-        (
-            screen_x + (screen_w - WINDOW_WIDTH) / 2.0,
-            screen_y + (screen_h - WINDOW_HEIGHT) / 2.0,
-        )
-    } else {
-        (200.0, 200.0)
+fn position_centered_near_cursor(
+    app: &AppHandle,
+    window: &tauri::WebviewWindow,
+) -> Result<(), String> {
+    let monitor = match app.cursor_position() {
+        Ok(cursor) => monitor_rect_for_physical_point(app, cursor.x, cursor.y),
+        Err(_) => primary_monitor_rect(app),
     };
 
-    let _ = window.set_size(LogicalSize::new(WINDOW_WIDTH, WINDOW_HEIGHT));
-    let _ = window.set_position(LogicalPosition::new(x, y));
+    let (x, y) = match monitor {
+        Some(rect) => center_on_monitor(rect),
+        None => (200.0, 200.0),
+    };
+    apply_window_position(window, x, y);
     Ok(())
 }
 
@@ -191,4 +266,94 @@ fn urlencoding_lightweight(value: &str) -> String {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        center_on_monitor, place_near_anchor, LogicalRect, GAP, WINDOW_HEIGHT, WINDOW_WIDTH,
+    };
+
+    #[test]
+    fn places_below_anchor_when_space_allows() {
+        let monitor = LogicalRect {
+            x: 1920.0,
+            y: 0.0,
+            width: 1920.0,
+            height: 1080.0,
+        };
+        let anchor = LogicalRect {
+            x: 2000.0,
+            y: 100.0,
+            width: 200.0,
+            height: 24.0,
+        };
+        let (x, y) = place_near_anchor(anchor, monitor);
+        assert_eq!(x, 2000.0);
+        assert_eq!(y, 100.0 + 24.0 + GAP);
+    }
+
+    #[test]
+    fn flips_above_when_overflowing_bottom_of_secondary_monitor() {
+        let monitor = LogicalRect {
+            x: 1920.0,
+            y: 0.0,
+            width: 1920.0,
+            height: 1080.0,
+        };
+        let anchor = LogicalRect {
+            x: 2100.0,
+            y: 1000.0,
+            width: 120.0,
+            height: 20.0,
+        };
+        let (x, y) = place_near_anchor(anchor, monitor);
+        assert_eq!(x, 2100.0);
+        assert_eq!(y, 1000.0 - WINDOW_HEIGHT - GAP);
+        assert!(y >= monitor.y);
+    }
+
+    #[test]
+    fn clamps_horizontally_inside_secondary_monitor_not_primary() {
+        let monitor = LogicalRect {
+            x: 1920.0,
+            y: 0.0,
+            width: 800.0,
+            height: 600.0,
+        };
+        let anchor = LogicalRect {
+            x: 2600.0,
+            y: 40.0,
+            width: 100.0,
+            height: 20.0,
+        };
+        let (x, _y) = place_near_anchor(anchor, monitor);
+        assert!(x + WINDOW_WIDTH <= monitor.x + monitor.width);
+        assert!(x >= monitor.x);
+    }
+
+    #[test]
+    fn centers_on_given_monitor() {
+        let monitor = LogicalRect {
+            x: 1920.0,
+            y: 0.0,
+            width: 1920.0,
+            height: 1080.0,
+        };
+        let (x, y) = center_on_monitor(monitor);
+        assert!((x - (1920.0 + (1920.0 - WINDOW_WIDTH) / 2.0)).abs() < f64::EPSILON);
+        assert!((y - (0.0 + (1080.0 - WINDOW_HEIGHT) / 2.0)).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn logical_rect_contains_point_on_secondary() {
+        let monitor = LogicalRect {
+            x: 1920.0,
+            y: 0.0,
+            width: 1920.0,
+            height: 1080.0,
+        };
+        assert!(monitor.contains(2000.0, 100.0));
+        assert!(!monitor.contains(100.0, 100.0));
+    }
 }
