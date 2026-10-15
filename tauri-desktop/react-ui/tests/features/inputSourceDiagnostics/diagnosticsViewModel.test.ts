@@ -83,9 +83,15 @@ describe("diagnosticsViewModel", () => {
         reason: "",
         detail: "elements=1",
         processingMicros: 10,
+        prepareMicros: 1,
+        currentMicros: 2,
+        selectMicros: 3,
       },
     ]);
     expect(tsv.split("\n")[0]).toContain("processingMicros");
+    expect(tsv.split("\n")[0]).toContain("prepareMicros");
+    expect(tsv.split("\n")[0]).toContain("currentMicros");
+    expect(tsv.split("\n")[0]).toContain("selectMicros");
     expect(tsv.split("\n")[0]).toContain("decision");
     expect(tsv).toContain("success");
     expect(tsv).toContain("attempted");

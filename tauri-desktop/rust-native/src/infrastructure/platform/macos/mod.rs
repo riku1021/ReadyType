@@ -4,11 +4,14 @@ mod accessibility;
 mod app_display_name;
 mod app_icon;
 mod application_path;
+mod current_input_source_change;
 mod focus_monitor;
 mod input_source_display_name;
 pub(crate) mod lab_switch_window;
 mod tis;
 mod window_chrome;
+
+pub use current_input_source_change::MacOsCurrentInputSourceChangeMonitor;
 
 pub use accessibility::{focused_element_frame, ElementFrame};
 pub use app_display_name::MacOsAppDisplayNameResolver;

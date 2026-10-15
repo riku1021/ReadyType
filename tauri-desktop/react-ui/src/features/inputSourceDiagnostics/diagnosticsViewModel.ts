@@ -72,6 +72,9 @@ export function logsToTsv(logs: readonly SwitchLogDto[]): string {
     "reason",
     "detail",
     "processingMicros",
+    "prepareMicros",
+    "currentMicros",
+    "selectMicros",
   ].join("\t");
   const rows = logs.map((log) =>
     [
@@ -88,6 +91,9 @@ export function logsToTsv(logs: readonly SwitchLogDto[]): string {
       log.reason.replace(/\t/g, " ").replace(/\n/g, " "),
       log.detail.replace(/\t/g, " ").replace(/\n/g, " "),
       log.processingMicros,
+      log.prepareMicros,
+      log.currentMicros,
+      log.selectMicros,
     ].join("\t")
   );
   return [header, ...rows].join("\n");
@@ -105,6 +111,9 @@ export function formatSwitchLogLine(log: SwitchLogDto, t: TFunction): string {
     log.ruleId || "rule —",
     route,
     `${log.processingMicros}µs`,
+    `prep ${log.prepareMicros}µs`,
+    `cur ${log.currentMicros}µs`,
+    `sel ${log.selectMicros}µs`,
   ];
   if (log.reason) {
     parts.push(log.reason);

@@ -21,10 +21,10 @@ use serde::Serialize;
 
 use crate::application::{
     input_source_switcher::SwitchDecision, ports::diagnostic_log::DiagnosticLogSink,
-    switcher_state::SwitchLogEntry,
+    switch_ablation, switch_proto, switcher_state::SwitchLogEntry,
 };
 
-const SCHEMA_VERSION: u32 = 1;
+const SCHEMA_VERSION: u32 = 2;
 const MAX_SESSION_FILES: usize = 30;
 
 pub struct FileDiagnosticLogSink {
@@ -57,7 +57,8 @@ impl FileDiagnosticLogSink {
             kind: "session_start",
             timestamp_unix_ms: now_unix_ms(),
             path: path.display().to_string(),
-            note: "ReadyType input-source switch diagnostics (JSONL). One object per line. Prefer current.jsonl.",
+            note: "ReadyType input-source switch diagnostics (JSONL). One object per line. Prefer current.jsonl. flags.ablation / flags.proto list env overrides that are ON (empty = production defaults).",
+            flags: FlagSnapshot::capture(),
         };
         writeln!(
             file,
@@ -79,7 +80,7 @@ impl FileDiagnosticLogSink {
 
 impl DiagnosticLogSink for FileDiagnosticLogSink {
     fn append_switch_log(&self, entry: &SwitchLogEntry) {
-        let record = SwitchLogFileRecord::from(entry);
+        let record = SwitchLogFileRecord::from_entry(entry);
         let Ok(line) = serde_json::to_string(&record) else {
             return;
         };
@@ -91,6 +92,23 @@ impl DiagnosticLogSink for FileDiagnosticLogSink {
     }
 }
 
+/// Enabled `READYTYPE_ABLATION_*` / `READYTYPE_PROTO_*` at write time.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct FlagSnapshot {
+    ablation: Vec<&'static str>,
+    proto: Vec<&'static str>,
+}
+
+impl FlagSnapshot {
+    fn capture() -> Self {
+        Self {
+            ablation: switch_ablation::active_slugs(),
+            proto: switch_proto::active_slugs(),
+        }
+    }
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SessionMetaRecord {
@@ -99,6 +117,7 @@ struct SessionMetaRecord {
     timestamp_unix_ms: u64,
     path: String,
     note: &'static str,
+    flags: FlagSnapshot,
 }
 
 #[derive(Serialize)]
@@ -119,10 +138,14 @@ struct SwitchLogFileRecord<'a> {
     reason: &'a str,
     detail: &'a str,
     processing_micros: u64,
+    prepare_micros: u64,
+    current_micros: u64,
+    select_micros: u64,
+    flags: FlagSnapshot,
 }
 
-impl<'a> From<&'a SwitchLogEntry> for SwitchLogFileRecord<'a> {
-    fn from(entry: &'a SwitchLogEntry) -> Self {
+impl<'a> SwitchLogFileRecord<'a> {
+    fn from_entry(entry: &'a SwitchLogEntry) -> Self {
         Self {
             v: SCHEMA_VERSION,
             kind: "switch",
@@ -139,6 +162,10 @@ impl<'a> From<&'a SwitchLogEntry> for SwitchLogFileRecord<'a> {
             reason: entry.reason.as_str(),
             detail: entry.detail.as_str(),
             processing_micros: entry.processing_micros,
+            prepare_micros: entry.prepare_micros,
+            current_micros: entry.current_micros,
+            select_micros: entry.select_micros,
+            flags: FlagSnapshot::capture(),
         }
     }
 }

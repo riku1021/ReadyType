@@ -10,6 +10,7 @@ use crate::domain::input_source::{
 };
 
 use super::{
+    current_source_cache::CurrentInputSourceCache,
     ports::{
         clock::Clock,
         diagnostic_log::SharedDiagnosticLogSink,
@@ -18,6 +19,7 @@ use super::{
         switcher_events::SwitcherEventPublisher,
     },
     settings::SwitcherSettings,
+    switch_ablation, switch_proto,
     switcher_state::{SwitchLogEntry, SwitcherState},
 };
 
@@ -78,17 +80,89 @@ pub struct InputSourceSwitcher<G, R, C, E> {
     state: SwitcherState,
     /// Set by `bump_state`; drained outside the switcher mutex before publish.
     publish_pending: bool,
+    /// Last UI-relevant publish fingerprint (PROTO_PUBLISH_FINGERPRINT).
+    last_publish_fingerprint: Option<PublishFingerprint>,
     active_app: Option<PlatformAppId>,
     active_generation: u64,
     handled_generation: Option<u64>,
+    /// Manual override latch (PROTO_MANUAL_OVERRIDE).
+    current_focus_key: Option<String>,
+    manual_override_key: Option<String>,
+    last_auto_target: Option<InputSourceId>,
+    suppress_tis_as_manual: bool,
     /// UI ログと並行してファイル等へ書く（未配線なら None）。
     diagnostic_log: Option<SharedDiagnosticLogSink>,
+    /// Shared with TIS notify / switch_input_source (PROTO_CURRENT_CACHE).
+    current_cache: Arc<Mutex<CurrentInputSourceCache>>,
+}
+
+/// UI / tray 向け publish の意味指紋（version / logs は除外）。
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct PublishFingerprint {
+    enabled: bool,
+    snoozed_until_unix_ms: Option<u64>,
+    current_app: Option<String>,
+    matched_rule_id: Option<String>,
+    current_input_source: Option<String>,
+    target_input_source: Option<String>,
+    last_decision: Option<SwitchDecision>,
+}
+
+impl PublishFingerprint {
+    fn from_state(state: &SwitcherState) -> Self {
+        Self {
+            enabled: state.enabled,
+            snoozed_until_unix_ms: state.snoozed_until_unix_ms,
+            current_app: state
+                .current_app
+                .as_ref()
+                .map(|app| format!("{}:{}", app.app_id(), app.pid())),
+            matched_rule_id: state.matched_rule_id.clone(),
+            current_input_source: state
+                .current_input_source
+                .as_ref()
+                .map(|id| id.as_str().to_owned()),
+            target_input_source: state
+                .target_input_source
+                .as_ref()
+                .map(|id| id.as_str().to_owned()),
+            last_decision: state.last_decision,
+        }
+    }
 }
 
 /// `gateway.select` 成功後の検証メモ（ログ reason 用）。
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SelectOutcome {
     pub note: String,
+}
+
+/// `switch_input_source` の区間計測。
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct SwitchSourceTiming {
+    pub current_micros: u64,
+    pub select_micros: u64,
+    /// `select` を呼んだか（ablation でスキップしたら false）。micros が 0 でも区別する。
+    pub select_attempted: bool,
+}
+
+/// ログ用の区間内訳。
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct LogTiming {
+    pub prepare_micros: u64,
+    pub current_micros: u64,
+    pub select_micros: u64,
+}
+
+/// `complete_focus` の引数まとめ（Clippy too_many_arguments 回避）。
+pub struct CompleteFocusInput {
+    pub snapshot: FocusSnapshot,
+    pub rule: FocusRule,
+    pub target: InputSourceId,
+    pub current: InputSourceId,
+    pub select_result: Result<SelectOutcome, GatewayError>,
+    pub prepare_micros: u64,
+    pub source_timing: SwitchSourceTiming,
 }
 
 /// `prepare_focus` の結果。gateway 呼び出しはロック外で行う。
@@ -98,6 +172,7 @@ pub enum PreparedFocus {
         snapshot: FocusSnapshot,
         rule: Box<FocusRule>,
         target: InputSourceId,
+        prepare_micros: u64,
     },
 }
 
@@ -163,10 +238,16 @@ where
             publisher,
             state,
             publish_pending: false,
+            last_publish_fingerprint: None,
             active_app: None,
             active_generation: 0,
             handled_generation: None,
+            current_focus_key: None,
+            manual_override_key: None,
+            last_auto_target: None,
+            suppress_tis_as_manual: false,
             diagnostic_log: None,
+            current_cache: Arc::new(Mutex::new(CurrentInputSourceCache::new())),
         })
     }
 
@@ -176,6 +257,30 @@ where
 
     pub fn gateway_handle(&self) -> Arc<Mutex<G>> {
         Arc::clone(&self.gateway)
+    }
+
+    pub fn current_cache_handle(&self) -> Arc<Mutex<CurrentInputSourceCache>> {
+        Arc::clone(&self.current_cache)
+    }
+
+    pub fn invalidate_current_cache(&self) {
+        if let Ok(mut cache) = self.current_cache.lock() {
+            cache.invalidate();
+        }
+    }
+
+    pub fn warm_current_cache(&self) {
+        if !switch_proto::current_cache() {
+            return;
+        }
+        let Ok(gateway) = self.gateway.lock() else {
+            return;
+        };
+        if let Ok(id) = gateway.current() {
+            if let Ok(mut cache) = self.current_cache.lock() {
+                cache.put(id);
+            }
+        }
     }
 
     pub fn state(&self) -> &SwitcherState {
@@ -285,12 +390,34 @@ where
         self.active_app = Some(app.clone());
         self.active_generation = generation;
         self.handled_generation = None;
+        if switch_proto::manual_override() {
+            self.current_focus_key = None;
+            self.manual_override_key = None;
+            self.last_auto_target = None;
+            self.suppress_tis_as_manual = false;
+        }
         self.state.current_app = Some(app);
         self.state.matched_rule_id = None;
         self.state.current_input_source = None;
         self.state.target_input_source = None;
         self.bump_state();
         Ok(())
+    }
+
+    /// External TIS change (PROTO_TIS_NOTIFY / PROTO_MANUAL_OVERRIDE).
+    pub fn note_external_input_source_change(&mut self, current: &InputSourceId) {
+        if switch_proto::manual_override()
+            && !self.suppress_tis_as_manual
+            && self.last_auto_target.as_ref() != Some(current)
+        {
+            if let Some(key) = self.current_focus_key.clone() {
+                self.manual_override_key = Some(key);
+            }
+        }
+    }
+
+    pub fn set_suppress_tis_as_manual(&mut self, suppress: bool) {
+        self.suppress_tis_as_manual = suppress;
     }
 
     pub fn prepare_focus(
@@ -312,12 +439,42 @@ where
                     false,
                     reason,
                     started,
+                    LogTiming {
+                        prepare_micros: micros_since(started),
+                        ..LogTiming::default()
+                    },
                 );
             }
             return Ok(PreparedFocus::Done(SwitchDecision::Ignored));
         }
         self.handled_generation = Some(snapshot.generation());
         self.state.current_app = Some(snapshot.app().clone());
+
+        if switch_proto::manual_override() {
+            let focus_key = snapshot.focus_key();
+            if self.current_focus_key.as_deref() != Some(focus_key.as_str()) {
+                self.manual_override_key = None;
+            }
+            self.current_focus_key = Some(focus_key.clone());
+            if self.manual_override_key.as_deref() == Some(focus_key.as_str()) {
+                self.push_log(
+                    &snapshot,
+                    "",
+                    SwitchDecision::Ignored,
+                    "",
+                    "",
+                    true,
+                    false,
+                    "manual override latch: same focus context; select skipped".to_owned(),
+                    started,
+                    LogTiming {
+                        prepare_micros: micros_since(started),
+                        ..LogTiming::default()
+                    },
+                );
+                return Ok(PreparedFocus::Done(self.finish(SwitchDecision::Ignored)));
+            }
+        }
 
         if !self.settings.enabled {
             self.push_log(
@@ -330,6 +487,10 @@ where
                 false,
                 "auto switch is disabled".to_owned(),
                 started,
+                LogTiming {
+                    prepare_micros: micros_since(started),
+                    ..LogTiming::default()
+                },
             );
             return Ok(PreparedFocus::Done(self.finish(SwitchDecision::Disabled)));
         }
@@ -353,6 +514,10 @@ where
                 false,
                 format!("snoozed for remaining {remaining}ms"),
                 started,
+                LogTiming {
+                    prepare_micros: micros_since(started),
+                    ..LogTiming::default()
+                },
             );
             return Ok(PreparedFocus::Done(self.finish(SwitchDecision::Snoozed)));
         }
@@ -381,6 +546,10 @@ where
                         .count()
                 ),
                 started,
+                LogTiming {
+                    prepare_micros: micros_since(started),
+                    ..LogTiming::default()
+                },
             );
             return Ok(PreparedFocus::Done(self.finish(SwitchDecision::NoRule)));
         };
@@ -403,6 +572,10 @@ where
                 false,
                 reason,
                 started,
+                LogTiming {
+                    prepare_micros: micros_since(started),
+                    ..LogTiming::default()
+                },
             );
             return Ok(PreparedFocus::Done(self.finish(SwitchDecision::Failed)));
         };
@@ -410,22 +583,46 @@ where
             snapshot,
             rule: Box::new(rule),
             target,
+            prepare_micros: micros_since(started),
         })
     }
 
     pub fn complete_focus(
         &mut self,
-        snapshot: FocusSnapshot,
-        rule: FocusRule,
-        target: InputSourceId,
-        current: InputSourceId,
-        select_result: Result<SelectOutcome, GatewayError>,
+        input: CompleteFocusInput,
     ) -> Result<SwitchDecision, ApplicationError> {
+        let CompleteFocusInput {
+            snapshot,
+            rule,
+            target,
+            current,
+            select_result,
+            prepare_micros,
+            source_timing,
+        } = input;
         let started = Instant::now();
+        let timing = LogTiming {
+            prepare_micros,
+            current_micros: source_timing.current_micros,
+            select_micros: source_timing.select_micros,
+        };
         self.state.matched_rule_id = Some(rule.id().to_owned());
         self.state.current_input_source = Some(current.clone());
         self.state.target_input_source = Some(target.clone());
         if current == target {
+            let reason = if !source_timing.select_attempted {
+                Self::with_source_tags(
+                    "current input source already matches target; same-source reselect skipped (ablation)",
+                    current.as_str(),
+                    target.as_str(),
+                )
+            } else {
+                Self::with_source_tags(
+                    "current input source already matches target; reselected to refresh field context",
+                    current.as_str(),
+                    target.as_str(),
+                )
+            };
             self.push_log(
                 &snapshot,
                 rule.id(),
@@ -433,14 +630,14 @@ where
                 current.as_str(),
                 target.as_str(),
                 true,
-                true,
-                Self::with_source_tags(
-                    "current input source already matches target; reselected to refresh field context",
-                    current.as_str(),
-                    target.as_str(),
-                ),
+                source_timing.select_attempted,
+                reason,
                 started,
+                timing,
             );
+            if switch_proto::manual_override() {
+                self.last_auto_target = Some(target);
+            }
             return Ok(self.finish(SwitchDecision::AlreadySelected));
         }
 
@@ -465,7 +662,11 @@ where
                     true,
                     reason,
                     started,
+                    timing,
                 );
+                if switch_proto::manual_override() {
+                    self.last_auto_target = Some(target.clone());
+                }
                 self.state.current_input_source = Some(target);
                 Ok(self.finish(SwitchDecision::Switched))
             }
@@ -482,6 +683,7 @@ where
                     true,
                     message.clone(),
                     started,
+                    timing,
                 );
                 let _ = self.finish(SwitchDecision::Failed);
                 Err(ApplicationError::Gateway(error))
@@ -532,6 +734,7 @@ where
             true,
             error.to_string(),
             Instant::now(),
+            LogTiming::default(),
         );
         let _ = self.finish(SwitchDecision::Failed);
     }
@@ -546,17 +749,32 @@ where
                 snapshot,
                 rule,
                 target,
+                prepare_micros,
             } => {
+                if switch_proto::manual_override() {
+                    self.suppress_tis_as_manual = true;
+                }
                 let switch_result = {
                     let mut gateway = self.gateway.lock().map_err(|_| {
                         ApplicationError::InvalidSettings("gateway lock poisoned".to_owned())
                     })?;
                     let locale = SwitcherSettings::resolve_ui_locale(&self.settings.ui_locale);
-                    switch_input_source(&mut *gateway, &target, &locale)
+                    switch_input_source(&mut *gateway, &target, &locale, Some(&self.current_cache))
                 };
+                if switch_proto::manual_override() {
+                    self.suppress_tis_as_manual = false;
+                }
                 match switch_result {
-                    Ok((current, select_result)) => {
-                        self.complete_focus(snapshot, *rule, target, current, select_result)
+                    Ok((current, select_result, source_timing)) => {
+                        self.complete_focus(CompleteFocusInput {
+                            snapshot,
+                            rule: *rule,
+                            target,
+                            current,
+                            select_result,
+                            prepare_micros,
+                            source_timing,
+                        })
                     }
                     Err(error) => {
                         self.record_switch_pipeline_error(&snapshot, rule.id(), &target, &error);
@@ -732,6 +950,9 @@ where
                 reason,
                 detail,
                 processing_micros: 0,
+                prepare_micros: 0,
+                current_micros: 0,
+                select_micros: 0,
             },
         );
         self.state.logs.truncate(MAX_LOGS);
@@ -760,6 +981,7 @@ where
         attempted: bool,
         reason: String,
         started: Instant,
+        timing: LogTiming,
     ) {
         self.state.logs.insert(
             0,
@@ -776,7 +998,10 @@ where
                 attempted,
                 reason,
                 detail: Self::focus_detail(snapshot),
-                processing_micros: u64::try_from(started.elapsed().as_micros()).unwrap_or(u64::MAX),
+                processing_micros: micros_since(started),
+                prepare_micros: timing.prepare_micros,
+                current_micros: timing.current_micros,
+                select_micros: timing.select_micros,
             },
         );
         self.state.logs.truncate(MAX_LOGS);
@@ -803,6 +1028,13 @@ where
             return None;
         }
         self.publish_pending = false;
+        if switch_proto::publish_fingerprint() {
+            let fingerprint = PublishFingerprint::from_state(&self.state);
+            if self.last_publish_fingerprint.as_ref() == Some(&fingerprint) {
+                return None;
+            }
+            self.last_publish_fingerprint = Some(fingerprint);
+        }
         Some((self.state.clone(), self.settings.ui_locale.clone()))
     }
 
@@ -819,16 +1051,113 @@ pub(crate) fn switch_input_source<G: InputSourceGateway>(
     gateway: &mut G,
     target: &InputSourceId,
     locale: &str,
-) -> Result<(InputSourceId, Result<SelectOutcome, GatewayError>), ApplicationError> {
-    let current = gateway.current()?;
+    current_cache: Option<&Mutex<CurrentInputSourceCache>>,
+) -> Result<
+    (
+        InputSourceId,
+        Result<SelectOutcome, GatewayError>,
+        SwitchSourceTiming,
+    ),
+    ApplicationError,
+> {
+    let current_started = Instant::now();
+    let current = if switch_proto::current_cache() {
+        if let Some(cache) = current_cache {
+            if let Ok(guard) = cache.lock() {
+                if let Some(cached) = guard.get() {
+                    let id = cached.clone();
+                    drop(guard);
+                    let current_micros = micros_since(current_started);
+                    return finish_switch_after_current(
+                        gateway,
+                        target,
+                        locale,
+                        current_cache,
+                        id,
+                        current_micros,
+                    );
+                }
+            }
+        }
+        let id = gateway.current()?;
+        if let Some(cache) = current_cache {
+            if let Ok(mut guard) = cache.lock() {
+                guard.put(id.clone());
+            }
+        }
+        id
+    } else {
+        gateway.current()?
+    };
+    let current_micros = micros_since(current_started);
+    finish_switch_after_current(
+        gateway,
+        target,
+        locale,
+        current_cache,
+        current,
+        current_micros,
+    )
+}
+
+fn finish_switch_after_current<G: InputSourceGateway>(
+    gateway: &mut G,
+    target: &InputSourceId,
+    locale: &str,
+    current_cache: Option<&Mutex<CurrentInputSourceCache>>,
+    current: InputSourceId,
+    current_micros: u64,
+) -> Result<
+    (
+        InputSourceId,
+        Result<SelectOutcome, GatewayError>,
+        SwitchSourceTiming,
+    ),
+    ApplicationError,
+> {
+    if current == *target && switch_ablation::no_same_source_reselect() {
+        return Ok((
+            current,
+            Ok(SelectOutcome {
+                note: "same-source reselect skipped (ablation)".to_owned(),
+            }),
+            SwitchSourceTiming {
+                current_micros,
+                select_micros: 0,
+                select_attempted: false,
+            },
+        ));
+    }
+
+    let select_started = Instant::now();
     let select_result = match gateway.select(target) {
         Ok(()) => Ok(()),
-        Err(_) => {
-            gateway.list(true, locale)?;
-            gateway.select(target)
+        Err(first) => {
+            if let Some(cache) = current_cache {
+                if let Ok(mut guard) = cache.lock() {
+                    guard.invalidate();
+                }
+            }
+            if switch_ablation::no_retry() {
+                Err(first)
+            } else {
+                gateway.list(true, locale)?;
+                gateway.select(target)
+            }
         }
     };
+    let select_micros = micros_since(select_started);
+    let timing = SwitchSourceTiming {
+        current_micros,
+        select_micros,
+        select_attempted: true,
+    };
     let outcome = select_result.map(|()| {
+        if let Some(cache) = current_cache {
+            if let Ok(mut guard) = cache.lock() {
+                guard.put(target.clone());
+            }
+        }
         // select 成功でもメニューだけ先に変わることがあるので current を再読取して検証する。
         let mut notes = Vec::new();
         match gateway.current().ok() {
@@ -843,7 +1172,18 @@ pub(crate) fn switch_input_source<G: InputSourceGateway>(
             note: notes.join(" "),
         }
     });
-    Ok((current, outcome))
+    if outcome.is_err() {
+        if let Some(cache) = current_cache {
+            if let Ok(mut guard) = cache.lock() {
+                guard.invalidate();
+            }
+        }
+    }
+    Ok((current, outcome, timing))
+}
+
+fn micros_since(started: Instant) -> u64 {
+    u64::try_from(started.elapsed().as_micros()).unwrap_or(u64::MAX)
 }
 
 #[cfg(test)]

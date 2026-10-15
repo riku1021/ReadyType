@@ -4,11 +4,6 @@
 //!（WKWebView 由来）、本番モニタが Lab 欄を拾えない。そのため Lab 窓が key の間は
 //! AppKit firstResponder（と可能なら AX）から Identifier を読み、切替ワーカーへ渡す。
 
-use std::cell::RefCell;
-use std::ffi::c_void;
-use std::mem::MaybeUninit;
-use std::sync::{Arc, Mutex};
-
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2::{MainThreadMarker, MainThreadOnly};
@@ -17,6 +12,10 @@ use objc2_app_kit::{
     NSView, NSWindow, NSWindowStyleMask,
 };
 use objc2_foundation::{NSPoint, NSRect, NSSize, NSString};
+use std::cell::RefCell;
+use std::ffi::c_void;
+use std::mem::MaybeUninit;
+use std::sync::{Arc, Mutex};
 
 use crate::domain::input_source::{AxAttribute, LAB_SWITCH_FIELD_IDS};
 use crate::infrastructure::platform::focus_monitor::AttributePlan;
@@ -56,6 +55,34 @@ pub fn show(on_focus: LabFocusHandler) -> Result<(), String> {
         *guard = Some(on_focus);
     }
     run_on_main_thread(show_on_main)
+}
+
+/// 指定 Identifier の Lab 欄へフォーカスする（スモーク / 手動ハーネス用）。
+#[cfg(any(test, feature = "lab-smoke"))]
+pub fn focus_field(identifier: &str) -> Result<(), String> {
+    let identifier = identifier.to_owned();
+    run_on_main_thread(move || focus_field_on_main(&identifier))
+}
+
+/// Lab 欄の現在の文字列（スモークで自動 1 キー後の検証用）。
+#[cfg(any(test, feature = "lab-smoke"))]
+pub fn field_string_value(identifier: &str) -> Result<String, String> {
+    let identifier = identifier.to_owned();
+    run_on_main_thread(move || field_string_value_on_main(&identifier))
+}
+
+/// Lab 欄を空にする。
+#[cfg(any(test, feature = "lab-smoke"))]
+pub fn clear_field(identifier: &str) -> Result<(), String> {
+    let identifier = identifier.to_owned();
+    run_on_main_thread(move || clear_field_on_main(&identifier))
+}
+
+/// 指定 Lab 欄へ literal `a` を入れる（欄が書けることのプローブ。IME 非経由）。
+#[cfg(any(test, feature = "lab-smoke"))]
+pub fn insert_literal_a(identifier: &str) -> Result<(), String> {
+    let identifier = identifier.to_owned();
+    run_on_main_thread(move || insert_literal_a_on_main(&identifier))
 }
 
 fn show_on_main() -> Result<(), String> {
@@ -194,27 +221,47 @@ fn poll_once() -> bool {
         let Some(id) = resolve_focused_lab_id(state) else {
             return true;
         };
-        if state.last_focus_id.as_deref() == Some(id.as_str()) {
-            return true;
-        }
-        state.last_focus_id = Some(id.clone());
-        if let Ok(handler) = FOCUS_HANDLER.lock() {
-            if let Some(handler) = handler.as_ref() {
-                handler(&id);
-            }
-        }
+        // Dedup is inside notify_lab_focus (force=false).
+        drop(guard);
+        notify_lab_focus(&id, false);
         true
     })
 }
 
 fn resolve_focused_lab_id(state: &LabWindowState) -> Option<String> {
-    if !state.window.isKeyWindow() {
-        return None;
-    }
-    if let Some(id) = ax_lab_identifier() {
+    // AppKit firstResponder は key でなくても読める（ターミナルから起動したスモークで
+    // 窓は見えるが key にならないケースがある）。AX は key のときだけ試す。
+    if let Some(id) = appkit_lab_identifier(state) {
         return Some(id);
     }
-    appkit_lab_identifier(state)
+    if state.window.isKeyWindow() {
+        if let Some(id) = ax_lab_identifier() {
+            return Some(id);
+        }
+    }
+    None
+}
+
+fn notify_lab_focus(id: &str, force: bool) {
+    let should_notify = LAB_WINDOW.with(|cell| {
+        let mut guard = cell.borrow_mut();
+        let Some(state) = guard.as_mut() else {
+            return force;
+        };
+        if !force && state.last_focus_id.as_deref() == Some(id) {
+            return false;
+        }
+        state.last_focus_id = Some(id.to_owned());
+        true
+    });
+    if !should_notify {
+        return;
+    }
+    if let Ok(handler) = FOCUS_HANDLER.lock() {
+        if let Some(handler) = handler.as_ref() {
+            handler(id);
+        }
+    }
 }
 
 fn ax_lab_identifier() -> Option<String> {
@@ -252,6 +299,98 @@ fn appkit_lab_identifier(state: &LabWindowState) -> Option<String> {
         }
     }
     None
+}
+
+#[cfg(any(test, feature = "lab-smoke"))]
+fn focus_field_on_main(identifier: &str) -> Result<(), String> {
+    let mtm = MainThreadMarker::new()
+        .ok_or_else(|| "lab focus_field requires the AppKit main thread".to_owned())?;
+    LAB_WINDOW.with(|cell| {
+        let guard = cell.borrow();
+        let state = guard
+            .as_ref()
+            .ok_or_else(|| "lab switch window is not open".to_owned())?;
+        let field = state
+            .fields
+            .iter()
+            .find(|(id, _)| id == identifier)
+            .map(|(_, field)| field)
+            .ok_or_else(|| format!("unknown lab field: {identifier}"))?;
+        activate_and_front(mtm, &state.window);
+        let ok = state
+            .window
+            .makeFirstResponder(Some(AsRef::<NSResponder>::as_ref(&**field)));
+        if !ok {
+            return Err(format!("makeFirstResponder failed for {identifier}"));
+        }
+        Ok(())
+    })?;
+    // ターミナル起動では poll が key/firstResponder を拾えないことがあるので、
+    // プログラムフォーカスは必ず通知する（スモーク用）。
+    notify_lab_focus(identifier, true);
+    Ok(())
+}
+
+#[cfg(any(test, feature = "lab-smoke"))]
+fn field_string_value_on_main(identifier: &str) -> Result<String, String> {
+    LAB_WINDOW.with(|cell| {
+        let guard = cell.borrow();
+        let state = guard
+            .as_ref()
+            .ok_or_else(|| "lab switch window is not open".to_owned())?;
+        let field = state
+            .fields
+            .iter()
+            .find(|(id, _)| id == identifier)
+            .map(|(_, field)| field)
+            .ok_or_else(|| format!("unknown lab field: {identifier}"))?;
+        let value = AsRef::<NSControl>::as_ref(&**field).stringValue();
+        Ok(format!("{value}"))
+    })
+}
+
+#[cfg(any(test, feature = "lab-smoke"))]
+fn clear_field_on_main(identifier: &str) -> Result<(), String> {
+    LAB_WINDOW.with(|cell| {
+        let guard = cell.borrow();
+        let state = guard
+            .as_ref()
+            .ok_or_else(|| "lab switch window is not open".to_owned())?;
+        let field = state
+            .fields
+            .iter()
+            .find(|(id, _)| id == identifier)
+            .map(|(_, field)| field)
+            .ok_or_else(|| format!("unknown lab field: {identifier}"))?;
+        AsRef::<NSControl>::as_ref(&**field).setStringValue(&NSString::from_str(""));
+        Ok(())
+    })
+}
+
+#[cfg(any(test, feature = "lab-smoke"))]
+fn insert_literal_a_on_main(identifier: &str) -> Result<(), String> {
+    let mtm = MainThreadMarker::new()
+        .ok_or_else(|| "lab insert_literal_a requires the AppKit main thread".to_owned())?;
+    LAB_WINDOW.with(|cell| {
+        let guard = cell.borrow();
+        let state = guard
+            .as_ref()
+            .ok_or_else(|| "lab switch window is not open".to_owned())?;
+        let field = state
+            .fields
+            .iter()
+            .find(|(id, _)| id == identifier)
+            .map(|(_, field)| field)
+            .ok_or_else(|| format!("unknown lab field: {identifier}"))?;
+        activate_and_front(mtm, &state.window);
+        let _ = state
+            .window
+            .makeFirstResponder(Some(AsRef::<NSResponder>::as_ref(&**field)));
+        let control = AsRef::<NSControl>::as_ref(&**field);
+        let current = format!("{}", control.stringValue());
+        control.setStringValue(&NSString::from_str(&format!("{current}a")));
+        Ok(())
+    })
 }
 
 fn dispatch_after_ms<F>(delay_ms: u64, work: F)
@@ -347,3 +486,6 @@ extern "C" {
 }
 
 const DISPATCH_TIME_NOW: u64 = 0;
+
+#[cfg(any(test, feature = "lab-smoke"))]
+pub mod smoke;

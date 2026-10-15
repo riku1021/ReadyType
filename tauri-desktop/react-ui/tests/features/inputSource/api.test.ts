@@ -5,6 +5,7 @@ import {
   clearSwitchLogs,
   createRule,
   deleteRule,
+  ensureLabSwitchRules,
   getAccessibilityPermission,
   getAppPresentations,
   getAutostartEnabled,
@@ -15,6 +16,7 @@ import {
   listRules,
   listSwitchLogs,
   openAccessibilitySettings,
+  openLabSwitchWindow,
   reorderRules,
   requestAccessibilityPermission,
   resetDefaultRules,
@@ -141,6 +143,8 @@ describe("input source IPC", () => {
     await getAutostartEnabled();
     await setAutostartEnabled(true);
     await getAppPresentations(["com.apple.Terminal"]);
+    await ensureLabSwitchRules();
+    await openLabSwitchWindow();
 
     expect(calls.map((call) => call.command)).toEqual([
       "get_input_source_switcher_state",
@@ -167,10 +171,29 @@ describe("input source IPC", () => {
       "get_autostart_enabled",
       "set_autostart_enabled",
       "get_app_presentations",
+      "ensure_lab_switch_rules",
+      "open_lab_switch_window",
     ]);
-    expect(calls[calls.length - 1]?.args).toEqual({ bundleIds: ["com.apple.Terminal"] });
+    expect(calls[calls.length - 3]?.args).toEqual({ bundleIds: ["com.apple.Terminal"] });
     expect(calls[1]?.args).toEqual({ enabled: false });
     expect(calls[9]?.args).toEqual({ ids: ["a", "b"] });
+  });
+
+  it("invokes Lab switch helpers with exact command names", async () => {
+    const calls: string[] = [];
+    mockIPC((command) => {
+      calls.push(command);
+      if (command === "ensure_lab_switch_rules") {
+        return stateAtVersion(2);
+      }
+      if (command === "open_lab_switch_window") {
+        return;
+      }
+      throw new Error(`unexpected: ${command}`);
+    });
+    await expect(ensureLabSwitchRules()).resolves.toMatchObject({ version: 2 });
+    await expect(openLabSwitchWindow()).resolves.toBeUndefined();
+    expect(calls).toEqual(["ensure_lab_switch_rules", "open_lab_switch_window"]);
   });
 
   it("propagates invoke errors", async () => {

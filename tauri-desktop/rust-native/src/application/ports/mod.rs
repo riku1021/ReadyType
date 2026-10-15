@@ -3,6 +3,7 @@
 pub mod app_display_name;
 pub mod app_icon;
 pub mod clock;
+pub mod current_input_source_change;
 pub mod diagnostic_log;
 pub mod focus_monitor;
 pub mod input_source;

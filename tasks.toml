@@ -107,3 +107,14 @@ run = "cargo fmt -- --check"
 description = "Lint rust-native"
 dir = "tauri-desktop/rust-native"
 run = "cargo clippy --all-targets -- -D warnings"
+
+["rust-native:lab-smoke"]
+description = "macOS Lab input-source smoke (AppKit window on process main; needs AX)"
+dir = "tauri-desktop/rust-native"
+run = """
+if [ "$(uname -s)" != Darwin ]; then
+  echo "rust-native:lab-smoke is macOS-only" >&2
+  exit 1
+fi
+cargo run --bin lab-smoke --features lab-smoke
+"""

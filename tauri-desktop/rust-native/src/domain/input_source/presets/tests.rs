@@ -1,6 +1,7 @@
 use super::default_rules;
 use crate::domain::input_source::{
-    AxAttribute, AxElementSnapshot, FocusSnapshot, Platform, PlatformAppId, RuleSet,
+    AxAttribute, AxElementSnapshot, FocusSnapshot, LanguageTag, Platform, PlatformAppId, RuleSet,
+    RuleTarget,
 };
 
 fn cursor_snapshot(elements: Vec<AxElementSnapshot>) -> FocusSnapshot {
@@ -196,11 +197,38 @@ fn readytype_lab_switch_fields_match_fixed_languages() {
     let rules = RuleSet::new(default_rules()).expect("valid presets");
 
     let cases = [
-        ("readytype-lab-switch-01", "preset-readytype-lab-switch-01"),
-        ("readytype-lab-switch-02", "preset-readytype-lab-switch-02"),
-        ("readytype-lab-switch-06", "preset-readytype-lab-switch-06"),
+        (
+            "readytype-lab-switch-01",
+            "preset-readytype-lab-switch-01",
+            LanguageTag::ja(),
+        ),
+        (
+            "readytype-lab-switch-02",
+            "preset-readytype-lab-switch-02",
+            LanguageTag::en(),
+        ),
+        (
+            "readytype-lab-switch-03",
+            "preset-readytype-lab-switch-03",
+            LanguageTag::ja(),
+        ),
+        (
+            "readytype-lab-switch-04",
+            "preset-readytype-lab-switch-04",
+            LanguageTag::en(),
+        ),
+        (
+            "readytype-lab-switch-05",
+            "preset-readytype-lab-switch-05",
+            LanguageTag::ja(),
+        ),
+        (
+            "readytype-lab-switch-06",
+            "preset-readytype-lab-switch-06",
+            LanguageTag::en(),
+        ),
     ];
-    for (identifier, expected_rule_id) in cases {
+    for (identifier, expected_rule_id, expected_language) in cases {
         let snapshot = FocusSnapshot::new(
             app.clone(),
             1,
@@ -208,6 +236,10 @@ fn readytype_lab_switch_fields_match_fixed_languages() {
         );
         let matched = rules.first_match(&snapshot).expect("lab field matches");
         assert_eq!(matched.id(), expected_rule_id);
+        match matched.target() {
+            RuleTarget::PreferredLanguage(tag) => assert_eq!(tag, &expected_language),
+            other => panic!("expected preferred language, got {other:?}"),
+        }
 
         // field editor が FOCUSED で Identifier は親 NSTextField にあるケース
         let via_ancestor = FocusSnapshot::new(

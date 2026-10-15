@@ -255,6 +255,33 @@ impl FocusSnapshot {
     pub fn elements(&self) -> &[AxElementSnapshot] {
         &self.elements
     }
+
+    /// Focus identity for manual-override latch (focused element only).
+    pub fn focus_key(&self) -> String {
+        let Some(focused) = self.elements.first() else {
+            return format!("{}|{}|empty", self.app.app_id(), self.generation);
+        };
+        let classes = normalize_dom_class_list(focused.value(AxAttribute::DomClassList));
+        format!(
+            "{}|{}|{}|{}|{}|{}",
+            self.app.app_id(),
+            focused.value(AxAttribute::Role),
+            focused.value(AxAttribute::Identifier),
+            focused.value(AxAttribute::DomIdentifier),
+            classes,
+            // generation は含めない（同一文脈の再通知でも key を安定させる）
+            ""
+        )
+    }
+}
+
+fn normalize_dom_class_list(raw: &str) -> String {
+    let mut parts = raw
+        .split_whitespace()
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>();
+    parts.sort_unstable();
+    parts.join(" ")
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

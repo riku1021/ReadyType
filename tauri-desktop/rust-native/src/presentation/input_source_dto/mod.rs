@@ -401,6 +401,9 @@ pub struct SwitchLogDto {
     pub reason: String,
     pub detail: String,
     pub processing_micros: u64,
+    pub prepare_micros: u64,
+    pub current_micros: u64,
+    pub select_micros: u64,
 }
 
 impl From<SwitchLogEntry> for SwitchLogDto {
@@ -419,6 +422,9 @@ impl From<SwitchLogEntry> for SwitchLogDto {
             reason: log.reason,
             detail: log.detail,
             processing_micros: log.processing_micros,
+            prepare_micros: log.prepare_micros,
+            current_micros: log.current_micros,
+            select_micros: log.select_micros,
         }
     }
 }

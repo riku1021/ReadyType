@@ -20,6 +20,11 @@
 | 14 | `--autostart` | ログイン起動相当 | ウィンドウ非表示で起動 | _未実施_ | |
 | 15 | 入力ソース削除 | 設定画面 | 利用不可表示 | _未実施_ | |
 | 16 | 診断画面 | コピー / 条件取り込み / 離脱 | キャプチャ停止・生テキスト非永続化 | _未実施_ | |
+| L1 | 自動切替 ON・監視中・Lab ルール準備済 | 開発確認 → 「ネイティブ入力窓を開く」→ 欄 01–06 を順にフォーカス | 奇数欄 preferred ja / 偶数欄 preferred en（メニュー＋実入力） | _未実施_ | |
+| L2 | L1 のあと同一欄フォーカス維持 | メニューバーで手動 IME 切替 → 自動 1 キー相当の入力 | 手動ソースが維持され入力できる（ルールへ即戻らない） | _未実施_ | |
+| L3 | L1 と同前提 | `mise run rust-native:lab-smoke`（Lab 窓が前面に出る） | AC-2 / AC-3 相当がパス。失敗時は stderr / `tmp/input-source-logs/` | _未実施_ | |
+
+正本・ablation: [input-source-switch-test-plan.md](./input-source-switch-test-plan.md)
 
 ## 性能（診断画面）
 

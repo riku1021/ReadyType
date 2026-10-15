@@ -1,17 +1,20 @@
 # 入力ソース切替のレイテンシ対策（施策メモ）
 
-**現行コードには未適用。** 挙動の正は `57d310a` 時点の切替実装（＋詳細ログ / ファイル診断ログ）とする。  
-以下は試行した高速化（`1d52ef8` / `93487fe` 周辺）のメモであり、再検証してから個別に戻す候補。パス名・型名は当時の案。
+挙動の正（デフォルト）はフラグ未設定時の現行実装。
+以下の高速化候補は **`READYTYPE_PROTO_*=1` で opt-in 計測**し、良ければデフォルト昇格する（Wave 1 は prototype、AX/tray は spec_only）。
+状態表・昇格手順の正本: [input-source-switch-test-plan.md](./input-source-switch-test-plan.md)。
 
 関連:
 
 - ドメインモデル: [rules/ja-JP/input-source-model.md](./rules/ja-JP/input-source-model.md)
 - 手動確認: [input-source-switcher-manual-test.md](./input-source-switcher-manual-test.md)
+- テスト計画: [input-source-switch-test-plan.md](./input-source-switch-test-plan.md)
 
-残しているもの（現行）:
+残しているもの（現行・implemented）:
 
 - 詳細な切替 reason / detail、follow-up reselect の debug ログ
 - `tmp/input-source-logs/` への JSONL ファイル出力（§11.0）
+- 区間計測の縮小版（`processing` / `prepare` / `current` / `select` micros）
 
 ---
 
@@ -197,28 +200,86 @@ tray / FE 向けに「見た目が変わらない」publish を省略する。
 | `handled_generation` | 現行あり | 同一 generation の二重処理を Ignored |
 | postSelect / layoutOverride を reason に | 現行あり（ログ強化） | 切替直後の検証メモ |
 
-### 7.1 当面非採用
+### 7.1 当面非採用（デフォルト）
 
-**アイドル後の「二段 select」（常時の二重撃ち）は採用しない。**  
-速さ・AC-005（不要な再切替抑止）と逆行するため。診断で select 取りこぼしが再現したときだけ別チケットにする。  
-（macOS TIS 層に Electron 向け follow-up reselect がある場合は、ゲートウェイ実装の局所対策として扱う。）
+**アイドル後の「二段 select」（常時の二重撃ち）はデフォルト採用しない。**
+速さ・AC-005（不要な再切替抑止）と逆行するため。診断で select 取りこぼしが再現したときだけ別チケット／PROTO 実験にする。
+（macOS TIS 層の follow-up reselect はゲートウェイ実装の局所対策として現行あり。§7.2 参照。）
+
+### 7.2 外部参考: InputSourceSwitcher から借りうるもの
+
+参考実装: [InputSourceSwitcher](https://github.com/rn10/InputSourceSwitcher)（README.jp）。
+相手は **CGEventTap で ^Space 相当を横取りして TIS 直切替**する用途で、ReadyType（AX フォーカス → ルール → TIS）とは主経路が異なる。**タップ／ショートカット横取りは借りない。**
+
+すでに近いもの:
+
+| 相手 | ReadyType（現行） |
+|------|-------------------|
+| TIS 直 select | `tis` / `switch_input_source` |
+| 二段撃ち（再 select） | follow-up reselect +40 / +120 / +250ms（`READYTYPE_ABLATION_NO_FOLLOWUP` で切れる） |
+
+あと借り（または点検）しうるのは次の 2 点。
+
+#### 7.2.1 二段撃ちの詰め方（PROTO 実験向き）
+
+**相手の意図:** select 直後にもう一度同じソースを選び、メニューだけ先に変わる／IME（ATOK 等）の活性化取りこぼしを防ぐ。メニューバーの一瞬チラつきは許容。
+
+**ReadyType との差:** 後追い再 select 自体はある。違うのは **いつ・何回・どれだけ積極的か**。§7.1 の「常時アイドル後二重撃ちをデフォルトにしない」は維持し、効きが必要なら **`READYTYPE_PROTO_*` で opt-in 計測**する。
+
+| 案 | 内容 | 狙い |
+|----|------|------|
+| A. 即時二段 | 1 回目 select の直後（ほぼ 0ms）にもう 1 回 | 相手に近い。活性化取りこぼしを最短で潰す |
+| B. アイドル後だけ厚く | 最後の select から N 秒空いたときだけ、即時＋既存 follow-up | 「冷えたあと」だけ厚くする |
+| C. タイミング調整 | 40/120/250 をずらす・本数を変える | いまの枠のまま効きを測る |
+
+トレードオフ:
+
+- **良い:** 偽切替（メニューだけ変わる）や IME 活性化遅れに効く可能性（AC-2）
+- **悪い:** select 回数↑、チラつき、`selectMicros` 悪化、不要な再 select 感
+- **正しさ:** 手動オーバーライド直後の自前 reselect は手動尊重と衝突しうる → P3（manual override latch）とセットで見る
+
+測るとき: Lab + 手動で AC-2 / AC-3 と `selectMicros` p50。正本の昇格手順は [input-source-switch-test-plan.md](./input-source-switch-test-plan.md)。
+
+#### 7.2.2 重い処理をコールバック上でやらない（メインキューへ渡す）
+
+**相手の意図:** `CGEventTap` コールバック内では切替本体をやらす、すぐ return → 実処理はメインキューへ。タップ内で長引くと macOS がタップを無効化（`tapDisabledByTimeout`）し、取りこぼしが再発するため。待機も `usleep` ではなく後追い実行。
+
+**ReadyType の対応関係（ショートカットタップは無いが同じ原則）:**
+
+- TIS はメインキュー前提（macOS 26+ 等）
+- フォーカス worker は switcher ロックを握ったまま TIS を待たない（ロック外 handoff）
+- follow-up は呼び出しをブロックする sleep ではなく遅延スケジュール
+
+新規機能というより **点検・維持チェックリスト**:
+
+1. select 経路に同期 sleep（メイン／worker を止める待ち）が残っていないか
+2. AX / フォーカスコールバック内で重い処理をしていないか（すぐキューに投げているか）
+3. follow-up がメインを長時間占有していないか（短い select 連打は可、長い処理は NG）
+
+崩れると相手の「タップ無効化」に相当し、監視停止・切替が突然効かない、が出うる。
+
+| 項目 | 扱い |
+|------|------|
+| 二段撃ち強化（A/B/C） | 実験するなら PROTO。第一候補はここ |
+| メインキュー／非ブロック | 点検・既存方針の厳守（フラグ化は不要） |
 
 ---
 
 ## 8. 診断メトリクス — 候補（当時）
 
-高速化試行時に `SwitchLogEntry` へ載せた timing 列と診断 UI。**現行の `SwitchLogEntry` は `processing_micros` までの単純形**で、以下の細分フィールドは未適用。
+高速化試行時に `SwitchLogEntry` へ載せた timing 列と診断 UI。
+
+**現行（縮小版・適用済み）:** `processing_micros` / `prepare_micros` / `current_micros` / `select_micros`。手順は [input-source-switch-test-plan.md](./input-source-switch-test-plan.md)。
+
+未適用の細分候補:
 
 | フィールド | 測るもの |
 |------------|----------|
 | `ax_micros` | AX スナップショット（pipeline 外） |
 | `queue_micros` | AX 完了 → `prepare_focus` 開始 |
-| `prepare_micros` | ルール判定 |
 | `handoff_micros` | NeedsSwitch 後〜 gateway/cache ロック取得（Done は 0） |
-| `current_micros` / `current_cache_hit` | `gateway.current()` とキャッシュ成否 |
-| `select_micros` | `gateway.select()`（未実行 0。失敗時の list+再試行含む） |
+| `current_cache_hit` | current キャッシュ成否 |
 | `finalize_micros` | complete_focus / 早期 push_log 直前まで |
-| `processing_micros` | 判定処理全体（**現行も保持**） |
 | `pipeline_micros` | AX 完了〜ログまで（キュー・gateway 含む） |
 | `publish_micros` | state/tray publish（pipeline 外。後書き） |
 
@@ -271,7 +332,7 @@ tmp/input-source-logs/
 ```
 
 - 1 行目は `kind=session_start`、以降は `kind=switch`
-- フィールドは camelCase（`decision` / `reason` / `detail` / `processingMicros` など）。timing 細分は現行スキーマには無い
+- フィールドは camelCase（`decision` / `reason` / `detail` / `processingMicros` / `prepareMicros` / `currentMicros` / `selectMicros` など）
 - 上書きディレクトリ: 環境変数 `READYTYPE_INPUT_SOURCE_LOG_DIR`
 
 ### 11.1 reason / detail の見方

@@ -13,6 +13,13 @@ pub mod domain;
 pub mod infrastructure;
 pub mod presentation;
 
+/// Lab 切替スモーク（`cargo run --bin lab-smoke --features lab-smoke`）。
+/// `cargo test` では AppKit main runloop を回せないため、こちらを使う。
+#[cfg(all(target_os = "macos", feature = "lab-smoke"))]
+pub fn run_lab_switch_smoke() -> Result<(), String> {
+    infrastructure::platform::macos::lab_switch_window::smoke::run_from_process_main()
+}
+
 use std::sync::Arc;
 
 use application::ports::{
@@ -115,6 +122,23 @@ pub fn run() {
                     )
                 }
             };
+            let tis_change_monitor: Box<
+                dyn application::ports::current_input_source_change::CurrentInputSourceChangeMonitor,
+            > = {
+                #[cfg(target_os = "macos")]
+                {
+                    Box::new(
+                        infrastructure::platform::macos::MacOsCurrentInputSourceChangeMonitor::default(
+                        ),
+                    )
+                }
+                #[cfg(not(target_os = "macos"))]
+                {
+                    Box::new(
+                        application::ports::current_input_source_change::NoopCurrentInputSourceChangeMonitor,
+                    )
+                }
+            };
             let controller = application::switcher_controller::SwitcherController::new(
                 application::switcher_controller::SwitcherControllerDeps {
                     settings,
@@ -124,6 +148,7 @@ pub fn run() {
                     publisher,
                     monitor,
                     app_display_names: Arc::clone(&app_display_name_resolver),
+                    tis_change_monitor,
                 },
             )?;
             #[cfg(target_os = "macos")]

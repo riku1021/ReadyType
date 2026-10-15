@@ -17,6 +17,12 @@ pub struct SwitchLogEntry {
     pub reason: String,
     pub detail: String,
     pub processing_micros: u64,
+    /// `prepare_focus` 区間（ルール判定）。NeedsSwitch 時は complete 前までの時間。
+    pub prepare_micros: u64,
+    /// `gateway.current()` 区間。
+    pub current_micros: u64,
+    /// `gateway.select`（retry 含む）。未実行時 0。
+    pub select_micros: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

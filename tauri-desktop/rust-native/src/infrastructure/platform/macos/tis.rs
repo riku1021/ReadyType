@@ -320,8 +320,23 @@ fn select_on_main(handle: &OwnedTisInputSource) -> Result<(), GatewayError> {
         )));
     }
     // メニューバーだけ先に変わり、フォーカス中フィールドの入力コンテキストが遅れる対策。
-    schedule_followup_reselects(handle.clone());
+    // Ablation: READYTYPE_ABLATION_NO_FOLLOWUP=1（docs/input-source-switch-test-plan.md）
+    if !ablation_no_followup() {
+        schedule_followup_reselects(handle.clone());
+    }
     Ok(())
+}
+
+fn ablation_no_followup() -> bool {
+    match std::env::var("READYTYPE_ABLATION_NO_FOLLOWUP") {
+        Ok(value) => {
+            let trimmed = value.trim();
+            trimmed == "1"
+                || trimmed.eq_ignore_ascii_case("true")
+                || trimmed.eq_ignore_ascii_case("yes")
+        }
+        Err(_) => false,
+    }
 }
 
 fn schedule_followup_reselects(handle: OwnedTisInputSource) {

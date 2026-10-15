@@ -1,9 +1,9 @@
 use std::sync::{
     atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
-    Arc,
+    mpsc, Arc, Mutex,
 };
 
-use super::{SwitcherController, SwitcherControllerDeps};
+use super::{drain_queued_focus, SwitcherController, SwitcherControllerDeps, WorkerMessage};
 use crate::{
     application::{
         ports::{
@@ -19,7 +19,9 @@ use crate::{
         settings::SwitcherSettings,
         switcher_state::SwitcherState,
     },
-    domain::input_source::{AxAttribute, InputSourceId},
+    domain::input_source::{
+        readytype_lab_switch_rules, AxAttribute, InputSourceId, LanguageTag, LAB_SWITCH_FIELD_IDS,
+    },
 };
 
 struct FakeGateway;
@@ -38,6 +40,55 @@ impl InputSourceGateway for FakeGateway {
     }
 
     fn select(&mut self, _id: &InputSourceId) -> Result<(), GatewayError> {
+        Ok(())
+    }
+}
+
+#[derive(Default)]
+struct RecordingGatewayData {
+    current: String,
+    selected: Vec<String>,
+}
+
+struct RecordingGateway(Arc<Mutex<RecordingGatewayData>>);
+
+impl InputSourceGateway for RecordingGateway {
+    fn list(
+        &mut self,
+        _refresh: bool,
+        _locale: &str,
+    ) -> Result<Vec<AvailableInputSource>, GatewayError> {
+        Ok(vec![
+            AvailableInputSource {
+                id: InputSourceId::parse("en").expect("en"),
+                name: "English".to_owned(),
+                language_code: Some("en".to_owned()),
+                available: true,
+            },
+            AvailableInputSource {
+                id: InputSourceId::parse("jp").expect("jp"),
+                name: "Japanese".to_owned(),
+                language_code: Some("ja".to_owned()),
+                available: true,
+            },
+            AvailableInputSource {
+                id: InputSourceId::parse("other").expect("other"),
+                name: "Other".to_owned(),
+                language_code: Some("fr".to_owned()),
+                available: true,
+            },
+        ])
+    }
+
+    fn current(&self) -> Result<InputSourceId, GatewayError> {
+        let current = self.0.lock().expect("gateway").current.clone();
+        InputSourceId::parse(&current).map_err(|error| GatewayError::Operation(error.to_string()))
+    }
+
+    fn select(&mut self, id: &InputSourceId) -> Result<(), GatewayError> {
+        let mut data = self.0.lock().expect("gateway");
+        data.current = id.as_str().to_owned();
+        data.selected.push(id.as_str().to_owned());
         Ok(())
     }
 }
@@ -124,14 +175,25 @@ impl AppDisplayNameResolver for NoopDisplayNames {
 }
 
 fn controller(monitor: Arc<MonitorData>) -> Arc<SwitcherController> {
+    controller_with(monitor, SwitcherSettings::defaults(), Box::new(FakeGateway))
+}
+
+fn controller_with(
+    monitor: Arc<MonitorData>,
+    settings: SwitcherSettings,
+    gateway: Box<dyn InputSourceGateway>,
+) -> Arc<SwitcherController> {
     SwitcherController::new(SwitcherControllerDeps {
-        settings: SwitcherSettings::defaults(),
-        gateway: Box::new(FakeGateway),
+        settings,
+        gateway,
         repository: Arc::new(FakeRepository),
         clock: Arc::new(FakeClock(AtomicU64::new(1_000))),
         publisher: Arc::new(NoopPublisher),
         monitor: Box::new(FakeMonitor(monitor)),
         app_display_names: Arc::new(NoopDisplayNames),
+        tis_change_monitor: Box::new(
+            crate::application::ports::current_input_source_change::NoopCurrentInputSourceChangeMonitor,
+        ),
     })
     .expect("controller")
 }
@@ -239,4 +301,100 @@ fn zero_minute_snooze_expires_without_a_focus_event() {
         std::thread::yield_now();
     }
     panic!("snooze did not expire");
+}
+
+#[test]
+fn ensure_lab_switch_rules_upserts_presets() {
+    let controller = controller(Arc::new(MonitorData::default()));
+    let before = controller.rules().expect("rules").len();
+    controller
+        .ensure_lab_switch_rules()
+        .expect("ensure lab rules");
+    let rules = controller.rules().expect("rules");
+    assert!(rules.len() >= before);
+    for field_ordinal in 1..=6 {
+        let id = format!("preset-readytype-lab-switch-{field_ordinal:02}");
+        assert!(rules.iter().any(|rule| rule.id() == id), "missing {id}");
+    }
+    // idempotent
+    controller.ensure_lab_switch_rules().expect("ensure again");
+    assert_eq!(controller.rules().expect("rules").len(), rules.len());
+}
+
+#[test]
+fn report_lab_focus_requires_monitoring() {
+    let controller = controller(Arc::new(MonitorData::default()));
+    let err = controller
+        .report_lab_focus(LAB_SWITCH_FIELD_IDS[0])
+        .expect_err("not monitoring");
+    assert!(err.to_string().contains("not running"));
+}
+
+#[test]
+fn report_lab_focus_selects_preferred_source_per_field() {
+    // SAFETY: clear ablation env so parallel ablation tests do not skip select.
+    unsafe {
+        std::env::remove_var("READYTYPE_ABLATION_NO_FOLLOWUP");
+        std::env::remove_var("READYTYPE_ABLATION_NO_SAME_SOURCE_RESELECT");
+        std::env::remove_var("READYTYPE_ABLATION_NO_RETRY");
+    }
+    let monitor = Arc::new(MonitorData::default());
+    monitor.trusted.store(true, Ordering::Release);
+    let gateway_data = Arc::new(Mutex::new(RecordingGatewayData {
+        current: "other".to_owned(),
+        selected: Vec::new(),
+    }));
+    let mut settings = SwitcherSettings::defaults();
+    settings.language_preferences.insert(
+        LanguageTag::ja(),
+        Some(InputSourceId::parse("jp").expect("jp")),
+    );
+    settings.language_preferences.insert(
+        LanguageTag::en(),
+        Some(InputSourceId::parse("en").expect("en")),
+    );
+    settings.rules = readytype_lab_switch_rules();
+    let controller = controller_with(
+        Arc::clone(&monitor),
+        settings,
+        Box::new(RecordingGateway(Arc::clone(&gateway_data))),
+    );
+    controller.refresh_permission().expect("start monitoring");
+    assert!(controller.is_monitoring());
+
+    for (index, field_id) in LAB_SWITCH_FIELD_IDS.iter().enumerate() {
+        gateway_data.lock().expect("gateway").current = "other".to_owned();
+        controller
+            .report_lab_focus(field_id)
+            .expect("report lab focus");
+        let expected = if (index + 1) % 2 == 1 { "jp" } else { "en" };
+        let mut saw = false;
+        for _ in 0..200 {
+            let selected = gateway_data.lock().expect("gateway").selected.clone();
+            if selected.last().map(String::as_str) == Some(expected) {
+                saw = true;
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        assert!(saw, "field {field_id} should select {expected}");
+    }
+}
+
+#[test]
+fn drain_queued_focus_keeps_latest_and_defers_stop() {
+    use crate::domain::input_source::{FocusSnapshot, Platform, PlatformAppId};
+
+    let (sender, receiver) = mpsc::channel();
+    let app = PlatformAppId::new(Platform::MacOs, "com.example.Editor", 1).expect("app");
+    let first = FocusSnapshot::new(app.clone(), 1, Vec::new());
+    let second = FocusSnapshot::new(app.clone(), 2, Vec::new());
+    let third = FocusSnapshot::new(app, 3, Vec::new());
+    sender.send(WorkerMessage::Focus(second)).expect("send");
+    sender.send(WorkerMessage::Focus(third)).expect("send");
+    sender.send(WorkerMessage::Stop).expect("send");
+
+    let (latest, deferred) = drain_queued_focus(&receiver, first);
+    assert_eq!(latest.generation(), 3);
+    assert!(matches!(deferred, Some(WorkerMessage::Stop)));
 }

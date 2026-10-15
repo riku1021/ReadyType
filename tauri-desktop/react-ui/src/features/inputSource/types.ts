@@ -106,6 +106,9 @@ export interface SwitchLogDto {
   reason: string;
   detail: string;
   processingMicros: number;
+  prepareMicros: number;
+  currentMicros: number;
+  selectMicros: number;
 }
 
 export interface AxElementDto {

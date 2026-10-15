@@ -17,11 +17,13 @@ use crate::domain::input_source::{
 
 use super::{
     input_source_switcher::{
-        switch_input_source, ApplicationError, InputSourceSwitcher, PreparedFocus,
+        switch_input_source, ApplicationError, CompleteFocusInput, InputSourceSwitcher,
+        PreparedFocus,
     },
     ports::{
         app_display_name::AppDisplayNameResolver,
         clock::Clock,
+        current_input_source_change::CurrentInputSourceChangeMonitor,
         diagnostic_log::SharedDiagnosticLogSink,
         focus_monitor::{AccessibilityPermission, FocusMonitor, FocusMonitorError},
         input_source::{AvailableInputSource, InputSourceGateway},
@@ -33,6 +35,7 @@ use super::{
         resolve_quick_set_name, rule_target_from_source_id, QuickSetSession,
     },
     settings::SwitcherSettings,
+    switch_proto,
     switcher_state::{SwitchLogEntry, SwitcherState},
     ui_locale_cache::UiLocaleCache,
 };
@@ -45,6 +48,8 @@ pub struct SwitcherControllerDeps {
     pub publisher: Arc<dyn SwitcherEventPublisher>,
     pub monitor: Box<dyn FocusMonitor>,
     pub app_display_names: Arc<dyn AppDisplayNameResolver>,
+    /// TIS change notifications (PROTO_TIS_NOTIFY). Composition may pass Noop.
+    pub tis_change_monitor: Box<dyn CurrentInputSourceChangeMonitor>,
 }
 
 type RuntimeSwitcher = InputSourceSwitcher<
@@ -101,7 +106,7 @@ impl Clock for SystemClock {
     }
 }
 
-enum WorkerMessage {
+pub(crate) enum WorkerMessage {
     Focus(FocusSnapshot),
     SettingsChanged,
     Stop,
@@ -121,6 +126,7 @@ pub struct SwitcherController {
     publisher: Arc<dyn SwitcherEventPublisher>,
     ui_locale: Arc<UiLocaleCache>,
     app_display_names: Arc<dyn AppDisplayNameResolver>,
+    tis_change_monitor: Mutex<Box<dyn CurrentInputSourceChangeMonitor>>,
 }
 
 impl SwitcherController {
@@ -133,6 +139,7 @@ impl SwitcherController {
             publisher,
             monitor,
             app_display_names,
+            tis_change_monitor,
         } = deps;
         let resolved = SwitcherSettings::resolve_ui_locale(&settings.ui_locale);
         let ui_locale = Arc::new(UiLocaleCache::new(&resolved));
@@ -158,6 +165,7 @@ impl SwitcherController {
             publisher: Arc::clone(&publisher),
             ui_locale: Arc::clone(&ui_locale),
             app_display_names,
+            tis_change_monitor: Mutex::new(tis_change_monitor),
         });
         let worker = thread::Builder::new()
             .name("readytype-switcher".to_owned())
@@ -275,13 +283,59 @@ impl SwitcherController {
                 let _ = sender.send(WorkerMessage::Focus(snapshot));
             }),
         )?;
+        {
+            let switcher = self.lock_switcher()?;
+            switcher.warm_current_cache();
+        }
+        self.start_tis_change_monitor()?;
         self.monitoring.store(true, Ordering::Release);
         Ok(())
     }
 
     pub fn stop_monitoring(&self) -> Result<(), ControllerError> {
+        self.stop_tis_change_monitor()?;
         self.lock_monitor()?.stop()?;
         self.monitoring.store(false, Ordering::Release);
+        Ok(())
+    }
+
+    fn start_tis_change_monitor(self: &Arc<Self>) -> Result<(), ControllerError> {
+        if !switch_proto::tis_notify() {
+            return Ok(());
+        }
+        let switcher = Arc::clone(&self.switcher);
+        let sink: Arc<dyn Fn() + Send + Sync> = Arc::new(move || {
+            let Ok(mut guard) = switcher.lock() else {
+                return;
+            };
+            guard.invalidate_current_cache();
+            if switch_proto::manual_override() {
+                let gateway = guard.gateway_handle();
+                let current = gateway
+                    .lock()
+                    .ok()
+                    .and_then(|gateway| gateway.current().ok());
+                if let Some(current) = current {
+                    guard.note_external_input_source_change(&current);
+                }
+            }
+        });
+        let mut monitor = self
+            .tis_change_monitor
+            .lock()
+            .map_err(|_| ControllerError::InvalidRequest("tis monitor lock poisoned".to_owned()))?;
+        monitor
+            .start(sink)
+            .map_err(ControllerError::InvalidRequest)?;
+        Ok(())
+    }
+
+    fn stop_tis_change_monitor(&self) -> Result<(), ControllerError> {
+        let mut monitor = self
+            .tis_change_monitor
+            .lock()
+            .map_err(|_| ControllerError::InvalidRequest("tis monitor lock poisoned".to_owned()))?;
+        monitor.stop().map_err(ControllerError::InvalidRequest)?;
         Ok(())
     }
 
@@ -751,18 +805,29 @@ fn run_worker(
     };
 
     let mut active: Option<(PlatformAppId, u64)> = None;
+    let mut deferred: Option<WorkerMessage> = None;
     loop {
-        let wait = switcher
-            .lock()
-            .ok()
-            .and_then(|switcher| switcher.snooze_remaining_ms())
-            .map(Duration::from_millis);
-        let message = match wait {
-            Some(wait) => receiver.recv_timeout(wait),
-            None => receiver.recv().map_err(|_| RecvTimeoutError::Disconnected),
+        let message = if let Some(pending) = deferred.take() {
+            Ok(pending)
+        } else {
+            let wait = switcher
+                .lock()
+                .ok()
+                .and_then(|switcher| switcher.snooze_remaining_ms())
+                .map(Duration::from_millis);
+            match wait {
+                Some(wait) => receiver.recv_timeout(wait),
+                None => receiver.recv().map_err(|_| RecvTimeoutError::Disconnected),
+            }
         };
         match message {
             Ok(WorkerMessage::Focus(snapshot)) => {
+                let (snapshot, next_deferred) = if switch_proto::drain_focus() {
+                    drain_queued_focus(&receiver, snapshot)
+                } else {
+                    (snapshot, None)
+                };
+                deferred = next_deferred;
                 if let Ok(mut latest) = last_snapshot.lock() {
                     *latest = Some(snapshot.clone());
                 }
@@ -776,12 +841,13 @@ fn run_worker(
                         active = Some(key);
                     }
                     let gateway = switcher.gateway_handle();
+                    let current_cache = switcher.current_cache_handle();
                     let prepared = switcher.prepare_focus(snapshot);
                     let pending = switcher.drain_publish_snapshot();
-                    (gateway, prepared, pending)
+                    (gateway, current_cache, prepared, pending)
                 };
                 // TIS はメインキューへ sync するため、switcher ロックを握ったまま待たない。
-                let (gateway, prepared, pending) = prepared;
+                let (gateway, current_cache, prepared, pending) = prepared;
                 dispatch(pending);
                 let Ok(prepared) = prepared else {
                     continue;
@@ -792,24 +858,40 @@ fn run_worker(
                         snapshot,
                         rule,
                         target,
+                        prepare_micros,
                     } => {
+                        if switch_proto::manual_override() {
+                            if let Ok(mut switcher) = switcher.lock() {
+                                switcher.set_suppress_tis_as_manual(true);
+                            }
+                        }
                         let locale = ui_locale.load();
                         let switch_result = match gateway.lock() {
-                            Ok(mut gateway) => switch_input_source(&mut *gateway, &target, &locale),
+                            Ok(mut gateway) => switch_input_source(
+                                &mut *gateway,
+                                &target,
+                                &locale,
+                                Some(&current_cache),
+                            ),
                             Err(_) => Err(ApplicationError::InvalidSettings(
                                 "gateway lock poisoned".to_owned(),
                             )),
                         };
                         match switch_result {
-                            Ok((current, select_result)) => {
+                            Ok((current, select_result, source_timing)) => {
                                 let pending = if let Ok(mut switcher) = switcher.lock() {
-                                    let _ = switcher.complete_focus(
+                                    let _ = switcher.complete_focus(CompleteFocusInput {
                                         snapshot,
-                                        *rule,
+                                        rule: *rule,
                                         target,
                                         current,
                                         select_result,
-                                    );
+                                        prepare_micros,
+                                        source_timing,
+                                    });
+                                    if switch_proto::manual_override() {
+                                        switcher.set_suppress_tis_as_manual(false);
+                                    }
                                     switcher.drain_publish_snapshot()
                                 } else {
                                     None
@@ -824,6 +906,9 @@ fn run_worker(
                                         &target,
                                         &error,
                                     );
+                                    if switch_proto::manual_override() {
+                                        switcher.set_suppress_tis_as_manual(false);
+                                    }
                                     switcher.drain_publish_snapshot()
                                 } else {
                                     None
@@ -845,6 +930,21 @@ fn run_worker(
                 };
                 dispatch(pending);
             }
+        }
+    }
+}
+
+/// Keep the latest Focus; defer the first non-Focus message (PROTO_DRAIN_FOCUS).
+pub(crate) fn drain_queued_focus(
+    receiver: &Receiver<WorkerMessage>,
+    first: FocusSnapshot,
+) -> (FocusSnapshot, Option<WorkerMessage>) {
+    let mut latest = first;
+    loop {
+        match receiver.try_recv() {
+            Ok(WorkerMessage::Focus(next)) => latest = next,
+            Ok(other) => return (latest, Some(other)),
+            Err(_) => return (latest, None),
         }
     }
 }
