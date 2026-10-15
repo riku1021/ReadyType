@@ -1,6 +1,6 @@
 //! Platform-independent fallback for app icon resolution.
 
-use crate::application::ports::app_icon::AppIconResolver;
+use crate::application::ports::app_icon::{AppIconResolver, ResolvedAppIcon};
 use crate::infrastructure::platform::app_icon_cache::{AppIconSource, FetchedIcon};
 
 /// Source used on platforms without an icon implementation. Always returns `None`.
@@ -20,7 +20,7 @@ impl AppIconSource for UnsupportedAppIconSource {
 pub struct UnsupportedAppIconResolver;
 
 impl AppIconResolver for UnsupportedAppIconResolver {
-    fn resolve(&self, _bundle_id: &str) -> Option<String> {
+    fn resolve(&self, _bundle_id: &str) -> Option<ResolvedAppIcon> {
         None
     }
 }

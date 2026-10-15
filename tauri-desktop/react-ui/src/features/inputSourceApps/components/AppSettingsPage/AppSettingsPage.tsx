@@ -34,7 +34,7 @@ export function AppSettingsPage() {
         return {
           ...group,
           label: appDisplayName(group.appId, presentation?.displayName),
-          iconSrc: presentation?.icon,
+          iconSrc: presentation?.iconSrc,
         };
       }),
     [groups, presentations]

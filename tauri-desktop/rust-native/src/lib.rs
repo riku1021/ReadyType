@@ -26,7 +26,7 @@ use application::ports::{
     input_source::InputSourceGateway, platform::PlatformGateway,
     settings_repository::SettingsRepository, switcher_events::SwitcherEventPublisher,
 };
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 /// Composition helper kept so platform adapters stay wired into the crate graph.
 #[allow(dead_code)]
@@ -113,7 +113,11 @@ pub fn run() {
             > = {
                 #[cfg(target_os = "macos")]
                 {
-                    Arc::new(infrastructure::platform::macos::MacOsAppDisplayNameResolver)
+                    Arc::new(
+                        infrastructure::platform::app_display_name_cache::CachedAppDisplayNameResolver::new(
+                            infrastructure::platform::macos::MacOsAppDisplayNameResolver,
+                        ),
+                    )
                 }
                 #[cfg(not(target_os = "macos"))]
                 {
@@ -180,9 +184,10 @@ pub fn run() {
                 #[cfg(target_os = "macos")]
                 {
                     Arc::new(
-                        infrastructure::platform::app_icon_cache::CachedAppIconResolver::new(
+                        infrastructure::platform::app_icon_cache::CachedAppIconResolver::with_style(
                             infrastructure::platform::macos::MacOsAppIconSource,
                             icon_cache_dir,
+                            infrastructure::platform::macos::macos_icon_style_source(),
                         ),
                     )
                 }
@@ -197,6 +202,19 @@ pub fn run() {
                 }
             };
             app.manage(app_icon_resolver);
+
+            #[cfg(target_os = "macos")]
+            {
+                let handle = app.handle().clone();
+                infrastructure::platform::macos::start_icon_style_monitor(move |style_token| {
+                    let _ = handle.emit(
+                        presentation::commands::app_presentations::ICON_STYLE_CHANGED_EVENT,
+                        presentation::commands::app_presentations::IconStyleChangedDto {
+                            style_token,
+                        },
+                    );
+                });
+            }
 
             infrastructure::desktop::tray::install(
                 app.handle(),

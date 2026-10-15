@@ -32,3 +32,7 @@ UI 上の編集は「アプリごとの設定」（`/apps`）から行う。
 ## プライバシー
 
 診断で見える title / description などはデバッグ用途のみ。外部送信やファイル保存はしない。
+
+## 関連
+
+- アプリアイコン / 表示名の取得とキャッシュ: [app-presentations-icon-cache.md](./app-presentations-icon-cache.md)

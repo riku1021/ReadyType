@@ -130,13 +130,17 @@ export async function installTauriMocks(page: Page): Promise<void> {
           return Boolean(args?.enabled);
         case "get_app_presentations": {
           const ids = Array.isArray(args?.bundleIds) ? args.bundleIds : [];
-          const presentations: Record<string, { icon: string; displayName: string }> = {};
+          const presentations: Record<
+            string,
+            { icon: string; iconRevision: string | null; displayName: string }
+          > = {};
           const pixel =
             "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
           for (const id of ids) {
             if (typeof id === "string") {
               presentations[id] = {
                 icon: pixel,
+                iconRevision: null,
                 displayName: id.split(".").at(-1) ?? id,
               };
             }

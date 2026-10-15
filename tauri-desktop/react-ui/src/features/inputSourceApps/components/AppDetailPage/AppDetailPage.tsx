@@ -247,7 +247,11 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
       <SettingsSection>
         <div className={styles.detailHeader}>
           <div className={styles.detailIdentity}>
-            <AppIconView src={presentations[selected.appId]?.icon} label={selected.label} large />
+            <AppIconView
+              src={presentations[selected.appId]?.iconSrc}
+              label={selected.label}
+              large
+            />
             <div className={styles.detailTitleBlock}>
               <h2 className={styles.detailName}>{selected.label}</h2>
               <p className={styles.detailPath}>{selected.appId}</p>

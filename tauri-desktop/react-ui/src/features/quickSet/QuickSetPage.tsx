@@ -239,7 +239,7 @@ export function QuickSetPage() {
           <div className={headerBlock}>
             <BrandLogo />
             <div className={appIdentity}>
-              <AppIconView src={presentations[session.appId]?.icon} label={appLabel} />
+              <AppIconView src={presentations[session.appId]?.iconSrc} label={appLabel} />
               <p className={appName}>{appLabel}</p>
             </div>
             <p className={prompt}>

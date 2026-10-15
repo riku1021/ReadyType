@@ -9,6 +9,7 @@ use crate::application::ports::{
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppPresentation {
     pub icon: Option<String>,
+    pub icon_revision: Option<String>,
     pub display_name: Option<String>,
 }
 
@@ -21,10 +22,12 @@ pub fn execute(
     bundle_ids
         .iter()
         .map(|bundle_id| {
+            let resolved = icons.resolve(bundle_id);
             (
                 bundle_id.clone(),
                 AppPresentation {
-                    icon: icons.resolve(bundle_id),
+                    icon: resolved.as_ref().map(|icon| icon.path.clone()),
+                    icon_revision: resolved.as_ref().map(|icon| icon.revision.clone()),
                     display_name: display_names.resolve(bundle_id),
                 },
             )

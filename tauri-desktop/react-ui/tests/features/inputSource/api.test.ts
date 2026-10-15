@@ -111,7 +111,8 @@ describe("input source IPC", () => {
       if (command === "get_app_presentations") {
         return {
           "com.apple.Terminal": {
-            icon: "data:image/png;base64,AA==",
+            icon: "/tmp/com.apple.Terminal.png",
+            iconRevision: "1:",
             displayName: "Terminal",
           },
         };

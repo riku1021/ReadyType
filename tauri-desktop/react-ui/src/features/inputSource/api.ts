@@ -54,12 +54,14 @@ export const clearSwitchLogs = () => invoke<SwitcherStateDto>("clear_switch_logs
 export const getAutostartEnabled = () => invoke<boolean>("get_autostart_enabled");
 export const setAutostartEnabled = (enabled: boolean) =>
   invoke<boolean>("set_autostart_enabled", { enabled });
+/** IPC payload from `get_app_presentations` (filesystem path + revision; not a UI src). */
 export type AppPresentationDto = {
   icon: string | null;
+  iconRevision: string | null;
   displayName: string | null;
 };
 
-/** bundle id ごとのアイコン + Finder 表示名（解決不可フィールドは null）。 */
+/** bundle id ごとのキャッシュ PNG パス + Finder 表示名（解決不可フィールドは null）。 */
 export const getAppPresentations = (bundleIds: readonly string[]) =>
   invoke<Record<string, AppPresentationDto>>("get_app_presentations", {
     bundleIds: [...bundleIds],

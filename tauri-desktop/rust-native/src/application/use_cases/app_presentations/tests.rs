@@ -1,11 +1,15 @@
 use super::*;
+use crate::application::ports::app_icon::ResolvedAppIcon;
 
 struct StubIcons;
 struct StubNames;
 
 impl AppIconResolver for StubIcons {
-    fn resolve(&self, bundle_id: &str) -> Option<String> {
-        (bundle_id == "com.known.app").then(|| "data:image/png;base64,AAAA".to_owned())
+    fn resolve(&self, bundle_id: &str) -> Option<ResolvedAppIcon> {
+        (bundle_id == "com.known.app").then(|| ResolvedAppIcon {
+            path: "/tmp/com.known.app.png".to_owned(),
+            revision: "10:default".to_owned(),
+        })
     }
 }
 
@@ -23,7 +27,8 @@ fn maps_icon_and_display_name_together() {
     assert_eq!(
         result.get("com.known.app"),
         Some(&AppPresentation {
-            icon: Some("data:image/png;base64,AAAA".to_owned()),
+            icon: Some("/tmp/com.known.app.png".to_owned()),
+            icon_revision: Some("10:default".to_owned()),
             display_name: Some("Known".to_owned()),
         })
     );
@@ -31,6 +36,7 @@ fn maps_icon_and_display_name_together() {
         result.get("com.unknown.app"),
         Some(&AppPresentation {
             icon: None,
+            icon_revision: None,
             display_name: None,
         })
     );

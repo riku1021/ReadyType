@@ -39,3 +39,5 @@ Exact(InputSourceId)            → その ID を直接使用
 - Rust: `application/input_source_switcher.rs`（`resolve_target`）
 - TS: `features/inputSource/types.ts`
 - TS: `features/inputSourceApps/appRulesViewModel.ts`
+
+アプリ一覧のアイコン / 表示名キャッシュは [app-presentations-icon-cache.md](../../app-presentations-icon-cache.md)。

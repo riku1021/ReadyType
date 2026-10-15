@@ -8,14 +8,16 @@ import {
   IoTerminal,
 } from "react-icons/io5";
 
-import {
-  type AppPresentationDto,
-  getAppPresentations,
-  type InputSourceOption,
-  visibleInputSourceOptions,
-} from "@/features/inputSource";
+import { type InputSourceOption, visibleInputSourceOptions } from "@/features/inputSource";
 import { cx } from "@/styled-system/css";
-
+import {
+  type AppPresentationView,
+  ensureAppPresentationStyleInvalidation,
+  loadAppPresentations,
+  missingAppPresentationIds,
+  peekAppPresentations,
+  subscribeAppPresentationCache,
+} from "../appPresentations";
 import type { RuleKind } from "../appRulesViewModel";
 import * as styles from "./appSettingsShared.styles";
 
@@ -59,18 +61,37 @@ export function AppIconView({
   );
 }
 
-/** アイコンと表示名を 1 IPC で取得する。 */
-export function useAppPresentations(appIds: readonly string[]): Record<string, AppPresentationDto> {
-  const [values, setValues] = useState<Record<string, AppPresentationDto>>({});
+/** アイコンと表示名を取得する（セッションキャッシュあり。未取得 id のみ IPC）。 */
+export function useAppPresentations(
+  appIds: readonly string[]
+): Record<string, AppPresentationView> {
   const key = [...appIds].sort().join("\n");
+  const [cacheEpoch, setCacheEpoch] = useState(0);
+  const [values, setValues] = useState<Record<string, AppPresentationView>>(() =>
+    key ? peekAppPresentations(key.split("\n")) : {}
+  );
 
   useEffect(() => {
+    ensureAppPresentationStyleInvalidation();
+    return subscribeAppPresentationCache(() => {
+      setCacheEpoch((epoch) => epoch + 1);
+    });
+  }, []);
+
+  useEffect(() => {
+    // cacheEpoch はスタイル無効化後の再取得トリガ（effect 本体では読まない）
+    void cacheEpoch;
     const ids = key ? key.split("\n") : [];
     if (ids.length === 0) {
+      setValues({});
+      return;
+    }
+    setValues(peekAppPresentations(ids));
+    if (missingAppPresentationIds(ids).length === 0) {
       return;
     }
     let cancelled = false;
-    getAppPresentations(ids)
+    loadAppPresentations(ids)
       .then((result) => {
         if (!cancelled) {
           setValues(result);
@@ -82,7 +103,7 @@ export function useAppPresentations(appIds: readonly string[]): Record<string, A
     return () => {
       cancelled = true;
     };
-  }, [key]);
+  }, [key, cacheEpoch]);
 
   return values;
 }
