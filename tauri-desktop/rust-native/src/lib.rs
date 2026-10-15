@@ -216,6 +216,22 @@ pub fn run() {
                 });
             }
 
+            #[cfg(target_os = "macos")]
+            {
+                let handle = app.handle().clone();
+                infrastructure::platform::macos::start_accessibility_permission_monitor(move || {
+                    let controller = handle
+                        .state::<Arc<application::switcher_controller::SwitcherController>>();
+                    let Ok(permission) = controller.inner().refresh_permission() else {
+                        return;
+                    };
+                    let _ = handle.emit(
+                        presentation::commands::input_source_switcher::ACCESSIBILITY_PERMISSION_EVENT,
+                        presentation::input_source_dto::PermissionDto::from(permission),
+                    );
+                });
+            }
+
             infrastructure::desktop::tray::install(
                 app.handle(),
                 &initial_state,

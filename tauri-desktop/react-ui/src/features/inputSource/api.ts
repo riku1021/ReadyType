@@ -13,6 +13,8 @@ import type {
 export const INPUT_SOURCE_STATE_EVENT = "input-source-switcher://state";
 /** Native emits when preference is `system` and OS preferred languages change. */
 export const RESOLVED_UI_LOCALE_EVENT = "ui-locale://resolved-changed";
+/** Native emits after delayed re-check when Accessibility TCC may have changed. */
+export const ACCESSIBILITY_PERMISSION_EVENT = "accessibility://permission-changed";
 
 export const getInputSourceSwitcherState = () =>
   invoke<SwitcherStateDto>("get_input_source_switcher_state");

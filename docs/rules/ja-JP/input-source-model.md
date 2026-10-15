@@ -50,3 +50,12 @@ preference が `system` のとき、解決済みパック（`ja` / `en` / …）
 - FE: 同イベントで `i18n.changeLanguage` と `settings.resolvedUiLocale` を同期
 
 固定パック選択時は OS 言語変更の影響を受けない。
+
+## Accessibility 許可の再確認
+
+System Settings で Accessibility 一覧が変わったとき（他アプリ含む）、macOS は非公式の `com.apple.accessibility.api` を配信する。即座の `AXIsProcessTrusted` は古いことがあるため:
+
+- Native: `DeliverImmediately` で購読 → **約 100ms / 500ms** 後に `refresh_permission`（モニタ開始/停止）+ `accessibility://permission-changed`
+- FE: 同イベントで `permission` を同期
+
+窓フォーカス時の `refresh_permission` も併用する。`DeliverImmediately` は Accessory（ログイン起動）でも通知が届くようにするため。

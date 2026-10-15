@@ -4,6 +4,7 @@ import { useCallback, useEffect } from "react";
 
 import i18n, { isResolvedUiLocale } from "@/locales/i18n";
 import {
+  ACCESSIBILITY_PERMISSION_EVENT,
   applyNewerStateEvent,
   clearSwitchLogs as clearSwitchLogsApi,
   completeOnboarding as completeOnboardingApi,
@@ -84,6 +85,7 @@ export function useInputSourceBootstrap() {
     let cancelled = false;
     let unlistenState: (() => void) | undefined;
     let unlistenLocale: (() => void) | undefined;
+    let unlistenPermission: (() => void) | undefined;
 
     const bootstrap = async () => {
       try {
@@ -178,6 +180,25 @@ export function useInputSourceBootstrap() {
             }
           }
         );
+        unlistenPermission = await listen<AccessibilityPermission>(
+          ACCESSIBILITY_PERMISSION_EVENT,
+          (event) => {
+            const permission = event.payload;
+            if (
+              permission !== "granted" &&
+              permission !== "denied" &&
+              permission !== "unsupported"
+            ) {
+              return;
+            }
+            setFeature((current) => {
+              if (current.permission === permission) {
+                return current;
+              }
+              return { ...current, permission };
+            });
+          }
+        );
       } catch {
         // ブラウザ単体起動など
       }
@@ -189,6 +210,7 @@ export function useInputSourceBootstrap() {
       cancelled = true;
       unlistenState?.();
       unlistenLocale?.();
+      unlistenPermission?.();
     };
   }, [setFeature]);
 }

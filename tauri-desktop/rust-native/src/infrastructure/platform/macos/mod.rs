@@ -1,6 +1,7 @@
 //! macOS-specific infrastructure adapters.
 
 mod accessibility;
+mod accessibility_permission_monitor;
 mod app_display_name;
 mod app_icon;
 mod application_path;
@@ -15,6 +16,7 @@ mod window_chrome;
 pub use current_input_source_change::MacOsCurrentInputSourceChangeMonitor;
 
 pub use accessibility::{focused_element_frame, ElementFrame};
+pub use accessibility_permission_monitor::start_monitor as start_accessibility_permission_monitor;
 pub use app_display_name::MacOsAppDisplayNameResolver;
 pub use app_icon::MacOsAppIconSource;
 pub use application_path::application_path;

@@ -30,6 +30,9 @@ pub const STATE_EVENT_NAME: &str = "input-source-switcher://state";
 /// FE syncs i18n when OS preferred languages change under preference `system`.
 pub const RESOLVED_UI_LOCALE_EVENT: &str = "ui-locale://resolved-changed";
 
+/// FE syncs Accessibility UI when TCC trust may have changed (after delayed re-check).
+pub const ACCESSIBILITY_PERMISSION_EVENT: &str = "accessibility://permission-changed";
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResolvedUiLocaleEventDto {
