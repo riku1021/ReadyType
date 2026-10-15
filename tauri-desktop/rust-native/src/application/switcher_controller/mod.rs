@@ -219,6 +219,7 @@ impl SwitcherController {
         self.ui_locale.store(&resolved);
         self.refresh_localized_sources()?;
         self.publisher.publish(&state, &resolved);
+        self.publisher.publish_resolved_ui_locale(&resolved);
         Ok(Some(state))
     }
 

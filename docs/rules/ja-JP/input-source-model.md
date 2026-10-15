@@ -41,3 +41,12 @@ Exact(InputSourceId)            → その ID を直接使用
 - TS: `features/inputSourceApps/appRulesViewModel.ts`
 
 アプリ一覧のアイコン / 表示名キャッシュは [app-presentations-icon-cache.md](../../app-presentations-icon-cache.md)。
+
+## UI 表示言語（system）の再解決
+
+preference が `system` のとき、解決済みパック（`ja` / `en` / …）は起動時と **メイン窓フォーカス時** に OS の preferred languages から再計算する。
+
+- Native: `refresh_resolved_ui_locale` → トレイ更新 + `ui-locale://resolved-changed`
+- FE: 同イベントで `i18n.changeLanguage` と `settings.resolvedUiLocale` を同期
+
+固定パック選択時は OS 言語変更の影響を受けない。

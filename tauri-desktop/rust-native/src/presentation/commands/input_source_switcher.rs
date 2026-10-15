@@ -27,6 +27,15 @@ fn settings_dto_with_registration(app: &AppHandle, settings: &SwitcherSettings) 
 
 pub const STATE_EVENT_NAME: &str = "input-source-switcher://state";
 
+/// FE syncs i18n when OS preferred languages change under preference `system`.
+pub const RESOLVED_UI_LOCALE_EVENT: &str = "ui-locale://resolved-changed";
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResolvedUiLocaleEventDto {
+    pub resolved_ui_locale: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IpcError {
@@ -55,6 +64,15 @@ impl SwitcherEventPublisher for TauriSwitcherEventPublisher {
     fn publish(&self, state: &SwitcherState, locale: &str) {
         let _ = self.app.emit(STATE_EVENT_NAME, StateEventDto::from(state));
         let _ = crate::infrastructure::desktop::tray::update(&self.app, state, locale);
+    }
+
+    fn publish_resolved_ui_locale(&self, locale: &str) {
+        let _ = self.app.emit(
+            RESOLVED_UI_LOCALE_EVENT,
+            ResolvedUiLocaleEventDto {
+                resolved_ui_locale: locale.to_owned(),
+            },
+        );
     }
 }
 

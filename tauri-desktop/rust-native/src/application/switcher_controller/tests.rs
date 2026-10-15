@@ -122,6 +122,22 @@ impl SwitcherEventPublisher for NoopPublisher {
 }
 
 #[derive(Default)]
+struct RecordingPublisher {
+    resolved_locales: Mutex<Vec<String>>,
+}
+
+impl SwitcherEventPublisher for RecordingPublisher {
+    fn publish(&self, _state: &SwitcherState, _locale: &str) {}
+
+    fn publish_resolved_ui_locale(&self, locale: &str) {
+        self.resolved_locales
+            .lock()
+            .expect("publisher")
+            .push(locale.to_owned());
+    }
+}
+
+#[derive(Default)]
 struct MonitorData {
     trusted: AtomicBool,
     starts: AtomicUsize,
@@ -183,12 +199,21 @@ fn controller_with(
     settings: SwitcherSettings,
     gateway: Box<dyn InputSourceGateway>,
 ) -> Arc<SwitcherController> {
+    controller_with_publisher(monitor, settings, gateway, Arc::new(NoopPublisher))
+}
+
+fn controller_with_publisher(
+    monitor: Arc<MonitorData>,
+    settings: SwitcherSettings,
+    gateway: Box<dyn InputSourceGateway>,
+    publisher: Arc<dyn SwitcherEventPublisher>,
+) -> Arc<SwitcherController> {
     SwitcherController::new(SwitcherControllerDeps {
         settings,
         gateway,
         repository: Arc::new(FakeRepository),
         clock: Arc::new(FakeClock(AtomicU64::new(1_000))),
-        publisher: Arc::new(NoopPublisher),
+        publisher,
         monitor: Box::new(FakeMonitor(monitor)),
         app_display_names: Arc::new(NoopDisplayNames),
         tis_change_monitor: Box::new(
@@ -397,4 +422,70 @@ fn drain_queued_focus_keeps_latest_and_defers_stop() {
     let (latest, deferred) = drain_queued_focus(&receiver, first);
     assert_eq!(latest.generation(), 3);
     assert!(matches!(deferred, Some(WorkerMessage::Stop)));
+}
+
+#[test]
+fn refresh_resolved_ui_locale_skips_when_preference_fixed() {
+    let monitor = Arc::new(MonitorData::default());
+    let mut settings = SwitcherSettings::defaults();
+    settings.ui_locale = "en".to_owned();
+    let publisher = Arc::new(RecordingPublisher::default());
+    let controller =
+        controller_with_publisher(monitor, settings, Box::new(FakeGateway), publisher.clone());
+    assert!(controller
+        .refresh_resolved_ui_locale()
+        .expect("refresh")
+        .is_none());
+    assert!(publisher
+        .resolved_locales
+        .lock()
+        .expect("publisher")
+        .is_empty());
+}
+
+#[test]
+fn refresh_resolved_ui_locale_noop_when_system_unchanged() {
+    let monitor = Arc::new(MonitorData::default());
+    let mut settings = SwitcherSettings::defaults();
+    settings.ui_locale = "system".to_owned();
+    let publisher = Arc::new(RecordingPublisher::default());
+    let controller =
+        controller_with_publisher(monitor, settings, Box::new(FakeGateway), publisher.clone());
+    // Cache was seeded from the same OS resolve path at construction.
+    assert!(controller
+        .refresh_resolved_ui_locale()
+        .expect("refresh")
+        .is_none());
+    assert!(publisher
+        .resolved_locales
+        .lock()
+        .expect("publisher")
+        .is_empty());
+}
+
+#[test]
+fn refresh_resolved_ui_locale_publishes_when_cache_stale() {
+    let monitor = Arc::new(MonitorData::default());
+    let mut settings = SwitcherSettings::defaults();
+    settings.ui_locale = "system".to_owned();
+    let publisher = Arc::new(RecordingPublisher::default());
+    let controller =
+        controller_with_publisher(monitor, settings, Box::new(FakeGateway), publisher.clone());
+    let current = controller.resolved_ui_locale();
+    let stale = if current == "en" { "ja" } else { "en" };
+    controller.ui_locale.store(stale);
+
+    assert!(controller
+        .refresh_resolved_ui_locale()
+        .expect("refresh")
+        .is_some());
+    assert_eq!(controller.resolved_ui_locale(), current);
+    assert_eq!(
+        publisher
+            .resolved_locales
+            .lock()
+            .expect("publisher")
+            .as_slice(),
+        &[current]
+    );
 }

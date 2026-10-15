@@ -32,6 +32,10 @@ export interface StateEventDto {
   state: SwitcherStateDto;
 }
 
+export interface ResolvedUiLocaleEventDto {
+  resolvedUiLocale: string;
+}
+
 export interface InputSourceDto {
   id: string;
   name: string;

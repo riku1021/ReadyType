@@ -2,12 +2,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useAtom, useSetAtom } from "jotai";
 import { useCallback, useEffect } from "react";
 
-import i18n, {
-  isResolvedUiLocale,
-  isUiLocalePreference,
-  persistLanguage,
-  resolveUiLocale,
-} from "@/locales/i18n";
+import i18n, { isResolvedUiLocale } from "@/locales/i18n";
 import {
   applyNewerStateEvent,
   clearSwitchLogs as clearSwitchLogsApi,
@@ -24,6 +19,7 @@ import {
   listRules,
   listSwitchLogs,
   openAccessibilitySettings as openAccessibilitySettingsApi,
+  RESOLVED_UI_LOCALE_EVENT,
   reorderRules as reorderRulesApi,
   requestAccessibilityPermission,
   resetDefaultRules as resetDefaultRulesApi,
@@ -45,12 +41,15 @@ import type {
   AccessibilityPermission,
   FocusSnapshotDto,
   InputSourceDto,
+  InputSourceSettingsDto,
   LanguageInputPreferences,
+  ResolvedUiLocaleEventDto,
   RuleDto,
   StateEventDto,
   SwitcherStateDto,
   SwitchLogDto,
 } from "../types";
+import { prepareUiLocaleSync } from "../uiLocaleSync";
 
 export type InputSourceViewState = SwitcherStateDto & {
   accessibilityTrusted: boolean;
@@ -71,12 +70,20 @@ function applySwitcher(setFeature: FeatureSetter, switcher: SwitcherStateDto) {
   setFeature((current) => ({ ...current, switcher, initError: null, ready: true }));
 }
 
+async function applySettingsToI18n(settings: InputSourceSettingsDto): Promise<void> {
+  const resolved = prepareUiLocaleSync(settings);
+  if (resolved != null && i18n.language !== resolved) {
+    await i18n.changeLanguage(resolved);
+  }
+}
+
 export function useInputSourceBootstrap() {
   const setFeature = useSetAtom(inputSourceStateAtom);
 
   useEffect(() => {
     let cancelled = false;
-    let unlisten: (() => void) | undefined;
+    let unlistenState: (() => void) | undefined;
+    let unlistenLocale: (() => void) | undefined;
 
     const bootstrap = async () => {
       try {
@@ -89,15 +96,7 @@ export function useInputSourceBootstrap() {
         if (cancelled) {
           return;
         }
-        if (isUiLocalePreference(settings.uiLocale)) {
-          persistLanguage(settings.uiLocale);
-          const resolved = isResolvedUiLocale(settings.resolvedUiLocale)
-            ? settings.resolvedUiLocale
-            : resolveUiLocale(settings.uiLocale);
-          if (i18n.language !== resolved) {
-            await i18n.changeLanguage(resolved);
-          }
-        }
+        await applySettingsToI18n(settings);
         setFeature({
           switcher,
           permission,
@@ -120,7 +119,7 @@ export function useInputSourceBootstrap() {
       }
 
       try {
-        unlisten = await listen<StateEventDto>(INPUT_SOURCE_STATE_EVENT, (event) => {
+        unlistenState = await listen<StateEventDto>(INPUT_SOURCE_STATE_EVENT, (event) => {
           let shouldRefreshRules = false;
           setFeature((current) => {
             const previousRulesVersion = current.switcher?.rulesVersion;
@@ -158,6 +157,27 @@ export function useInputSourceBootstrap() {
               // 一時的な IPC 失敗は次回イベント / 手動操作に委ねる
             });
         });
+        unlistenLocale = await listen<ResolvedUiLocaleEventDto>(
+          RESOLVED_UI_LOCALE_EVENT,
+          (event) => {
+            const resolved = event.payload.resolvedUiLocale;
+            if (!isResolvedUiLocale(resolved)) {
+              return;
+            }
+            setFeature((current) => {
+              if (current.settings == null) {
+                return current;
+              }
+              return {
+                ...current,
+                settings: { ...current.settings, resolvedUiLocale: resolved },
+              };
+            });
+            if (!cancelled && i18n.language !== resolved) {
+              void i18n.changeLanguage(resolved);
+            }
+          }
+        );
       } catch {
         // ブラウザ単体起動など
       }
@@ -167,7 +187,8 @@ export function useInputSourceBootstrap() {
 
     return () => {
       cancelled = true;
-      unlisten?.();
+      unlistenState?.();
+      unlistenLocale?.();
     };
   }, [setFeature]);
 }
@@ -294,13 +315,7 @@ export function useInputSourceState() {
     async (locale: string) => {
       const settings = await setUiLocaleApi(locale);
       setFeature((current) => ({ ...current, settings }));
-      if (isUiLocalePreference(settings.uiLocale)) {
-        persistLanguage(settings.uiLocale);
-        const resolved = isResolvedUiLocale(settings.resolvedUiLocale)
-          ? settings.resolvedUiLocale
-          : resolveUiLocale(settings.uiLocale);
-        await i18n.changeLanguage(resolved);
-      }
+      await applySettingsToI18n(settings);
       return settings;
     },
     [setFeature]
