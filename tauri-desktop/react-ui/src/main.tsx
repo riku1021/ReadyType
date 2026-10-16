@@ -4,7 +4,7 @@ import "@/locales/i18n";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
 import { type ReactNode, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { useInputSourceBootstrap } from "@/features/inputSource";
+import { useInputSourceBootstrap, useInputSourceSources } from "@/features/inputSource";
 import { useRevealMainWindow } from "@/hooks/useRevealMainWindow";
 import { useThemeManager } from "@/hooks/useThemeManager";
 import {
@@ -54,6 +54,7 @@ function MainApp() {
   useThemeManager();
   useRevealMainWindow();
   useInputSourceBootstrap();
+  useInputSourceSources();
   return <RouterProvider router={router} />;
 }
 

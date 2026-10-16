@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useAtomValue } from "jotai";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { IoEllipsisHorizontal, IoInformationCircle } from "react-icons/io5";
 
@@ -10,7 +11,8 @@ import { SettingsSection } from "@/components/SettingsSection";
 import { Toggle } from "@/components/Toggle";
 import {
   buildInputSourceOptions,
-  type InputSourceDto,
+  inputSourceSourcesAtom,
+  isSourceMissing,
   type Platform,
   type RuleDto,
   useInputSourceState,
@@ -77,9 +79,11 @@ function resolveAppPlatform(rules: readonly RuleDto[], appId: string): Platform 
 }
 
 export function AppDetailPage({ appId }: AppDetailPageProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const { state, createRule, updateRule, deleteRule, fetchInputSources } = useInputSourceState();
+  const { state, createRule, updateRule, deleteRule } = useInputSourceState();
+  const sourcesState = useAtomValue(inputSourceSourcesAtom);
+  const sources = sourcesState.sources;
   const rules = state?.rules ?? [];
   const groups = useMemo(() => groupRulesByApp(rules, t), [rules, t]);
   const selectedBase = groups.find((group) => group.appId === appId) ?? null;
@@ -93,28 +97,8 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
       label: appDisplayName(selectedBase.appId, presentations[selectedBase.appId]?.displayName),
     };
   }, [presentations, selectedBase]);
-  const [sources, setSources] = useState<InputSourceDto[]>([]);
   const [pendingDelete, setPendingDelete] = useState<RuleDisplay | null>(null);
   const [deletedTitle, setDeletedTitle] = useState<string | null>(null);
-  const uiLanguage = i18n.language;
-
-  // UI 言語変更時にネイティブ側の locale 付き list を取り直す
-  useEffect(() => {
-    let cancelled = false;
-    const requestedLanguage = uiLanguage;
-    void fetchInputSources(true)
-      .then((next) => {
-        if (!cancelled && requestedLanguage === uiLanguage) {
-          setSources(next);
-        }
-      })
-      .catch(() => {
-        // ネイティブ未接続時は空のまま（セレクトは無効）
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [fetchInputSources, uiLanguage]);
 
   const languagePreferences = state?.languagePreferences ?? {};
   const preferredIds = useMemo(
@@ -125,6 +109,7 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
     [languagePreferences]
   );
 
+  const displayNames = state?.inputSourceDisplayNames ?? {};
   const languageOptions = useMemo(() => {
     const configuredIds = [
       ...preferredIds,
@@ -135,8 +120,8 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
         resolvedInputSourceId(item.rule.target, languagePreferences)
       ) ?? []),
     ];
-    return buildInputSourceOptions(sources, configuredIds);
-  }, [languagePreferences, preferredIds, selected, sources]);
+    return buildInputSourceOptions(sources, configuredIds, displayNames);
+  }, [displayNames, languagePreferences, preferredIds, selected, sources]);
 
   const setAppEnabled = async (group: AppRuleGroup, enabled: boolean) => {
     const targets = rules.filter((rule) => rule.appId === group.appId);
@@ -182,6 +167,9 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
     });
   };
 
+  const showWarningBadge = (inputSourceId: string) =>
+    sourcesState.status === "ready" && isSourceMissing(inputSourceId, sources);
+
   const ruleColumns: DataTableColumn<RuleDisplay>[] = [
     {
       id: "rule",
@@ -194,7 +182,7 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
     {
       id: "language",
       header: t("apps.columnInputLanguage"),
-      width: "10rem",
+      width: "12rem",
       headerClassName: styles.th,
       cellClassName: styles.td,
       stopPropagation: true,
@@ -203,6 +191,9 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
           value={resolvedInputSourceId(item.rule.target, languagePreferences)}
           label={t("apps.ruleLanguageAria", { title: item.title })}
           options={languageOptions}
+          showWarningBadge={showWarningBadge(
+            resolvedInputSourceId(item.rule.target, languagePreferences)
+          )}
           onChange={(value) => {
             void setRuleTarget(item.rule, value);
           }}
@@ -230,6 +221,10 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
     );
   }
 
+  const defaultInputSourceId = selected.defaultRule
+    ? resolvedInputSourceId(selected.defaultRule.target, languagePreferences)
+    : "";
+
   return (
     <section className={styles.page} aria-label={t("apps.detailAria")}>
       <SettingsSection>
@@ -256,14 +251,11 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
         <div className={styles.cardSection}>
           <p className={styles.fieldLabel}>{t("apps.defaultInputLanguage")}</p>
           <LanguageSelect
-            value={
-              selected.defaultRule
-                ? resolvedInputSourceId(selected.defaultRule.target, languagePreferences)
-                : ""
-            }
+            value={defaultInputSourceId}
             label={t("apps.defaultInputLanguage")}
             options={languageOptions}
             wide
+            showWarningBadge={showWarningBadge(defaultInputSourceId)}
             noneLabel={t("apps.defaultInputLanguageNone")}
             onChange={(value) => {
               void setDefaultInputLanguage(value);

@@ -104,6 +104,35 @@ export const navIcon = css({
   flexShrink: 0,
 });
 
+/** アイコン上にバッジを重ねるための相対ボックス */
+export const navIconWrap = css({
+  position: "relative",
+  display: "inline-flex",
+  width: "24px",
+  height: "24px",
+  flexShrink: 0,
+});
+
+/** 入力ソース欠損などを伝える警告バッジ（右上） */
+export const navIconWarningBadge = css({
+  position: "absolute",
+  top: "-3px",
+  right: "-3px",
+  width: "14px",
+  height: "14px",
+  borderRadius: "full",
+  backgroundColor: "status.error.main",
+  color: "white",
+  fontSize: "10px",
+  fontWeight: "bold",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  lineHeight: "1",
+  zIndex: "front",
+  pointerEvents: "none",
+});
+
 export const navText = css({
   whiteSpace: "nowrap",
   fontSize: "base",

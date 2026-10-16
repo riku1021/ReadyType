@@ -8,6 +8,7 @@
     "update": "更新",
     "lab": "开发确认",
     "mainNavigationAria": "主导航",
+    "appsMissingInputSourceAria": "已注册的输入源在系统中不存在",
     "backToList": "返回列表"
   },
   "os": {
@@ -27,7 +28,7 @@
     "loadSettingsFailed": "设置加载失败",
     "resetFailed": "重置失败",
     "initSwitcherFailed": "输入源切换初始化失败",
-    "inputSourceUnavailable": "{{id}}（不可用）",
+    "inputSourceUnavailable": "{{label}}（不可用）",
     "enableAppAria": "启用 {{label}}",
     "ruleCount": "{{count}} 个"
   },

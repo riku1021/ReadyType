@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     ffi::c_void,
     mem::MaybeUninit,
     ptr::NonNull,
@@ -197,28 +198,128 @@ pub fn inspect_input_source_flags(id: &str) -> Option<(bool, bool)> {
 }
 
 fn list_on_main(locale: &str) -> Result<Vec<NativeInputSource<OwnedTisInputSource>>, GatewayError> {
-    // SAFETY: null properties means no filter; false requests enabled sources only.
-    let array =
-        unsafe { OwnedCfArray::from_create_rule(TISCreateInputSourceList(std::ptr::null(), 0))? };
+    // 長寿命プロセス内の TIS enabled 一覧は Settings 直後に stale になり得る。
+    // 有効 ID の正本は別プロセス `tis-list-enabled`（ヘルパー無し時は in-process enabled-only）。
+    // Apple 推奨: まず includeAllInstalled=false。不足分だけ true で補完。
+    let fresh_ids = out_of_process_enabled_ids();
+    let mut sources = Vec::new();
+    let mut seen = HashSet::<String>::new();
+
+    append_tis_sources(
+        locale,
+        /* include_all_installed */ false,
+        &mut sources,
+        &mut seen,
+        |id| fresh_ids.as_ref().is_none_or(|fresh| fresh.contains(id)),
+    )?;
+
+    if let Some(fresh) = fresh_ids.as_ref() {
+        let missing = fresh
+            .iter()
+            .filter(|id| !seen.contains(id.as_str()))
+            .cloned()
+            .collect::<HashSet<_>>();
+        if !missing.is_empty() {
+            append_tis_sources(
+                locale,
+                /* include_all_installed */ true,
+                &mut sources,
+                &mut seen,
+                |id| missing.contains(id),
+            )?;
+        }
+    }
+
+    Ok(sources)
+}
+
+fn out_of_process_enabled_ids() -> Option<HashSet<String>> {
+    let helper = tis_list_helper_path()?;
+    let output = std::process::Command::new(&helper)
+        .stdin(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .output()
+        .ok()
+        .filter(|output| output.status.success())?;
+    let stdout = String::from_utf8(output.stdout).ok()?;
+    let ids = stdout
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(ToOwned::to_owned)
+        .collect::<HashSet<_>>();
+    if ids.is_empty() {
+        None
+    } else {
+        Some(ids)
+    }
+}
+
+fn tis_list_helper_path() -> Option<std::path::PathBuf> {
+    const NAME: &str = "tis-list-enabled";
+    // tauri_build が注入。externalBin の -$TARGET_TRIPLE 解決に使う。
+    let triple = option_env!("TAURI_ENV_TARGET_TRIPLE").unwrap_or("unknown");
+
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            // 本番 .app / cargo 出力: Contents/MacOS または target/{profile} の同名
+            let plain = dir.join(NAME);
+            if plain.is_file() {
+                return Some(plain);
+            }
+            // `tauri dev` が exe 横に triple 付きで置く場合
+            let with_triple = dir.join(format!("{NAME}-{triple}"));
+            if with_triple.is_file() {
+                return Some(with_triple);
+            }
+        }
+    }
+
+    // prepare-tis-list-sidecar.sh が置く場所（ソース監視外。CARGO_TARGET_DIR 対応）
+    let target_dir = std::env::var_os("CARGO_TARGET_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target"));
+    let from_sidecar = target_dir.join("sidecar").join(format!("{NAME}-{triple}"));
+    from_sidecar.is_file().then_some(from_sidecar)
+}
+
+fn append_tis_sources(
+    locale: &str,
+    include_all_installed: bool,
+    sources: &mut Vec<NativeInputSource<OwnedTisInputSource>>,
+    seen: &mut HashSet<String>,
+    keep: impl Fn(&str) -> bool,
+) -> Result<(), GatewayError> {
+    let include_flag = u8::from(include_all_installed);
+    // SAFETY: null properties = no filter; flag selects enabled-only vs all installed.
+    let array = unsafe {
+        OwnedCfArray::from_create_rule(TISCreateInputSourceList(std::ptr::null(), include_flag))?
+    };
     // SAFETY: array owns a valid CFArray for this scope.
     let count = unsafe { CFArrayGetCount(array.0.as_ptr()) };
-    let mut sources = Vec::with_capacity(usize::try_from(count).unwrap_or_default());
     for index in 0..count {
         // SAFETY: index is within the count returned for this valid CFArray.
         let raw = unsafe { CFArrayGetValueAtIndex(array.0.as_ptr(), index) };
-        // メニューバーの入力ソース一覧に合わせ、キーボードレイアウト／入力モード以外は除外する。
         if !is_menu_bar_keyboard_source(raw) {
             continue;
         }
-        // SAFETY: values in the TIS array are TISInputSource CF objects.
-        let handle = unsafe { OwnedTisInputSource::retain(raw)? };
+        let selectable =
+            property_bool(raw, unsafe { kTISPropertyInputSourceIsSelectCapable }).unwrap_or(false);
+        if !selectable {
+            continue;
+        }
         let Some(id) = property_string(raw, unsafe { kTISPropertyInputSourceID }) else {
             continue;
         };
+        if seen.contains(&id) || !keep(&id) {
+            continue;
+        }
         let fallback_name = property_string(raw, unsafe { kTISPropertyLocalizedName })
             .unwrap_or_else(|| id.clone());
         let bundle_id = property_string(raw, unsafe { kTISPropertyBundleID });
         let mode_id = property_string(raw, unsafe { kTISPropertyInputModeID });
+        // SAFETY: values in the TIS array are TISInputSource CF objects.
+        let handle = unsafe { OwnedTisInputSource::retain(raw)? };
         let icon_path = {
             let url = unsafe { TISGetInputSourceProperty(raw, kTISPropertyIconImageURL) };
             input_source_display_name::path_from_cfurl(url)
@@ -232,21 +333,18 @@ fn list_on_main(locale: &str) -> Result<Vec<NativeInputSource<OwnedTisInputSourc
             &fallback_name,
         );
         let language_code = primary_language_code(raw);
-        let enabled =
-            property_bool(raw, unsafe { kTISPropertyInputSourceIsEnabled }).unwrap_or(false);
-        let selectable =
-            property_bool(raw, unsafe { kTISPropertyInputSourceIsSelectCapable }).unwrap_or(false);
+        seen.insert(id.clone());
         sources.push(NativeInputSource {
             id: InputSourceId::parse(&id)
                 .map_err(|error| GatewayError::Operation(error.to_string()))?,
             name,
             language_code,
-            enabled,
+            enabled: true,
             selectable,
             handle,
         });
     }
-    Ok(sources)
+    Ok(())
 }
 
 /// メニューバー「入力ソース」相当: キーボードカテゴリかつ Layout / InputMode のみ。

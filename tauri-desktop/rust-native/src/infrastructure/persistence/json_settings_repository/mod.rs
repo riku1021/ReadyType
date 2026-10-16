@@ -1,4 +1,5 @@
 use std::{
+    collections::BTreeMap,
     fs::{self, OpenOptions},
     io::{ErrorKind, Write},
     path::{Path, PathBuf},
@@ -201,6 +202,8 @@ struct SettingsDto {
     quick_set_shortcut: String,
     #[serde(default = "default_onboarding_completed")]
     onboarding_completed: bool,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    input_source_display_names: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -301,6 +304,7 @@ impl From<&SwitcherSettings> for SettingsDto {
             ui_locale: settings.ui_locale.clone(),
             quick_set_shortcut: settings.quick_set_shortcut.clone(),
             onboarding_completed: settings.onboarding_completed,
+            input_source_display_names: settings.input_source_display_names.clone(),
         }
     }
 }
@@ -329,6 +333,7 @@ impl TryFrom<SettingsDto> for SwitcherSettings {
             ui_locale: SwitcherSettings::normalize_ui_locale(&dto.ui_locale),
             quick_set_shortcut,
             onboarding_completed: dto.onboarding_completed,
+            input_source_display_names: dto.input_source_display_names,
         };
         settings.validate().map_err(invalid_settings)?;
         Ok(settings)

@@ -22,6 +22,20 @@ describe("buildInputSourceOptions", () => {
     });
   });
 
+  it("uses last-known display name when a configured source is missing", () => {
+    expect(
+      buildInputSourceOptions(
+        [{ id: "en", name: "ABC", languageCode: "en", available: true }],
+        "com.google.inputmethod.Japanese.base",
+        { "com.google.inputmethod.Japanese.base": "ひらがな（Google）" }
+      )
+    ).toContainEqual({
+      value: "com.google.inputmethod.Japanese.base",
+      label: "ひらがな（Google）（利用不可）",
+      available: false,
+    });
+  });
+
   it("uses OS localized names as labels", () => {
     const options = buildInputSourceOptions(
       [

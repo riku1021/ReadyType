@@ -8,6 +8,7 @@
     "update": "アップデート",
     "lab": "開発確認",
     "mainNavigationAria": "メインナビゲーション",
+    "appsMissingInputSourceAria": "登録した入力ソースが OS にありません",
     "backToList": "一覧に戻る"
   },
   "os": {
@@ -27,7 +28,7 @@
     "loadSettingsFailed": "設定の読み込みに失敗しました",
     "resetFailed": "リセットに失敗しました",
     "initSwitcherFailed": "入力ソース切替の初期化に失敗しました",
-    "inputSourceUnavailable": "{{id}}（利用不可）",
+    "inputSourceUnavailable": "{{label}}（利用不可）",
     "enableAppAria": "{{label}} を有効化",
     "ruleCount": "{{count}}個"
   },

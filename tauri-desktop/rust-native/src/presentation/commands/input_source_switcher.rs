@@ -33,10 +33,19 @@ pub const RESOLVED_UI_LOCALE_EVENT: &str = "ui-locale://resolved-changed";
 /// FE syncs Accessibility UI when TCC trust may have changed (after delayed re-check).
 pub const ACCESSIBILITY_PERMISSION_EVENT: &str = "accessibility://permission-changed";
 
+/// FE refreshes OS input-source list when enabled sources may have changed (after delayed re-list).
+pub const INPUT_SOURCES_CHANGED_EVENT: &str = "input-source://sources-changed";
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResolvedUiLocaleEventDto {
     pub resolved_ui_locale: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InputSourcesChangedDto {
+    pub revised_at_unix_ms: u64,
 }
 
 #[derive(Debug, Clone, Serialize)]

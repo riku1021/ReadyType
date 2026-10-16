@@ -214,9 +214,16 @@ where
                     &sources,
                     &settings.rules,
                 );
-                if !next_preferences.is_empty() && next_preferences != settings.language_preferences
-                {
+                let preferences_changed = !next_preferences.is_empty()
+                    && next_preferences != settings.language_preferences;
+                if preferences_changed {
                     settings.language_preferences = next_preferences;
+                }
+                let names_changed = super::settings::merge_input_source_display_names(
+                    &mut settings.input_source_display_names,
+                    &sources,
+                );
+                if preferences_changed || names_changed {
                     match repository.save(&settings) {
                         Ok(()) => {}
                         // Corrupt recovery: keep in-memory seed, do not clobber quarantined data.
@@ -305,6 +312,24 @@ where
             .map_err(|_| ApplicationError::InvalidSettings("gateway lock poisoned".to_owned()))?
             .list(refresh, locale)
             .map_err(ApplicationError::from)
+    }
+
+    /// OS 一覧から表示名を取り込み、変化があれば保存する。
+    /// `WritesSuspended` のときはメモリ上のみ更新する。
+    pub fn record_input_source_display_names(
+        &mut self,
+        sources: &[super::ports::input_source::AvailableInputSource],
+    ) -> Result<(), ApplicationError> {
+        if !super::settings::merge_input_source_display_names(
+            &mut self.settings.input_source_display_names,
+            sources,
+        ) {
+            return Ok(());
+        }
+        match self.repository.save(&self.settings) {
+            Ok(()) | Err(SettingsError::WritesSuspended) => Ok(()),
+            Err(error) => Err(ApplicationError::from(error)),
+        }
     }
 
     pub fn set_enabled(&mut self, enabled: bool) -> Result<(), ApplicationError> {

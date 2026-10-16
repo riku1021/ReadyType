@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
+# `tis-list-enabled` 等の追加 bin があるとき、Tauri bundler がメインを特定するために必要。
+default-run = "tauri-desktop"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -22,6 +24,11 @@ lab-smoke = []
 name = "lab-smoke"
 path = "src/bin/lab_smoke.rs"
 required-features = ["lab-smoke"]
+
+# 別プロセスで TIS enabled-only を列挙（同一プロセス内の TIS キャッシュ回避）
+[[bin]]
+name = "tis-list-enabled"
+path = "src/bin/tis_list_enabled.rs"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

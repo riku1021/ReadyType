@@ -1,4 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
+import { useAtomValue } from "jotai";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { IoAdd, IoChevronForward, IoSearch } from "react-icons/io5";
@@ -7,7 +8,11 @@ import { Button } from "@/components/Button";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { AlertDialog } from "@/components/Dialog";
 import { Toggle } from "@/components/Toggle";
-import { useInputSourceState } from "@/features/inputSource";
+import {
+  appHasMissingInputSource,
+  inputSourceSourcesAtom,
+  useInputSourceState,
+} from "@/features/inputSource";
 
 import { type AppRuleGroup, appDisplayName, groupRulesByApp } from "../../appRulesViewModel";
 import { AppIconView, useAppPresentations } from "../appSettingsShared";
@@ -22,6 +27,8 @@ export function AppSettingsPage() {
   const navigate = useNavigate();
   const { state, updateRule, resetDefaultRules } = useInputSourceState();
   const rules = state?.rules ?? [];
+  const languagePreferences = state?.languagePreferences ?? {};
+  const sources = useAtomValue(inputSourceSourcesAtom);
   const groups = useMemo(() => groupRulesByApp(rules, t), [rules, t]);
   const appIds = useMemo(() => groups.map((group) => group.appId), [groups]);
   const presentations = useAppPresentations(appIds);
@@ -54,7 +61,14 @@ export function AppSettingsPage() {
       cellClassName: (_row, selected) => styles.tdApp({ selected }),
       cell: (group) => (
         <div className={styles.appCell}>
-          <AppIconView src={group.iconSrc} label={group.label} />
+          <AppIconView
+            src={group.iconSrc}
+            label={group.label}
+            showWarningBadge={
+              sources.status === "ready" &&
+              appHasMissingInputSource(group.appId, rules, languagePreferences, sources.sources)
+            }
+          />
           <span className={styles.appName}>{group.label}</span>
         </div>
       ),

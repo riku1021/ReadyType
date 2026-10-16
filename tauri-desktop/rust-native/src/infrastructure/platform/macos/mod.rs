@@ -6,6 +6,7 @@ mod app_display_name;
 mod app_icon;
 mod application_path;
 mod current_input_source_change;
+mod enabled_input_sources_monitor;
 mod focus_monitor;
 mod icon_style;
 mod input_source_display_name;
@@ -20,6 +21,7 @@ pub use accessibility_permission_monitor::start_monitor as start_accessibility_p
 pub use app_display_name::MacOsAppDisplayNameResolver;
 pub use app_icon::MacOsAppIconSource;
 pub use application_path::application_path;
+pub use enabled_input_sources_monitor::start_monitor as start_enabled_input_sources_monitor;
 pub use focus_monitor::MacOsFocusMonitor;
 pub use icon_style::{
     shared as macos_icon_style_source, start_monitor as start_icon_style_monitor,

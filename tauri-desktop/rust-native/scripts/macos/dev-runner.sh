@@ -75,14 +75,25 @@ if [[ "${SUBCOMMAND}" != "run" && "${SUBCOMMAND}" != "build" ]]; then
   exec cargo "${SUBCOMMAND}" "$@"
 fi
 
+# externalBin 用 sidecar を先に用意（tauri_build の存在チェック対策を含む）。
+# cargo_args（Tauri 由来の --release 等）は渡さない。二重指定で cargo が失敗する。
+PREPARE="${SCRIPT_DIR}/prepare-tis-list-sidecar.sh"
+if [[ "${profile}" == "release" ]]; then
+  bash "${PREPARE}" --release
+else
+  bash "${PREPARE}"
+fi
+
 # Always build first so we can sign before launch (cargo run would exec unsigned).
-cargo build "${cargo_args[@]+"${cargo_args[@]}"}"
+cargo build "${cargo_args[@]+"${cargo_args[@]}"}" --bin "${BIN_NAME}"
 
 TARGET_DIR="${CARGO_TARGET_DIR:-target}"
 if [[ -n "${target_triple}" ]]; then
   BIN_PATH="${TARGET_DIR}/${target_triple}/${profile}/${BIN_NAME}"
+  HELPER_PATH="${TARGET_DIR}/${target_triple}/${profile}/tis-list-enabled"
 else
   BIN_PATH="${TARGET_DIR}/${profile}/${BIN_NAME}"
+  HELPER_PATH="${TARGET_DIR}/${profile}/tis-list-enabled"
 fi
 
 if [[ ! -x "${BIN_PATH}" ]]; then
@@ -99,6 +110,10 @@ fi
 
 echo "codesign: signing ${BIN_PATH} with \"${IDENTITY}\"" >&2
 codesign --force --sign "${IDENTITY}" --identifier "${BUNDLE_ID}" "${BIN_PATH}"
+if [[ -x "${HELPER_PATH}" ]]; then
+  echo "codesign: signing ${HELPER_PATH} with \"${IDENTITY}\"" >&2
+  codesign --force --sign "${IDENTITY}" --identifier "${BUNDLE_ID}.tis-list-enabled" "${HELPER_PATH}"
+fi
 
 case "${SUBCOMMAND}" in
   build)

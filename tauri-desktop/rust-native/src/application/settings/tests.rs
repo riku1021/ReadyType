@@ -1,7 +1,7 @@
 use super::{
-    ensure_preferences_for_rule_languages, reconcile_language_preferences,
-    seed_language_preferences_from_sources, SwitcherSettings, CURRENT_SCHEMA_VERSION,
-    DEFAULT_QUICK_SET_SHORTCUT, DEFAULT_UI_LOCALE_PREFERENCE,
+    ensure_preferences_for_rule_languages, merge_input_source_display_names,
+    reconcile_language_preferences, seed_language_preferences_from_sources, SwitcherSettings,
+    CURRENT_SCHEMA_VERSION, DEFAULT_QUICK_SET_SHORTCUT, DEFAULT_UI_LOCALE_PREFERENCE,
 };
 use crate::{
     application::ports::input_source::AvailableInputSource,
@@ -264,6 +264,64 @@ fn reconcile_replaces_unavailable_or_mismatched_preferences() {
 }
 
 #[test]
+fn reconcile_keeps_configured_id_when_language_has_no_available_source() {
+    let abc = InputSourceId::parse("com.apple.keylayout.ABC").expect("abc");
+    let base = InputSourceId::parse("com.google.inputmethod.Japanese.base").expect("base");
+    let mut preferences = std::collections::BTreeMap::new();
+    preferences.insert(LanguageTag::en(), Some(abc.clone()));
+    preferences.insert(LanguageTag::ja(), Some(base.clone()));
+
+    // ja 入力ソースが OS から消えた状態
+    let sources = vec![AvailableInputSource {
+        id: abc.clone(),
+        name: "ABC".to_owned(),
+        language_code: Some("en".to_owned()),
+        available: true,
+    }];
+
+    let reconciled = reconcile_language_preferences(&preferences, &sources);
+    assert_eq!(
+        reconciled.get(&LanguageTag::en()).cloned().flatten(),
+        Some(abc)
+    );
+    assert_eq!(
+        reconciled.get(&LanguageTag::ja()).cloned().flatten(),
+        Some(base),
+        "代替が無いときは消失 ID を保持する"
+    );
+}
+
+#[test]
+fn reconcile_keeps_explicit_unset() {
+    let abc = InputSourceId::parse("com.apple.keylayout.ABC").expect("abc");
+    let mut preferences = std::collections::BTreeMap::new();
+    preferences.insert(LanguageTag::en(), Some(abc.clone()));
+    preferences.insert(LanguageTag::ja(), None);
+
+    let sources = vec![
+        AvailableInputSource {
+            id: abc,
+            name: "ABC".to_owned(),
+            language_code: Some("en".to_owned()),
+            available: true,
+        },
+        AvailableInputSource {
+            id: InputSourceId::parse("com.google.inputmethod.Japanese.base").expect("base"),
+            name: "Hiragana".to_owned(),
+            language_code: Some("ja".to_owned()),
+            available: true,
+        },
+    ];
+
+    let reconciled = reconcile_language_preferences(&preferences, &sources);
+    assert_eq!(
+        reconciled.get(&LanguageTag::ja()).cloned().flatten(),
+        None,
+        "明示 unset は OS から埋め直さない"
+    );
+}
+
+#[test]
 fn pick_default_skips_ime_latin_modes() {
     let roman = InputSourceId::parse("com.google.inputmethod.Japanese.Roman").expect("roman");
     let base = InputSourceId::parse("com.google.inputmethod.Japanese.base").expect("base");
@@ -328,4 +386,44 @@ fn language_tag_normalizes_primary_subtag() {
     assert_eq!(LanguageTag::parse("en-US").expect("parse").as_str(), "en");
     assert_eq!(LanguageTag::parse("JA_jp").expect("parse").as_str(), "ja");
     assert!(LanguageTag::parse("  ").is_err());
+}
+
+fn named_source(id: &str, name: &str) -> AvailableInputSource {
+    AvailableInputSource {
+        id: InputSourceId::parse(id).expect("id"),
+        name: name.to_owned(),
+        language_code: None,
+        available: true,
+    }
+}
+
+#[test]
+fn merge_display_names_adds_updates_and_keeps_removed() {
+    let mut names = std::collections::BTreeMap::new();
+    names.insert("removed.id".to_owned(), "ひらがな（Google）".to_owned());
+    names.insert("existing.id".to_owned(), "Old".to_owned());
+
+    let changed = merge_input_source_display_names(
+        &mut names,
+        &[
+            named_source("new.id", "New"),
+            named_source("existing.id", "Updated"),
+            named_source("blank.id", ""),
+        ],
+    );
+
+    assert!(changed);
+    assert_eq!(names.get("new.id").map(String::as_str), Some("New"));
+    assert_eq!(
+        names.get("existing.id").map(String::as_str),
+        Some("Updated")
+    );
+    assert_eq!(
+        names.get("removed.id").map(String::as_str),
+        Some("ひらがな（Google）")
+    );
+    assert!(!names.contains_key("blank.id"));
+
+    let unchanged = merge_input_source_display_names(&mut names, &[named_source("new.id", "New")]);
+    assert!(!unchanged);
 }

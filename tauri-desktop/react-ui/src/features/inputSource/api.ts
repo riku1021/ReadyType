@@ -15,6 +15,8 @@ export const INPUT_SOURCE_STATE_EVENT = "input-source-switcher://state";
 export const RESOLVED_UI_LOCALE_EVENT = "ui-locale://resolved-changed";
 /** Native emits after delayed re-check when Accessibility TCC may have changed. */
 export const ACCESSIBILITY_PERMISSION_EVENT = "accessibility://permission-changed";
+/** Native emits after delayed re-list when enabled OS input sources may have changed. */
+export const INPUT_SOURCES_CHANGED_EVENT = "input-source://sources-changed";
 
 export const getInputSourceSwitcherState = () =>
   invoke<SwitcherStateDto>("get_input_source_switcher_state");
@@ -100,13 +102,12 @@ export function shouldApplyFetchedRules(
 
 export function withConfiguredSource(
   sources: readonly InputSourceDto[],
-  configuredId: string
+  configuredId: string,
+  knownName?: string
 ): InputSourceDto[] {
   if (sources.some((source) => source.id === configuredId)) {
     return [...sources];
   }
-  return [
-    ...sources,
-    { id: configuredId, name: configuredId, languageCode: null, available: false },
-  ];
+  const name = knownName && knownName.length > 0 ? knownName : configuredId;
+  return [...sources, { id: configuredId, name, languageCode: null, available: false }];
 }

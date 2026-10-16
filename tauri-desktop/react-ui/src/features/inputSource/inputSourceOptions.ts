@@ -10,7 +10,8 @@ export type InputSourceOption = {
 
 export function buildInputSourceOptions(
   sources: readonly InputSourceDto[],
-  configuredIds: string | readonly string[]
+  configuredIds: string | readonly string[],
+  displayNames: Readonly<Record<string, string>> = {}
 ): InputSourceOption[] {
   const ids = typeof configuredIds === "string" ? [configuredIds] : configuredIds;
   let merged: InputSourceDto[] = [...sources];
@@ -18,7 +19,7 @@ export function buildInputSourceOptions(
     if (id.length === 0) {
       continue;
     }
-    merged = withConfiguredSource(merged, id);
+    merged = withConfiguredSource(merged, id, displayNames[id]);
   }
   const unique = new Map<string, InputSourceDto>();
   for (const source of merged) {
@@ -44,10 +45,11 @@ export function visibleInputSourceOptions(
   return options.filter((option) => option.available || option.value === currentValue);
 }
 
-/** OS の LocalizedName（`source.name`）をそのまま使う。メニューバー表示に合わせる。 */
+/** 利用可能時は OS LocalizedName。利用不可時は最終既知名（無ければ id）。 */
 function displayLabelForSource(source: InputSourceDto): string {
   if (!source.available) {
-    return i18n.t("common.inputSourceUnavailable", { id: source.id });
+    const label = source.name.length > 0 ? source.name : source.id;
+    return i18n.t("common.inputSourceUnavailable", { label });
   }
   return source.name;
 }

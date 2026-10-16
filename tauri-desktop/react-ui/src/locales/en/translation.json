@@ -8,6 +8,7 @@
     "update": "Updates",
     "lab": "Lab",
     "mainNavigationAria": "Main navigation",
+    "appsMissingInputSourceAria": "A registered input source is missing from the OS",
     "backToList": "Back to list"
   },
   "os": {
@@ -27,7 +28,7 @@
     "loadSettingsFailed": "Failed to load settings",
     "resetFailed": "Failed to reset",
     "initSwitcherFailed": "Failed to initialize input source switching",
-    "inputSourceUnavailable": "{{id}} (unavailable)",
+    "inputSourceUnavailable": "{{label}} (unavailable)",
     "enableAppAria": "Enable {{label}}",
     "ruleCount": "{{count}}"
   },

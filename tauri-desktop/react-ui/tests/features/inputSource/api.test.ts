@@ -103,6 +103,7 @@ describe("input source IPC", () => {
           quickSetShortcut: "CommandOrControl+Shift+L",
           quickSetShortcutRegistered: true,
           onboardingCompleted: true,
+          inputSourceDisplayNames: {},
         };
       }
       if (command === "get_focus_snapshot" || command === "open_accessibility_settings") {
@@ -220,6 +221,17 @@ describe("state helpers", () => {
     expect(merged[merged.length - 1]).toEqual({
       id: "removed.id",
       name: "removed.id",
+      languageCode: null,
+      available: false,
+    });
+  });
+
+  it("uses a known display name for an absent configured source", () => {
+    const available = [{ id: "present", name: "Present", languageCode: "en", available: true }];
+    const merged = withConfiguredSource(available, "ja.base", "ひらがな（Google）");
+    expect(merged[merged.length - 1]).toEqual({
+      id: "ja.base",
+      name: "ひらがな（Google）",
       languageCode: null,
       available: false,
     });

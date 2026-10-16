@@ -14,6 +14,7 @@ const baseSettings = (): InputSourceSettingsDto => ({
   quickSetShortcut: "CommandOrControl+Shift+L",
   quickSetShortcutRegistered: true,
   onboardingCompleted: true,
+  inputSourceDisplayNames: {},
 });
 
 describe("uiLocaleSync", () => {

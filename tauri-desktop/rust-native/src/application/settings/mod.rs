@@ -29,6 +29,8 @@ pub struct SwitcherSettings {
     pub quick_set_shortcut: String,
     /// 初回オンボーディングを完了したか。
     pub onboarding_completed: bool,
+    /// Last-known LocalizedName per input source id (kept after OS removal for UI).
+    pub input_source_display_names: BTreeMap<String, String>,
 }
 
 impl SwitcherSettings {
@@ -43,6 +45,7 @@ impl SwitcherSettings {
             ui_locale: DEFAULT_UI_LOCALE_PREFERENCE.to_owned(),
             quick_set_shortcut: DEFAULT_QUICK_SET_SHORTCUT.to_owned(),
             onboarding_completed: false,
+            input_source_display_names: BTreeMap::new(),
         }
     }
 
@@ -112,7 +115,30 @@ pub fn seed_language_preferences_from_sources(
     preferences
 }
 
+/// Upsert display names from a successful OS list. Returns true if map changed.
+///
+/// Only non-empty names are upserted. Entries for ids missing from `sources` are
+/// never removed (they must survive OS removal).
+pub fn merge_input_source_display_names(
+    names: &mut BTreeMap<String, String>,
+    sources: &[crate::application::ports::input_source::AvailableInputSource],
+) -> bool {
+    let mut changed = false;
+    for source in sources {
+        if source.name.is_empty() || names.get(source.id.as_str()) == Some(&source.name) {
+            continue;
+        }
+        names.insert(source.id.as_str().to_owned(), source.name.clone());
+        changed = true;
+    }
+    changed
+}
+
 /// OS 一覧と突き合わせ、消失・言語不一致の preference を差し替える。
+///
+/// - 同言語の利用可能ソースがあれば差し替える
+/// - 代替が無いときは設定済み ID を保持する（UI は利用不可＋警告バッジで示す）
+/// - 明示 unset（`None`）は埋めない
 pub fn reconcile_language_preferences(
     preferences: &BTreeMap<LanguageTag, Option<InputSourceId>>,
     sources: &[crate::application::ports::input_source::AvailableInputSource],
@@ -134,12 +160,17 @@ pub fn reconcile_language_preferences(
         });
         if still_valid {
             result.insert(tag.clone(), preferred.clone());
-        } else {
-            let replacement = by_language
-                .get(tag)
-                .and_then(|group| pick_default_source_id(group));
-            result.insert(tag.clone(), replacement);
+            continue;
         }
+        let Some(configured_id) = preferred.clone() else {
+            // 明示 unset は OS から埋め直さない
+            result.insert(tag.clone(), None);
+            continue;
+        };
+        let replacement = by_language
+            .get(tag)
+            .and_then(|group| pick_default_source_id(group));
+        result.insert(tag.clone(), Some(replacement.unwrap_or(configured_id)));
     }
     result
 }

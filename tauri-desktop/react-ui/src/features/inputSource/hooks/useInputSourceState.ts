@@ -56,6 +56,7 @@ export type InputSourceViewState = SwitcherStateDto & {
   accessibilityTrusted: boolean;
   permission: AccessibilityPermission | null;
   languagePreferences: LanguageInputPreferences;
+  inputSourceDisplayNames: Record<string, string>;
   debugLogging: boolean;
   uiLocale: string | null;
   rules: RuleDto[];
@@ -387,6 +388,7 @@ export function useInputSourceState() {
   );
 
   const languagePreferences = feature.settings?.languagePreferences ?? {};
+  const inputSourceDisplayNames = feature.settings?.inputSourceDisplayNames ?? {};
 
   const state: InputSourceViewState | null = feature.switcher
     ? {
@@ -394,6 +396,7 @@ export function useInputSourceState() {
         accessibilityTrusted: feature.permission === "granted",
         permission: feature.permission,
         languagePreferences,
+        inputSourceDisplayNames,
         debugLogging: feature.settings?.debugLogging ?? false,
         uiLocale: feature.settings?.uiLocale ?? null,
         rules: feature.rules,
@@ -414,6 +417,7 @@ export function useInputSourceState() {
           accessibilityTrusted: feature.permission === "granted",
           permission: feature.permission,
           languagePreferences,
+          inputSourceDisplayNames,
           debugLogging: feature.settings?.debugLogging ?? false,
           uiLocale: feature.settings?.uiLocale ?? null,
           rules: feature.rules,

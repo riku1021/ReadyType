@@ -232,6 +232,46 @@ pub fn run() {
                 });
             }
 
+            #[cfg(target_os = "macos")]
+            {
+                let handle = app.handle().clone();
+                let last_emitted_ids = std::sync::Mutex::new(String::new());
+                infrastructure::platform::macos::start_enabled_input_sources_monitor(move || {
+                    let controller = handle
+                        .state::<Arc<application::switcher_controller::SwitcherController>>();
+                    // Gateway キャッシュを更新し、表示名を永続化してから FE に再取得を促す。
+                    let Ok(sources) = controller.inner().list_input_sources(true) else {
+                        eprintln!("input-source: re-list after notify failed");
+                        return;
+                    };
+                    let mut ids = sources
+                        .iter()
+                        .map(|source| source.id.as_str())
+                        .collect::<Vec<_>>();
+                    ids.sort_unstable();
+                    let fingerprint = ids.join(",");
+                    {
+                        let Ok(mut last) = last_emitted_ids.lock() else {
+                            return;
+                        };
+                        if *last == fingerprint {
+                            return;
+                        }
+                        *last = fingerprint.clone();
+                    }
+                    let revised_at_unix_ms = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map(|d| d.as_millis() as u64)
+                        .unwrap_or(0);
+                    let _ = handle.emit(
+                        presentation::commands::input_source_switcher::INPUT_SOURCES_CHANGED_EVENT,
+                        presentation::commands::input_source_switcher::InputSourcesChangedDto {
+                            revised_at_unix_ms,
+                        },
+                    );
+                });
+            }
+
             infrastructure::desktop::tray::install(
                 app.handle(),
                 &initial_state,

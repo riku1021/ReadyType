@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { type InputSourceOption, visibleInputSourceOptions } from "@/features/inputSource";
 import { cx } from "@/styled-system/css";
@@ -16,20 +17,37 @@ export function AppIconView({
   src,
   label,
   large,
+  showWarningBadge,
 }: {
   src?: string | null;
   label: string;
   large?: boolean;
+  showWarningBadge?: boolean;
 }) {
-  if (src) {
-    return <img className={large ? styles.appIconLarge : styles.appIcon} src={src} alt="" />;
-  }
-  return (
+  const { t } = useTranslation();
+  const icon = src ? (
+    <img className={large ? styles.appIconLarge : styles.appIcon} src={src} alt="" />
+  ) : (
     <span
       className={large ? styles.appIconFallbackLarge : styles.appIconFallback}
       aria-hidden="true"
     >
       {label.slice(0, 1)}
+    </span>
+  );
+
+  return (
+    <span className={large ? styles.appIconWrapLarge : styles.appIconWrap}>
+      {icon}
+      {showWarningBadge ? (
+        <span
+          className={styles.appIconWarningBadge}
+          role="img"
+          aria-label={t("nav.appsMissingInputSourceAria")}
+        >
+          <span aria-hidden>!</span>
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -88,6 +106,7 @@ export function LanguageSelect({
   onChange,
   wide = false,
   noneLabel,
+  showWarningBadge,
 }: {
   value: string;
   label: string;
@@ -96,7 +115,9 @@ export function LanguageSelect({
   wide?: boolean;
   /** 指定時、value="" の「設定しない」相当を選択肢に含める（選択中は常に最上段） */
   noneLabel?: string;
+  showWarningBadge?: boolean;
 }) {
+  const { t } = useTranslation();
   const visibleOptions = visibleInputSourceOptions(options, value);
   const selected = visibleOptions.find((option) => option.value === value);
   const languagePinned =
@@ -107,9 +128,14 @@ export function LanguageSelect({
   const pinned = noneSelected ? noneOption : languagePinned;
   const others = [...(noneOption != null && !noneSelected ? [noneOption] : []), ...languageOthers];
 
-  return (
+  const selectClassName = cx(
+    styles.select,
+    wide ? (showWarningBadge ? styles.selectWideInRow : styles.selectWide) : undefined
+  );
+
+  const select = (
     <select
-      className={cx(styles.select, wide ? styles.selectWide : undefined)}
+      className={selectClassName}
       aria-label={label}
       value={value}
       onChange={(event) => onChange(event.target.value)}
@@ -127,5 +153,22 @@ export function LanguageSelect({
         </option>
       ))}
     </select>
+  );
+
+  if (!showWarningBadge) {
+    return select;
+  }
+
+  return (
+    <span className={cx(styles.selectRow, wide ? styles.selectRowWide : undefined)}>
+      {select}
+      <span
+        className={styles.selectWarningBadge}
+        role="img"
+        aria-label={t("nav.appsMissingInputSourceAria")}
+      >
+        <span aria-hidden>!</span>
+      </span>
+    </span>
   );
 }

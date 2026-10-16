@@ -380,12 +380,20 @@ impl SwitcherController {
     ) -> Result<Vec<AvailableInputSource>, ControllerError> {
         let locale = self.ui_locale.load();
         let gateway = self.lock_switcher()?.gateway_handle();
-        let mut gateway = gateway
-            .lock()
-            .map_err(|_| ControllerError::InvalidRequest("gateway lock poisoned".to_owned()))?;
-        Ok(gateway
-            .list(refresh, &locale)
-            .map_err(ApplicationError::from)?)
+        let sources = {
+            let mut gateway = gateway
+                .lock()
+                .map_err(|_| ControllerError::InvalidRequest("gateway lock poisoned".to_owned()))?;
+            gateway
+                .list(refresh, &locale)
+                .map_err(ApplicationError::from)?
+        };
+        // gateway ロックを解放してから switcher を取る（他経路は switcher → gateway の順）。
+        // 表示名の保存失敗で一覧取得を失敗させない。
+        let _ = self
+            .lock_switcher()?
+            .record_input_source_display_names(&sources);
+        Ok(sources)
     }
 
     pub fn rules(&self) -> Result<Vec<FocusRule>, ControllerError> {

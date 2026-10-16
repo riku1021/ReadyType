@@ -114,17 +114,7 @@ export function groupRulesByApp(rules: readonly RuleDto[], t: TFunction): AppRul
     .sort((left, right) => left.label.localeCompare(right.label, i18n.language));
 }
 
-export function resolvedInputSourceId(
-  target: RuleTarget,
-  preferences: Record<string, string | null | undefined> | null | undefined
-): string {
-  switch (target.kind) {
-    case "preferredLanguage":
-      return preferences?.[target.language] ?? "";
-    case "exact":
-      return target.inputSourceId;
-  }
-}
+export { resolvedInputSourceId } from "@/features/inputSource";
 
 export function ruleTargetFromInputSourceId(
   inputSourceId: string,

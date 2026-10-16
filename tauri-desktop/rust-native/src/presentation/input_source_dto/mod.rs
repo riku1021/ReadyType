@@ -358,6 +358,8 @@ pub struct SettingsDto {
     pub quick_set_shortcut_registered: bool,
     /// 初回オンボーディング完了済みか。
     pub onboarding_completed: bool,
+    /// 入力ソース id ごとの最終既知 LocalizedName（OS 削除後も UI 表示用に保持）。
+    pub input_source_display_names: std::collections::BTreeMap<String, String>,
 }
 
 impl From<&SwitcherSettings> for SettingsDto {
@@ -381,6 +383,7 @@ impl From<&SwitcherSettings> for SettingsDto {
             // AppHandle なしでは不明。コマンド側で上書きする。
             quick_set_shortcut_registered: false,
             onboarding_completed: settings.onboarding_completed,
+            input_source_display_names: settings.input_source_display_names.clone(),
         }
     }
 }
