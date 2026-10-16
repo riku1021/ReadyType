@@ -1,12 +1,4 @@
 import { useEffect, useState } from "react";
-import {
-  IoApps,
-  IoChatbubbleEllipses,
-  IoCreate,
-  IoDocumentText,
-  IoOptions,
-  IoTerminal,
-} from "react-icons/io5";
 
 import { type InputSourceOption, visibleInputSourceOptions } from "@/features/inputSource";
 import { cx } from "@/styled-system/css";
@@ -18,26 +10,7 @@ import {
   peekAppPresentations,
   subscribeAppPresentationCache,
 } from "../appPresentations";
-import type { RuleKind } from "../appRulesViewModel";
 import * as styles from "./appSettingsShared.styles";
-
-const RULE_ICONS: Record<RuleKind, typeof IoChatbubbleEllipses> = {
-  chat: IoChatbubbleEllipses,
-  editor: IoDocumentText,
-  terminal: IoTerminal,
-  rename: IoCreate,
-  default: IoApps,
-  other: IoOptions,
-};
-
-export function RuleKindIcon({ kind }: { kind: RuleKind }) {
-  const Icon = RULE_ICONS[kind];
-  return (
-    <span className={styles.ruleIconBox} aria-hidden="true">
-      <Icon />
-    </span>
-  );
-}
 
 export function AppIconView({
   src,

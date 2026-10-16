@@ -164,20 +164,6 @@ export const tdActions = css({
   textAlign: "right",
 });
 
-export const ruleCell = css({
-  display: "flex",
-  alignItems: "center",
-  gap: "sm",
-  minWidth: "0",
-});
-
-export const ruleText = css({
-  display: "flex",
-  flexDirection: "column",
-  gap: "4px",
-  minWidth: "0",
-});
-
 export const ruleTitle = css({
   margin: "0",
   fontSize: "sm",

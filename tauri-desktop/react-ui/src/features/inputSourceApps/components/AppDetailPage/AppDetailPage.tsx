@@ -24,12 +24,7 @@ import {
   resolvedInputSourceId,
   ruleTargetFromInputSourceId,
 } from "../../appRulesViewModel";
-import {
-  AppIconView,
-  LanguageSelect,
-  RuleKindIcon,
-  useAppPresentations,
-} from "../appSettingsShared";
+import { AppIconView, LanguageSelect, useAppPresentations } from "../appSettingsShared";
 import * as styles from "./AppDetailPage.styles";
 
 type AppDetailPageProps = {
@@ -194,14 +189,7 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
       width: "50%",
       headerClassName: styles.thRule,
       cellClassName: styles.tdRule,
-      cell: (item) => (
-        <div className={styles.ruleCell}>
-          <RuleKindIcon kind={item.kind} />
-          <div className={styles.ruleText}>
-            <p className={styles.ruleTitle}>{item.title}</p>
-          </div>
-        </div>
-      ),
+      cell: (item) => <p className={styles.ruleTitle}>{item.title}</p>,
     },
     {
       id: "language",

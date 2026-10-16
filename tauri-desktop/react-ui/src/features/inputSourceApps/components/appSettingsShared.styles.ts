@@ -65,16 +65,3 @@ export const selectWide = css({
   width: "100%",
   maxWidth: "360px",
 });
-
-export const ruleIconBox = css({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: "34px",
-  height: "34px",
-  borderRadius: "9px",
-  flexShrink: "0",
-  backgroundColor: "background.sub",
-  color: "text.main",
-  fontSize: "lg",
-});
