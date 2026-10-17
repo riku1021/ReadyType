@@ -30,38 +30,6 @@ export const toolbarActions = css({
   flexWrap: "wrap",
 });
 
-export const searchBox = css({
-  display: "flex",
-  alignItems: "center",
-  gap: "xs",
-  paddingInline: "sm",
-  paddingBlock: "xs",
-  borderRadius: "8px",
-  borderWidth: "1px",
-  borderStyle: "solid",
-  borderColor: "border.primary",
-  backgroundColor: "background.sub",
-  color: "text.secondary",
-});
-
-export const searchIcon = css({
-  fontSize: "md",
-  flexShrink: "0",
-});
-
-export const searchInput = css({
-  border: "none",
-  background: "transparent",
-  color: "text.main",
-  fontSize: "sm",
-  width: "160px",
-  maxWidth: "40vw",
-  outline: "none",
-  _placeholder: {
-    color: "text.secondary",
-  },
-});
-
 export const appCell = css({
   display: "flex",
   alignItems: "center",

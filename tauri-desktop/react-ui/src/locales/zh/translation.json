@@ -30,7 +30,8 @@
     "initSwitcherFailed": "输入源切换初始化失败",
     "inputSourceUnavailable": "{{label}}（不可用）",
     "enableAppAria": "启用 {{label}}",
-    "ruleCount": "{{count}} 个"
+    "ruleCount": "{{count}} 个",
+    "searchClearAria": "清除搜索"
   },
   "dialog": {
     "confirmDefault": "是",
@@ -79,14 +80,11 @@
     "searchPlaceholder": "搜索应用...",
     "searchAria": "搜索应用",
     "addApp": "添加应用",
-    "resetToDefaultRules": "恢复默认规则",
     "columnApp": "应用",
     "columnRules": "规则",
     "columnEnabled": "启用",
-    "emptyList": "没有可显示的应用设置。请恢复默认规则。",
-    "resetConfirmTitle": "要恢复默认规则吗？",
-    "resetConfirmText": "将用默认预设替换当前规则列表（含自定义规则）。",
-    "resetConfirmButton": "恢复",
+    "emptyList": "没有可显示的应用设置。可在「一般」设置中重置为默认。",
+    "emptySearch": "没有匹配的应用",
     "detailAria": "应用详情",
     "notFound": "找不到指定应用的设置。",
     "defaultInputLanguage": "默认输入语言",

@@ -30,7 +30,8 @@
     "initSwitcherFailed": "Failed to initialize input source switching",
     "inputSourceUnavailable": "{{label}} (unavailable)",
     "enableAppAria": "Enable {{label}}",
-    "ruleCount": "{{count}}"
+    "ruleCount": "{{count}}",
+    "searchClearAria": "Clear search"
   },
   "dialog": {
     "confirmDefault": "Yes",
@@ -79,14 +80,11 @@
     "searchPlaceholder": "Search apps...",
     "searchAria": "Search apps",
     "addApp": "Add app",
-    "resetToDefaultRules": "Restore default rules",
     "columnApp": "App",
     "columnRules": "Rules",
     "columnEnabled": "Enabled",
-    "emptyList": "No app settings to show. Restore the default rules.",
-    "resetConfirmTitle": "Restore default rules?",
-    "resetConfirmText": "This replaces the current rule list, including custom rules, with the default preset.",
-    "resetConfirmButton": "Restore",
+    "emptyList": "No app settings to show. You can reset to defaults in General settings.",
+    "emptySearch": "No matching apps",
     "detailAria": "App details",
     "notFound": "Settings for the specified app were not found.",
     "defaultInputLanguage": "Default input language",

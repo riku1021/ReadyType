@@ -4,6 +4,7 @@ import type { RuleDto } from "@/features/inputSource";
 import {
   appDisplayName,
   displayRuleLabel,
+  filterAppListRows,
   groupRulesByApp,
   resolvedInputSourceId,
   ruleTargetFromInputSourceId,
@@ -158,5 +159,25 @@ describe("appRulesViewModel", () => {
       kind: "exact",
       inputSourceId: "zh.id",
     });
+  });
+});
+
+describe("filterAppListRows", () => {
+  const rows = [
+    { appId: "com.todesktop.230313mzl4w4u92", label: "Cursor" },
+    { appId: "com.apple.Terminal", label: "Terminal" },
+  ];
+
+  it("returns all rows when search is empty or whitespace", () => {
+    expect(filterAppListRows(rows, "")).toEqual(rows);
+    expect(filterAppListRows(rows, "   ")).toEqual(rows);
+  });
+
+  it("matches display name case-insensitively", () => {
+    expect(filterAppListRows(rows, "cur")).toEqual([rows[0]]);
+  });
+
+  it("matches bundle id", () => {
+    expect(filterAppListRows(rows, "apple.Terminal")).toEqual([rows[1]]);
   });
 });

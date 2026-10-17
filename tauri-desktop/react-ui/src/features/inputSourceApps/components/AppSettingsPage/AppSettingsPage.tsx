@@ -2,11 +2,11 @@ import { useNavigate } from "@tanstack/react-router";
 import { useAtomValue } from "jotai";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { IoAdd, IoChevronForward, IoSearch } from "react-icons/io5";
+import { IoAdd, IoChevronForward } from "react-icons/io5";
 
 import { Button } from "@/components/Button";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
-import { AlertDialog } from "@/components/Dialog";
+import { SearchBar } from "@/components/SearchBar";
 import { Toggle } from "@/components/Toggle";
 import {
   appHasMissingInputSource,
@@ -14,7 +14,12 @@ import {
   useInputSourceState,
 } from "@/features/inputSource";
 
-import { type AppRuleGroup, appDisplayName, groupRulesByApp } from "../../appRulesViewModel";
+import {
+  type AppRuleGroup,
+  appDisplayName,
+  filterAppListRows,
+  groupRulesByApp,
+} from "../../appRulesViewModel";
 import { AppIconView, useAppPresentations } from "../appSettingsShared";
 import * as styles from "./AppSettingsPage.styles";
 
@@ -25,14 +30,14 @@ type AppListRow = AppRuleGroup & {
 export function AppSettingsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { state, updateRule, resetDefaultRules } = useInputSourceState();
+  const { state, updateRule } = useInputSourceState();
   const rules = state?.rules ?? [];
   const languagePreferences = state?.languagePreferences ?? {};
   const sources = useAtomValue(inputSourceSourcesAtom);
   const groups = useMemo(() => groupRulesByApp(rules, t), [rules, t]);
   const appIds = useMemo(() => groups.map((group) => group.appId), [groups]);
   const presentations = useAppPresentations(appIds);
-  const [resetOpen, setResetOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
   const rows: AppListRow[] = useMemo(
     () =>
@@ -46,6 +51,8 @@ export function AppSettingsPage() {
       }),
     [groups, presentations]
   );
+
+  const visibleRows = useMemo(() => filterAppListRows(rows, search), [rows, search]);
 
   const setAppEnabled = async (group: AppRuleGroup, enabled: boolean) => {
     const targets = rules.filter((rule) => rule.appId === group.appId);
@@ -121,45 +128,27 @@ export function AppSettingsPage() {
       <div className={styles.toolbar}>
         <p className={styles.intro}>{t("apps.intro")}</p>
         <div className={styles.toolbarActions}>
-          <span className={styles.searchBox}>
-            <IoSearch className={styles.searchIcon} aria-hidden="true" />
-            <input
-              className={styles.searchInput}
-              type="search"
-              placeholder={t("apps.searchPlaceholder")}
-              aria-label={t("apps.searchAria")}
-              disabled
-            />
-          </span>
+          <SearchBar
+            value={search}
+            onChange={setSearch}
+            placeholder={t("apps.searchPlaceholder")}
+            aria-label={t("apps.searchAria")}
+          />
           <Button variant="secondary" iconLeft={<IoAdd />} onClick={() => undefined} disabled>
             {t("apps.addApp")}
-          </Button>
-          <Button variant="secondary" onClick={() => setResetOpen(true)}>
-            {t("apps.resetToDefaultRules")}
           </Button>
         </div>
       </div>
 
       <DataTable
         columns={columns}
-        rows={rows}
+        rows={visibleRows}
         getRowId={(group) => group.appId}
         onRowSelect={(appId) => {
           void navigate({ to: "/apps/$appId", params: { appId } });
         }}
         rowClassName={() => styles.row}
-        emptyMessage={t("apps.emptyList")}
-      />
-
-      <AlertDialog
-        isOpen={resetOpen}
-        onClose={() => setResetOpen(false)}
-        title={t("apps.resetConfirmTitle")}
-        text={t("apps.resetConfirmText")}
-        confirmButtonText={t("apps.resetConfirmButton")}
-        onConfirm={() => {
-          void resetDefaultRules();
-        }}
+        emptyMessage={search.trim() !== "" ? t("apps.emptySearch") : t("apps.emptyList")}
       />
     </div>
   );
