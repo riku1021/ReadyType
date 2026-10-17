@@ -37,7 +37,8 @@ type SelectionSettingItem = SettingItemBase & {
 
 type ToggleSettingItem = SettingItemBase & {
   type: "toggle";
-  toggleValue: boolean;
+  /** `null` = unknown / loading (neutral toggle, not OFF). */
+  toggleValue: boolean | null;
   onToggleChanged: (value: boolean) => void;
   disabled?: boolean;
 };

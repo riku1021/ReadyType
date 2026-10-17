@@ -33,6 +33,10 @@ export const track = cva({
       false: {
         backgroundColor: "background.main",
       },
+      /** Unknown / loading — not a real OFF (avoids wrong-value flash). */
+      indeterminate: {
+        backgroundColor: "background.main",
+      },
     },
   },
   defaultVariants: {
@@ -57,4 +61,8 @@ export const thumb = css({
 
 export const thumbChecked = css({
   transform: "translateX(18px)",
+});
+
+export const thumbIndeterminate = css({
+  transform: "translateX(9px)",
 });

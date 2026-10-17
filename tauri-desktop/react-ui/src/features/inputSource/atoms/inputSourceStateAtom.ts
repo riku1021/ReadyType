@@ -12,6 +12,8 @@ export type InputSourceFeatureState = {
   permission: AccessibilityPermission | null;
   settings: InputSourceSettingsDto | null;
   rules: RuleDto[];
+  /** OS login-item status; `null` until first successful fetch (keep across remounts). */
+  autostartEnabled: boolean | null;
   initError: string | null;
   ready: boolean;
 };
@@ -21,6 +23,7 @@ export const initialInputSourceFeatureState: InputSourceFeatureState = {
   permission: null,
   settings: null,
   rules: [],
+  autostartEnabled: null,
   initError: null,
   ready: false,
 };

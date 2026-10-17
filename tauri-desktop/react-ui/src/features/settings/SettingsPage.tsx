@@ -29,13 +29,12 @@ export function SettingsPage() {
     setEnabled,
     setDebugLogging,
     setUiLocale,
-    fetchAutostartEnabled,
+    autostartEnabled,
+    refreshAutostartEnabled,
     setAutostartEnabled,
     resetDefaultRules,
   } = useInputSourceState();
 
-  /** `null` until native state is loaded (avoids flashing the wrong toggle). */
-  const [autostartEnabled, setAutostartEnabledState] = useState<boolean | null>(null);
   const [pending, setPending] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,10 +43,7 @@ export function SettingsPage() {
     let cancelled = false;
     const load = async () => {
       try {
-        const nextAutostart = await fetchAutostartEnabled();
-        if (!cancelled) {
-          setAutostartEnabledState(nextAutostart);
-        }
+        await refreshAutostartEnabled();
       } catch (loadError) {
         if (!cancelled) {
           setError(loadError instanceof Error ? loadError.message : t("common.loadSettingsFailed"));
@@ -57,6 +53,7 @@ export function SettingsPage() {
     void load();
 
     // System Settings でログイン項目を変えたあと、フォーカス復帰で OS 状態を取り直す。
+    // 前回値は atom に残るので、再取得中に OFF フラッシュしない。
     const unlistenFocusPromise = isTauri()
       ? getCurrentWindow().onFocusChanged(({ payload: focused }) => {
           if (focused) {
@@ -70,7 +67,7 @@ export function SettingsPage() {
       // `.then` 代入前に unmount しても解除できるよう Promise を待つ。
       void unlistenFocusPromise?.then((unlisten) => unlisten());
     };
-  }, [fetchAutostartEnabled, t]);
+  }, [refreshAutostartEnabled, t]);
 
   const themeOptions = THEME_OPTIONS.map((key) => t(key));
   const languageOptions = languageOptionLabels(t);
@@ -106,12 +103,11 @@ export function SettingsPage() {
           icon={MdRocketLaunch}
           title={t("settings.launchAtLogin")}
           type="toggle"
-          toggleValue={autostartEnabled ?? false}
+          toggleValue={autostartEnabled}
           disabled={autostartEnabled === null || pending}
           onToggleChanged={(enabled) => {
             setPending(true);
             void setAutostartEnabled(enabled)
-              .then(setAutostartEnabledState)
               .catch((updateError) => {
                 setError(
                   updateError instanceof Error ? updateError.message : t("common.saveFailed")

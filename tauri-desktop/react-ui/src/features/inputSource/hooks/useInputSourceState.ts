@@ -100,14 +100,15 @@ export function useInputSourceBootstrap() {
           return;
         }
         await applySettingsToI18n(settings);
-        setFeature({
+        setFeature((current) => ({
+          ...current,
           switcher,
           permission,
           settings,
           rules,
           initError: null,
           ready: true,
-        });
+        }));
       } catch (error) {
         if (cancelled) {
           return;
@@ -380,11 +381,21 @@ export function useInputSourceState() {
     []
   );
 
-  const fetchAutostartEnabled = useCallback(async () => getAutostartEnabled(), []);
+  const refreshAutostartEnabled = useCallback(async () => {
+    const enabled = await getAutostartEnabled();
+    setFeature((current) =>
+      current.autostartEnabled === enabled ? current : { ...current, autostartEnabled: enabled }
+    );
+    return enabled;
+  }, [setFeature]);
 
   const setAutostartEnabled = useCallback(
-    async (enabled: boolean) => setAutostartEnabledApi(enabled),
-    []
+    async (enabled: boolean) => {
+      const next = await setAutostartEnabledApi(enabled);
+      setFeature((current) => ({ ...current, autostartEnabled: next }));
+      return next;
+    },
+    [setFeature]
   );
 
   const languagePreferences = feature.settings?.languagePreferences ?? {};
@@ -449,7 +460,8 @@ export function useInputSourceState() {
     fetchInputSources,
     fetchSwitchLogs,
     fetchFocusSnapshot,
-    fetchAutostartEnabled,
+    autostartEnabled: feature.autostartEnabled,
+    refreshAutostartEnabled,
     setAutostartEnabled,
     refreshRules,
     refreshSettings,
