@@ -2,7 +2,6 @@
   "nav": {
     "accessibility": "Accessibility",
     "apps": "App Settings",
-    "diagnostics": "Diagnostics",
     "general": "General",
     "about": "About",
     "update": "Updates",
@@ -102,22 +101,6 @@
     "deleteRuleConfirmButton": "Delete",
     "deleteRuleSuccess": "Deleted “{{title}}”",
     "emptyContextualRules": "No field rules."
-  },
-  "diagnostics": {
-    "copyLogs": "Copy logs",
-    "clearLogs": "Clear logs",
-    "copyFailed": "Failed to copy to clipboard",
-    "sectionLatency": "Processing time",
-    "sectionFocus": "Focused element",
-    "noSnapshot": "No snapshot",
-    "copy": "Copy",
-    "sectionSwitchLogs": "Switch logs",
-    "switchLogsHelp": "Skipped decisions (disabled / snoozed / noRule / alreadySelected) are also logged. Ignored is recorded only when debug logging is on in Settings.",
-    "noLogs": "No logs",
-    "logSuccess": "Success",
-    "logFailure": "Failure",
-    "logAttempted": "Attempted",
-    "logSkipped": "Skipped"
   },
   "update": {
     "autoCheck": "Automatically check for updates",

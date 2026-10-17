@@ -1,7 +1,6 @@
 import {
   IoShieldCheckmark as Accessibility,
   IoApps as Apps,
-  IoPulse as Diagnostics,
   IoFlask as Lab,
   IoSettingsSharp as Settings,
   IoSync as Update,
@@ -23,11 +22,6 @@ export const navLinks: NavLink[] = [
     to: "/apps",
     labelKey: "nav.apps",
     icon: Apps,
-  },
-  {
-    to: "/diagnostics",
-    labelKey: "nav.diagnostics",
-    icon: Diagnostics,
   },
   {
     to: "/general",

@@ -1,12 +1,8 @@
 use super::*;
 use crate::application::input_source_switcher::SwitchDecision;
 
-#[test]
-fn writes_jsonl_switch_records_with_flag_snapshot() {
-    let dir = std::env::temp_dir().join(format!("readytype-diag-log-{}", now_unix_ms()));
-    let _ = fs::remove_dir_all(&dir);
-    let sink = FileDiagnosticLogSink::open(dir.clone()).expect("open");
-    sink.append_switch_log(&SwitchLogEntry {
+fn sample_entry(detail: &str) -> SwitchLogEntry {
+    SwitchLogEntry {
         timestamp_unix_ms: 1,
         app_id: "com.example".to_owned(),
         pid: 1,
@@ -18,12 +14,25 @@ fn writes_jsonl_switch_records_with_flag_snapshot() {
         success: true,
         attempted: true,
         reason: "selected target input source; postSelect=match".to_owned(),
-        detail: "elements=0".to_owned(),
+        detail: detail.to_owned(),
         processing_micros: 1,
         prepare_micros: 2,
         current_micros: 3,
         select_micros: 4,
-    });
+    }
+}
+
+fn temp_dir(label: &str) -> PathBuf {
+    let dir = std::env::temp_dir().join(format!("readytype-diag-log-{label}-{}", now_unix_ms()));
+    let _ = fs::remove_dir_all(&dir);
+    dir
+}
+
+#[test]
+fn writes_jsonl_switch_records_with_flag_snapshot() {
+    let dir = temp_dir("write");
+    let sink = FileDiagnosticLogSink::open(dir.clone()).expect("open");
+    sink.append_switch_log(&sample_entry("elements=0"));
 
     let body = fs::read_to_string(sink.path()).expect("read");
     assert!(body.contains("\"kind\":\"session_start\""));
@@ -39,6 +48,71 @@ fn writes_jsonl_switch_records_with_flag_snapshot() {
     assert!(body.contains("\"flags\""));
     assert!(body.contains("\"ablation\""));
     assert!(body.contains("\"proto\""));
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn rotates_current_when_file_exceeds_size_limit() {
+    let dir = temp_dir("rotate");
+    let sink = FileDiagnosticLogSink::open_with_limits(dir.clone(), 800, 50_000).expect("open");
+
+    // 1 行あたり数百バイトあるので、数回で 800 を超えてローテートする。
+    for index in 0..12 {
+        sink.append_switch_log(&sample_entry(&format!("pad-{}-{}", index, "x".repeat(40))));
+    }
+
+    let sessions = fs::read_dir(dir.join("sessions"))
+        .expect("sessions")
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "jsonl"))
+        .count();
+    assert!(
+        sessions >= 1,
+        "expected at least one archived session after size rotation"
+    );
+
+    let current = fs::read_to_string(dir.join("current.jsonl")).expect("current");
+    assert!(current.contains("\"kind\":\"session_start\""));
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn prunes_oldest_sessions_when_total_budget_exceeded() {
+    let dir = temp_dir("prune");
+    fs::create_dir_all(dir.join("sessions")).expect("sessions dir");
+
+    // 起動前に大きな過去セッションを置く（合計予算 2_500 を想定）。
+    let payload = "y".repeat(1_200);
+    for stamp in ["1000", "2000", "3000"] {
+        fs::write(
+            dir.join("sessions").join(format!("{stamp}.jsonl")),
+            &payload,
+        )
+        .expect("seed session");
+    }
+
+    let _sink = FileDiagnosticLogSink::open_with_limits(dir.clone(), 10_000, 2_500).expect("open");
+
+    let remaining: Vec<_> = fs::read_dir(dir.join("sessions"))
+        .expect("sessions")
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .collect();
+    assert!(
+        !remaining.iter().any(|name| name.starts_with("1000")),
+        "oldest session should be pruned, remaining={remaining:?}"
+    );
+    let sessions_bytes: u64 = remaining
+        .iter()
+        .map(|name| file_len(&dir.join("sessions").join(name)).unwrap_or(0))
+        .sum();
+    let current_bytes = file_len(&dir.join("current.jsonl")).unwrap_or(0);
+    assert!(
+        current_bytes.saturating_add(sessions_bytes) <= 2_500,
+        "total should fit budget: current={current_bytes} sessions={sessions_bytes}"
+    );
 
     let _ = fs::remove_dir_all(&dir);
 }

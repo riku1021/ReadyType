@@ -315,7 +315,6 @@ tray / FE 向けに「見た目が変わらない」publish を省略する。
 | フォーカス合流 | `drain_queued_focus_keeps_latest_snapshot` |
 | 指紋 / 属性計画 | `focus_monitor::tests::*` |
 | tray skip | `tray_update_skips_identical_last_or_desired` |
-| 診断 UI | `react-ui/tests/.../diagnosticsViewModel.test.ts` |
 
 ---
 
@@ -323,16 +322,17 @@ tray / FE 向けに「見た目が変わらない」publish を省略する。
 
 ### 11.0 ファイル出力（**現行あり**）
 
-アプリ起動時から、診断 UI と同じ切替イベントをリポジトリ直下へ JSONL 追記する（**Git 対象外**）。
+アプリ起動時から切替イベントをリポジトリ直下へ JSONL 追記する（**Git 対象外**）。アプリ内ログ画面は置かない。
 
 ```text
 tmp/input-source-logs/
   current.jsonl              ← いま読むのはこれ（1 行 = 1 JSON）
-  sessions/<unixSecs>.jsonl  ← 過去起動分（最大 30）
+  sessions/<unixSecs>.jsonl  ← 過去セグメント（起動時・サイズ超過で退避）
 ```
 
 - 1 行目は `kind=session_start`、以降は `kind=switch`
 - フィールドは camelCase（`decision` / `reason` / `detail` / `processingMicros` / `prepareMicros` / `currentMicros` / `selectMicros` など）
+- 保持: 1 ファイル約 10 MiB でローテート、`current` + `sessions` 合計約 50 MiB（件数上限 30 は補助）
 - 上書きディレクトリ: 環境変数 `READYTYPE_INPUT_SOURCE_LOG_DIR`
 
 ### 11.1 reason / detail の見方

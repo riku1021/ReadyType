@@ -5,11 +5,11 @@ use crate::{
         input_source_switcher::SwitchDecision,
         ports::{focus_monitor::AccessibilityPermission, input_source::AvailableInputSource},
         settings::SwitcherSettings,
-        switcher_state::{SwitchLogEntry, SwitcherState},
+        switcher_state::SwitcherState,
     },
     domain::input_source::{
-        AxAttribute, AxElementSnapshot, FocusRule, FocusSnapshot, InputSourceId, LanguageTag,
-        MatchOperator, Platform, RuleCondition, RuleTarget, SearchScope,
+        AxAttribute, FocusRule, InputSourceId, LanguageTag, MatchOperator, Platform, RuleCondition,
+        RuleTarget, SearchScope,
     },
 };
 
@@ -384,100 +384,6 @@ impl From<&SwitcherSettings> for SettingsDto {
             quick_set_shortcut_registered: false,
             onboarding_completed: settings.onboarding_completed,
             input_source_display_names: settings.input_source_display_names.clone(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SwitchLogDto {
-    pub timestamp_unix_ms: u64,
-    pub app_id: String,
-    pub pid: i32,
-    pub generation: u64,
-    pub rule_id: String,
-    pub decision: DecisionDto,
-    pub from: String,
-    pub to: String,
-    pub success: bool,
-    pub attempted: bool,
-    pub reason: String,
-    pub detail: String,
-    pub processing_micros: u64,
-    pub prepare_micros: u64,
-    pub current_micros: u64,
-    pub select_micros: u64,
-}
-
-impl From<SwitchLogEntry> for SwitchLogDto {
-    fn from(log: SwitchLogEntry) -> Self {
-        Self {
-            timestamp_unix_ms: log.timestamp_unix_ms,
-            app_id: log.app_id,
-            pid: log.pid,
-            generation: log.generation,
-            rule_id: log.rule_id,
-            decision: DecisionDto::from(log.decision),
-            from: log.from,
-            to: log.to,
-            success: log.success,
-            attempted: log.attempted,
-            reason: log.reason,
-            detail: log.detail,
-            processing_micros: log.processing_micros,
-            prepare_micros: log.prepare_micros,
-            current_micros: log.current_micros,
-            select_micros: log.select_micros,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FocusSnapshotDto {
-    pub app: AppDto,
-    pub generation: u64,
-    pub elements: Vec<AxElementDto>,
-}
-
-impl From<&FocusSnapshot> for FocusSnapshotDto {
-    fn from(snapshot: &FocusSnapshot) -> Self {
-        Self {
-            app: snapshot.app().into(),
-            generation: snapshot.generation(),
-            elements: snapshot.elements().iter().map(AxElementDto::from).collect(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AxElementDto {
-    pub role: String,
-    pub subrole: String,
-    pub role_description: String,
-    pub title: String,
-    pub description: String,
-    pub identifier: String,
-    pub dom_identifier: String,
-    pub dom_class_list: String,
-    pub help: String,
-    pub placeholder: String,
-}
-
-impl From<&AxElementSnapshot> for AxElementDto {
-    fn from(element: &AxElementSnapshot) -> Self {
-        Self {
-            role: element.value(AxAttribute::Role).to_owned(),
-            subrole: element.value(AxAttribute::Subrole).to_owned(),
-            role_description: element.value(AxAttribute::RoleDescription).to_owned(),
-            title: element.value(AxAttribute::Title).to_owned(),
-            description: element.value(AxAttribute::Description).to_owned(),
-            identifier: element.value(AxAttribute::Identifier).to_owned(),
-            dom_identifier: element.value(AxAttribute::DomIdentifier).to_owned(),
-            dom_class_list: element.value(AxAttribute::DomClassList).to_owned(),
-            help: element.value(AxAttribute::Help).to_owned(),
-            placeholder: element.value(AxAttribute::Placeholder).to_owned(),
         }
     }
 }

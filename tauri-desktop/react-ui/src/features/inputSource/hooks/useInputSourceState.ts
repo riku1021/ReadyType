@@ -6,19 +6,16 @@ import i18n, { isResolvedUiLocale } from "@/locales/i18n";
 import {
   ACCESSIBILITY_PERMISSION_EVENT,
   applyNewerStateEvent,
-  clearSwitchLogs as clearSwitchLogsApi,
   completeOnboarding as completeOnboardingApi,
   createRule as createRuleApi,
   deleteRule as deleteRuleApi,
   getAccessibilityPermission,
   getAutostartEnabled,
-  getFocusSnapshot,
   getInputSourceSettings,
   getInputSourceSwitcherState,
   INPUT_SOURCE_STATE_EVENT,
   listInputSources,
   listRules,
-  listSwitchLogs,
   openAccessibilitySettings as openAccessibilitySettingsApi,
   RESOLVED_UI_LOCALE_EVENT,
   reorderRules as reorderRulesApi,
@@ -33,14 +30,11 @@ import {
   shouldApplyFetchedRules,
   shouldRefreshRulesOnStateEvent,
   snoozeInputSourceSwitcherIndefinitely as snoozeIndefinitelyApi,
-  startDebugCapture as startDebugCaptureApi,
-  stopDebugCapture as stopDebugCaptureApi,
   updateRule as updateRuleApi,
 } from "../api";
 import { type InputSourceFeatureState, inputSourceStateAtom } from "../atoms/inputSourceStateAtom";
 import type {
   AccessibilityPermission,
-  FocusSnapshotDto,
   InputSourceDto,
   InputSourceSettingsDto,
   LanguageInputPreferences,
@@ -48,7 +42,6 @@ import type {
   RuleDto,
   StateEventDto,
   SwitcherStateDto,
-  SwitchLogDto,
 } from "../types";
 import { prepareUiLocaleSync } from "../uiLocaleSync";
 
@@ -351,33 +344,8 @@ export function useInputSourceState() {
     return settings;
   }, [setFeature]);
 
-  const startDebugCapture = useCallback(async () => {
-    const switcher = await startDebugCaptureApi();
-    applySwitcher(setFeature, switcher);
-    return switcher;
-  }, [setFeature]);
-
-  const stopDebugCapture = useCallback(async () => {
-    const switcher = await stopDebugCaptureApi();
-    applySwitcher(setFeature, switcher);
-    return switcher;
-  }, [setFeature]);
-
-  const clearSwitchLogs = useCallback(async () => {
-    const switcher = await clearSwitchLogsApi();
-    applySwitcher(setFeature, switcher);
-    return switcher;
-  }, [setFeature]);
-
   const fetchInputSources = useCallback(
     async (refresh = false): Promise<InputSourceDto[]> => listInputSources(refresh),
-    []
-  );
-
-  const fetchSwitchLogs = useCallback(async (): Promise<SwitchLogDto[]> => listSwitchLogs(), []);
-
-  const fetchFocusSnapshot = useCallback(
-    async (): Promise<FocusSnapshotDto | null> => getFocusSnapshot(),
     []
   );
 
@@ -454,12 +422,7 @@ export function useInputSourceState() {
     setDebugLogging,
     setUiLocale,
     completeOnboarding,
-    startDebugCapture,
-    stopDebugCapture,
-    clearSwitchLogs,
     fetchInputSources,
-    fetchSwitchLogs,
-    fetchFocusSnapshot,
     autostartEnabled: feature.autostartEnabled,
     refreshAutostartEnabled,
     setAutostartEnabled,

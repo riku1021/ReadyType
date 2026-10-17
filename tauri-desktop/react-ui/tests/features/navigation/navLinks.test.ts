@@ -6,7 +6,6 @@ describe("getNavLinkByPath", () => {
   it("完全一致のパスを返す", () => {
     expect(getNavLinkByPath("/accessibility")?.labelKey).toBe("nav.accessibility");
     expect(getNavLinkByPath("/apps")?.labelKey).toBe("nav.apps");
-    expect(getNavLinkByPath("/diagnostics")?.labelKey).toBe("nav.diagnostics");
     expect(getNavLinkByPath("/general")?.labelKey).toBe("nav.general");
     expect(getNavLinkByPath("/about")?.labelKey).toBe("nav.about");
     expect(getNavLinkByPath("/update")?.labelKey).toBe("nav.update");
@@ -23,11 +22,10 @@ describe("getNavLinkByPath", () => {
     expect(getNavLinkByPath("/")).toBeUndefined();
   });
 
-  it("navLinks はアクセシビリティ・アプリごとの設定・診断・一般・アプリについて・アップデート・開発確認を含む", () => {
+  it("navLinks はアクセシビリティ・アプリごとの設定・一般・アプリについて・アップデート・開発確認を含む", () => {
     expect(navLinks.map((link) => link.to)).toEqual([
       "/accessibility",
       "/apps",
-      "/diagnostics",
       "/general",
       "/about",
       "/update",
@@ -36,7 +34,6 @@ describe("getNavLinkByPath", () => {
     expect(navLinks.map((link) => link.labelKey)).toEqual([
       "nav.accessibility",
       "nav.apps",
-      "nav.diagnostics",
       "nav.general",
       "nav.about",
       "nav.update",

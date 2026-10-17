@@ -2,19 +2,16 @@ import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
   applyNewerStateEvent,
-  clearSwitchLogs,
   createRule,
   deleteRule,
   ensureLabSwitchRules,
   getAccessibilityPermission,
   getAppPresentations,
   getAutostartEnabled,
-  getFocusSnapshot,
   getInputSourceSettings,
   getInputSourceSwitcherState,
   listInputSources,
   listRules,
-  listSwitchLogs,
   openAccessibilitySettings,
   openLabSwitchWindow,
   reorderRules,
@@ -28,8 +25,6 @@ import {
   shouldApplyFetchedRules,
   shouldRefreshRulesOnStateEvent,
   snoozeInputSourceSwitcherIndefinitely,
-  startDebugCapture,
-  stopDebugCapture,
   updateRule,
   withConfiguredSource,
 } from "@/features/inputSource/api";
@@ -87,11 +82,7 @@ describe("input source IPC", () => {
       if (command.includes("permission")) {
         return "granted";
       }
-      if (
-        command === "list_input_sources" ||
-        command === "list_rules" ||
-        command === "list_switch_logs"
-      ) {
+      if (command === "list_input_sources" || command === "list_rules") {
         return [];
       }
       if (command === "get_input_source_settings") {
@@ -106,7 +97,7 @@ describe("input source IPC", () => {
           inputSourceDisplayNames: {},
         };
       }
-      if (command === "get_focus_snapshot" || command === "open_accessibility_settings") {
+      if (command === "open_accessibility_settings") {
         return null;
       }
       if (command === "get_app_presentations") {
@@ -136,12 +127,7 @@ describe("input source IPC", () => {
     await getAccessibilityPermission();
     await requestAccessibilityPermission();
     await openAccessibilitySettings();
-    await startDebugCapture();
-    await stopDebugCapture();
     await setDebugLogging(true);
-    await getFocusSnapshot();
-    await listSwitchLogs();
-    await clearSwitchLogs();
     await getAutostartEnabled();
     await setAutostartEnabled(true);
     await getAppPresentations(["com.apple.Terminal"]);
@@ -164,12 +150,7 @@ describe("input source IPC", () => {
       "get_accessibility_permission",
       "request_accessibility_permission",
       "open_accessibility_settings",
-      "start_debug_capture",
-      "stop_debug_capture",
       "set_debug_logging",
-      "get_focus_snapshot",
-      "list_switch_logs",
-      "clear_switch_logs",
       "get_autostart_enabled",
       "set_autostart_enabled",
       "get_app_presentations",

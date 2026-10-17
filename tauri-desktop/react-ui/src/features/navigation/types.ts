@@ -3,7 +3,6 @@ import type { IconType } from "react-icons";
 export type NavLabelKey =
   | "nav.accessibility"
   | "nav.apps"
-  | "nav.diagnostics"
   | "nav.general"
   | "nav.about"
   | "nav.update"

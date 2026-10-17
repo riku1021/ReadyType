@@ -3,9 +3,14 @@
 //! 構成（Git 対象外）:
 //! ```text
 //! tmp/input-source-logs/
-//!   current.jsonl                 # いまのセッション（起動のたびにローテート）
-//!   sessions/<unixSecs>.jsonl     # 過去セッション（最大 30）
+//!   current.jsonl                 # いまのセグメント（起動時・サイズ超過でローテート）
+//!   sessions/<unixSecs>.jsonl     # 過去セグメント
 //! ```
+//!
+//! 保持:
+//! - 1 ファイル最大約 10 MiB でローテート（常駐プロセス向け）
+//! - `current` + `sessions` の合計約 50 MiB を超えたら古いセッションから削除
+//! - セッション件数の上限 30（サイズ上限の補助）
 //!
 //! 上書き: 環境変数 `READYTYPE_INPUT_SOURCE_LOG_DIR`
 
@@ -25,11 +30,24 @@ use crate::application::{
 };
 
 const SCHEMA_VERSION: u32 = 2;
+/// 1 本の JSONL がこのサイズ以上になったら `sessions/` へ退避する。
+const MAX_FILE_BYTES: u64 = 10 * 1024 * 1024;
+/// `current` + `sessions` の合計上限。
+const MAX_TOTAL_BYTES: u64 = 50 * 1024 * 1024;
+/// 小さなセッションが大量に残る場合の件数上限（サイズ上限の補助）。
 const MAX_SESSION_FILES: usize = 30;
 
 pub struct FileDiagnosticLogSink {
-    file: Mutex<File>,
     path: PathBuf,
+    state: Mutex<SinkState>,
+}
+
+struct SinkState {
+    dir: PathBuf,
+    file: Option<File>,
+    bytes: u64,
+    max_file_bytes: u64,
+    max_total_bytes: u64,
 }
 
 impl FileDiagnosticLogSink {
@@ -39,37 +57,32 @@ impl FileDiagnosticLogSink {
     }
 
     pub fn open(dir: PathBuf) -> Result<Self, String> {
+        Self::open_with_limits(dir, MAX_FILE_BYTES, MAX_TOTAL_BYTES)
+    }
+
+    fn open_with_limits(
+        dir: PathBuf,
+        max_file_bytes: u64,
+        max_total_bytes: u64,
+    ) -> Result<Self, String> {
         fs::create_dir_all(dir.join("sessions"))
             .map_err(|error| format!("create log dir: {error}"))?;
         rotate_current_into_sessions(&dir)?;
-        prune_old_sessions(&dir.join("sessions"), MAX_SESSION_FILES)?;
 
         let path = dir.join("current.jsonl");
-        let mut file = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&path)
-            .map_err(|error| format!("open {}: {error}", path.display()))?;
-
-        let start = SessionMetaRecord {
-            v: SCHEMA_VERSION,
-            kind: "session_start",
-            timestamp_unix_ms: now_unix_ms(),
-            path: path.display().to_string(),
-            note: "ReadyType input-source switch diagnostics (JSONL). One object per line. Prefer current.jsonl. flags.ablation / flags.proto list env overrides that are ON (empty = production defaults).",
-            flags: FlagSnapshot::capture(),
-        };
-        writeln!(
-            file,
-            "{}",
-            serde_json::to_string(&start).map_err(|error| error.to_string())?
-        )
-        .map_err(|error| format!("write session_start: {error}"))?;
+        let (file, bytes) = open_new_current(&path)?;
+        // current 作成後に合計を見る（session_start 分を含める）。
+        prune_log_budget(&dir, max_total_bytes)?;
 
         Ok(Self {
-            file: Mutex::new(file),
             path,
+            state: Mutex::new(SinkState {
+                dir,
+                file: Some(file),
+                bytes,
+                max_file_bytes,
+                max_total_bytes,
+            }),
         })
     }
 
@@ -84,12 +97,66 @@ impl DiagnosticLogSink for FileDiagnosticLogSink {
         let Ok(line) = serde_json::to_string(&record) else {
             return;
         };
-        let Ok(mut file) = self.file.lock() else {
+        let Ok(mut state) = self.state.lock() else {
             return;
         };
-        let _ = writeln!(file, "{line}");
-        let _ = file.flush();
+        let _ = state.append_line(&line);
     }
+}
+
+impl SinkState {
+    fn append_line(&mut self, line: &str) -> Result<(), String> {
+        let line_bytes = u64::try_from(line.len().saturating_add(1)).unwrap_or(u64::MAX);
+        let file = self
+            .file
+            .as_mut()
+            .ok_or_else(|| "diagnostic log file is closed".to_owned())?;
+        writeln!(file, "{line}").map_err(|error| format!("write log: {error}"))?;
+        file.flush()
+            .map_err(|error| format!("flush log: {error}"))?;
+        self.bytes = self.bytes.saturating_add(line_bytes);
+        // 書き込み後に上限を超えていれば次の追記に備えてローテートする。
+        // （先に判定すると session_start + 1 行で上限を超える場合に無限ローテートし得る）
+        if self.bytes >= self.max_file_bytes {
+            self.rotate()?;
+        }
+        Ok(())
+    }
+
+    fn rotate(&mut self) -> Result<(), String> {
+        self.file = None;
+        rotate_current_into_sessions(&self.dir)?;
+        let path = self.dir.join("current.jsonl");
+        let (file, bytes) = open_new_current(&path)?;
+        prune_log_budget(&self.dir, self.max_total_bytes)?;
+        self.file = Some(file);
+        self.bytes = bytes;
+        Ok(())
+    }
+}
+
+fn open_new_current(path: &Path) -> Result<(File, u64), String> {
+    let mut file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(path)
+        .map_err(|error| format!("open {}: {error}", path.display()))?;
+
+    let start = SessionMetaRecord {
+        v: SCHEMA_VERSION,
+        kind: "session_start",
+        timestamp_unix_ms: now_unix_ms(),
+        path: path.display().to_string(),
+        note: "ReadyType input-source switch diagnostics (JSONL). One object per line. Prefer current.jsonl. flags.ablation / flags.proto list env overrides that are ON (empty = production defaults).",
+        flags: FlagSnapshot::capture(),
+    };
+    let line = serde_json::to_string(&start).map_err(|error| error.to_string())?;
+    writeln!(file, "{line}").map_err(|error| format!("write session_start: {error}"))?;
+    file.flush()
+        .map_err(|error| format!("flush session_start: {error}"))?;
+    let bytes = u64::try_from(line.len().saturating_add(1)).unwrap_or(u64::MAX);
+    Ok((file, bytes))
 }
 
 /// Enabled `READYTYPE_ABLATION_*` / `READYTYPE_PROTO_*` at write time.
@@ -227,7 +294,7 @@ fn rotate_current_into_sessions(dir: &Path) -> Result<(), String> {
     }
     let stamp = now_unix_ms() / 1000;
     let archived = dir.join("sessions").join(format!("{stamp}.jsonl"));
-    // 同一秒に二重起動した場合はサフィックスを付ける。
+    // 同一秒に二重起動・サイズローテートした場合はサフィックスを付ける。
     let archived = if archived.exists() {
         dir.join("sessions")
             .join(format!("{stamp}-{}.jsonl", now_unix_ms() % 1000))
@@ -243,17 +310,40 @@ fn rotate_current_into_sessions(dir: &Path) -> Result<(), String> {
     })
 }
 
-fn prune_old_sessions(sessions_dir: &Path, keep: usize) -> Result<(), String> {
-    let mut entries = fs::read_dir(sessions_dir)
+fn prune_log_budget(dir: &Path, max_total_bytes: u64) -> Result<(), String> {
+    let sessions_dir = dir.join("sessions");
+    let mut session_entries = fs::read_dir(&sessions_dir)
         .map_err(|error| format!("read sessions: {error}"))?
         .filter_map(|entry| entry.ok())
         .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "jsonl"))
         .collect::<Vec<_>>();
-    entries.sort_by_key(|entry| std::cmp::Reverse(entry.file_name()));
-    for entry in entries.into_iter().skip(keep) {
-        let _ = fs::remove_file(entry.path());
+
+    // ファイル名は unix 秒ベース。古いものから削除する。
+    session_entries.sort_by_key(|entry| entry.file_name());
+
+    let current_bytes = file_len(&dir.join("current.jsonl")).unwrap_or(0);
+    let mut sessions_bytes: u64 = session_entries
+        .iter()
+        .map(|entry| file_len(&entry.path()).unwrap_or(0))
+        .sum();
+
+    while session_entries.len() > MAX_SESSION_FILES
+        || current_bytes.saturating_add(sessions_bytes) > max_total_bytes
+    {
+        let Some(oldest) = session_entries.first() else {
+            break;
+        };
+        let path = oldest.path();
+        let removed = file_len(&path).unwrap_or(0);
+        let _ = fs::remove_file(&path);
+        session_entries.remove(0);
+        sessions_bytes = sessions_bytes.saturating_sub(removed);
     }
     Ok(())
+}
+
+fn file_len(path: &Path) -> Option<u64> {
+    fs::metadata(path).ok().map(|meta| meta.len())
 }
 
 fn now_unix_ms() -> u64 {

@@ -2,7 +2,6 @@
   "nav": {
     "accessibility": "辅助功能",
     "apps": "按应用设置",
-    "diagnostics": "诊断",
     "general": "通用",
     "about": "关于应用",
     "update": "更新",
@@ -102,22 +101,6 @@
     "deleteRuleConfirmButton": "删除",
     "deleteRuleSuccess": "已删除“{{title}}”",
     "emptyContextualRules": "没有个别规则。"
-  },
-  "diagnostics": {
-    "copyLogs": "复制日志",
-    "clearLogs": "清除日志",
-    "copyFailed": "复制到剪贴板失败",
-    "sectionLatency": "处理时间",
-    "sectionFocus": "焦点元素",
-    "noSnapshot": "无快照",
-    "copy": "复制",
-    "sectionSwitchLogs": "切换日志",
-    "switchLogsHelp": "也会记录未执行的结果（disabled / snoozed / noRule / alreadySelected）。忽略（ignored）仅在设置中开启调试日志时记录。",
-    "noLogs": "无日志",
-    "logSuccess": "成功",
-    "logFailure": "失败",
-    "logAttempted": "已执行",
-    "logSkipped": "未执行"
   },
   "update": {
     "autoCheck": "自动检查更新",

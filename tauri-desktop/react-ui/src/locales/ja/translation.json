@@ -2,7 +2,6 @@
   "nav": {
     "accessibility": "アクセシビリティ",
     "apps": "アプリごとの設定",
-    "diagnostics": "診断",
     "general": "一般",
     "about": "アプリについて",
     "update": "アップデート",
@@ -102,22 +101,6 @@
     "deleteRuleConfirmButton": "削除",
     "deleteRuleSuccess": "「{{title}}」を削除しました",
     "emptyContextualRules": "個別ルールはありません。"
-  },
-  "diagnostics": {
-    "copyLogs": "ログをコピー",
-    "clearLogs": "ログをクリア",
-    "copyFailed": "クリップボードへのコピーに失敗しました",
-    "sectionLatency": "処理時間",
-    "sectionFocus": "フォーカス要素",
-    "noSnapshot": "スナップショットなし",
-    "copy": "コピー",
-    "sectionSwitchLogs": "切替ログ",
-    "switchLogsHelp": "未実行（disabled / snoozed / noRule / alreadySelected）も記録します。無視（ignored）は設定のデバッグログ ON 時のみです。",
-    "noLogs": "ログなし",
-    "logSuccess": "成功",
-    "logFailure": "失敗",
-    "logAttempted": "実行",
-    "logSkipped": "未実行"
   },
   "update": {
     "autoCheck": "自動的にアップデートを確認",

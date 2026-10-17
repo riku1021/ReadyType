@@ -13,8 +13,7 @@ use crate::{
     domain::input_source::FocusRule,
     infrastructure::desktop::quick_set_shortcut,
     presentation::input_source_dto::{
-        FocusSnapshotDto, InputSourceDto, PermissionDto, RuleDto, SettingsDto, StateDto,
-        StateEventDto, SwitchLogDto,
+        InputSourceDto, PermissionDto, RuleDto, SettingsDto, StateDto, StateEventDto,
     },
 };
 
@@ -263,26 +262,6 @@ pub fn open_accessibility_settings(
 }
 
 #[tauri::command]
-pub fn start_debug_capture(
-    controller: State<'_, Arc<SwitcherController>>,
-) -> Result<StateDto, IpcError> {
-    controller
-        .set_debug_capture(true)
-        .map(|state| StateDto::from(&state))
-        .map_err(IpcError::from)
-}
-
-#[tauri::command]
-pub fn stop_debug_capture(
-    controller: State<'_, Arc<SwitcherController>>,
-) -> Result<StateDto, IpcError> {
-    controller
-        .set_debug_capture(false)
-        .map(|state| StateDto::from(&state))
-        .map_err(IpcError::from)
-}
-
-#[tauri::command]
 pub fn set_debug_logging(
     enabled: bool,
     controller: State<'_, Arc<SwitcherController>>,
@@ -318,16 +297,6 @@ pub fn complete_onboarding(
         .map_err(IpcError::from)
 }
 
-#[tauri::command]
-pub fn get_focus_snapshot(
-    controller: State<'_, Arc<SwitcherController>>,
-) -> Result<Option<FocusSnapshotDto>, IpcError> {
-    controller
-        .focus_snapshot()
-        .map(|snapshot| snapshot.as_ref().map(FocusSnapshotDto::from))
-        .map_err(IpcError::from)
-}
-
 /// Lab 切替テスト用プリセットを既存ルールへ upsert（他ルールは維持）。
 #[tauri::command]
 pub fn ensure_lab_switch_rules(
@@ -354,26 +323,6 @@ pub fn open_lab_switch_window(
         }
     }))
     .map_err(|message| IpcError { message })
-}
-
-#[tauri::command]
-pub fn list_switch_logs(
-    controller: State<'_, Arc<SwitcherController>>,
-) -> Result<Vec<SwitchLogDto>, IpcError> {
-    controller
-        .logs()
-        .map(|logs| logs.into_iter().map(SwitchLogDto::from).collect())
-        .map_err(IpcError::from)
-}
-
-#[tauri::command]
-pub fn clear_switch_logs(
-    controller: State<'_, Arc<SwitcherController>>,
-) -> Result<StateDto, IpcError> {
-    controller
-        .clear_logs()
-        .map(|state| StateDto::from(&state))
-        .map_err(IpcError::from)
 }
 
 fn invalid_input(message: String) -> IpcError {

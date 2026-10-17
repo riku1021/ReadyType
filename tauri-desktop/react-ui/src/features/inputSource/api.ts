@@ -1,13 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
   AccessibilityPermission,
-  FocusSnapshotDto,
   InputSourceDto,
   InputSourceSettingsDto,
   RuleDto,
   StateEventDto,
   SwitcherStateDto,
-  SwitchLogDto,
 } from "./types";
 
 export const INPUT_SOURCE_STATE_EVENT = "input-source-switcher://state";
@@ -43,20 +41,15 @@ export const getAccessibilityPermission = () =>
 export const requestAccessibilityPermission = () =>
   invoke<AccessibilityPermission>("request_accessibility_permission");
 export const openAccessibilitySettings = () => invoke<void>("open_accessibility_settings");
-export const startDebugCapture = () => invoke<SwitcherStateDto>("start_debug_capture");
-export const stopDebugCapture = () => invoke<SwitcherStateDto>("stop_debug_capture");
 export const setDebugLogging = (enabled: boolean) =>
   invoke<SwitcherStateDto>("set_debug_logging", { enabled });
 export const setUiLocale = (locale: string) =>
   invoke<InputSourceSettingsDto>("set_ui_locale", { locale });
 export const completeOnboarding = () => invoke<InputSourceSettingsDto>("complete_onboarding");
-export const getFocusSnapshot = () => invoke<FocusSnapshotDto | null>("get_focus_snapshot");
 /** Lab 切替プリセットを既存ルールへ upsert。 */
 export const ensureLabSwitchRules = () => invoke<SwitcherStateDto>("ensure_lab_switch_rules");
 /** Lab 切替テスト用のネイティブ入力窓を開く。 */
 export const openLabSwitchWindow = () => invoke<void>("open_lab_switch_window");
-export const listSwitchLogs = () => invoke<SwitchLogDto[]>("list_switch_logs");
-export const clearSwitchLogs = () => invoke<SwitcherStateDto>("clear_switch_logs");
 export const getAutostartEnabled = () => invoke<boolean>("get_autostart_enabled");
 export const setAutostartEnabled = (enabled: boolean) =>
   invoke<boolean>("set_autostart_enabled", { enabled });

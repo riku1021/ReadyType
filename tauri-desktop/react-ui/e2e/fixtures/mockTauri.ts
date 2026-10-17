@@ -60,10 +60,7 @@ export async function installTauriMocks(page: Page): Promise<void> {
         case "delete_rule":
         case "reorder_rules":
         case "reset_default_rules":
-        case "start_debug_capture":
-        case "stop_debug_capture":
         case "set_debug_logging":
-        case "clear_switch_logs":
           return { ...data.switcher };
         case "get_accessibility_permission":
         case "request_accessibility_permission":
@@ -114,10 +111,6 @@ export async function installTauriMocks(page: Page): Promise<void> {
               available: true,
             },
           ];
-        case "list_switch_logs":
-          return [];
-        case "get_focus_snapshot":
-          return null;
         case "open_accessibility_settings":
         case "sync_window_chrome_theme":
         case "quit_app":
