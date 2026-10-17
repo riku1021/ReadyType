@@ -33,6 +33,7 @@ type SelectionSettingItem = SettingItemBase & {
   value: string;
   options: readonly string[];
   onSelectionChanged: (value: string) => void;
+  disabled?: boolean;
 };
 
 type ToggleSettingItem = SettingItemBase & {
@@ -142,6 +143,7 @@ export function SettingItem(props: SettingItemProps) {
           className={styles.row({ density: "default", interactive: true })}
           aria-haspopup="listbox"
           aria-expanded={isMenuOpen}
+          disabled={props.disabled}
           onClick={() => setIsMenuOpen((open) => !open)}
         >
           {content}

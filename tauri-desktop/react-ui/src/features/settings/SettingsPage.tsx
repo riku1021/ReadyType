@@ -21,6 +21,10 @@ import * as styles from "./SettingsPage.styles";
 import { ShortcutRecorder } from "./ShortcutRecorder";
 import { getThemeLabel, THEME_OPTIONS, themeFromTranslatedLabel } from "./themeLabels";
 
+type SettingsPendingKey = "enabled" | "autostart" | "uiLocale" | "debugLogging";
+
+type SettingsPendingMap = Partial<Record<SettingsPendingKey, true>>;
+
 export function SettingsPage() {
   const { t } = useTranslation();
   const [theme, setTheme] = useAtom(themeAtom);
@@ -35,9 +39,11 @@ export function SettingsPage() {
     resetDefaultRules,
   } = useInputSourceState();
 
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState<SettingsPendingMap>({});
   const [resetOpen, setResetOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isPending = (key: SettingsPendingKey) => pending[key] === true;
+  const anyPending = Object.keys(pending).length > 0;
 
   useEffect(() => {
     let cancelled = false;
@@ -69,6 +75,24 @@ export function SettingsPage() {
     };
   }, [refreshAutostartEnabled, t]);
 
+  const runPending = (key: SettingsPendingKey, work: () => Promise<unknown>) => {
+    if (isPending(key)) {
+      return;
+    }
+    setPending((current) => ({ ...current, [key]: true }));
+    void work()
+      .catch((updateError) => {
+        setError(updateError instanceof Error ? updateError.message : t("common.saveFailed"));
+      })
+      .finally(() => {
+        setPending((current) => {
+          const next = { ...current };
+          delete next[key];
+          return next;
+        });
+      });
+  };
+
   const themeOptions = THEME_OPTIONS.map((key) => t(key));
   const languageOptions = languageOptionLabels(t);
   const preferenceRaw = state?.uiLocale ?? "";
@@ -85,18 +109,12 @@ export function SettingsPage() {
           description={t("settings.autoSwitchDescription")}
           type="toggle"
           toggleValue={state?.enabled ?? false}
+          disabled={isPending("enabled")}
           onToggleChanged={(enabled) => {
             if (!state || state.permission === "unsupported") {
               return;
             }
-            setPending(true);
-            void setEnabled(enabled)
-              .catch((updateError) => {
-                setError(
-                  updateError instanceof Error ? updateError.message : t("common.saveFailed")
-                );
-              })
-              .finally(() => setPending(false));
+            runPending("enabled", () => setEnabled(enabled));
           }}
         />
         <SettingItem
@@ -104,16 +122,9 @@ export function SettingsPage() {
           title={t("settings.launchAtLogin")}
           type="toggle"
           toggleValue={autostartEnabled}
-          disabled={autostartEnabled === null || pending}
+          disabled={autostartEnabled === null || isPending("autostart")}
           onToggleChanged={(enabled) => {
-            setPending(true);
-            void setAutostartEnabled(enabled)
-              .catch((updateError) => {
-                setError(
-                  updateError instanceof Error ? updateError.message : t("common.saveFailed")
-                );
-              })
-              .finally(() => setPending(false));
+            runPending("autostart", () => setAutostartEnabled(enabled));
           }}
         />
       </SettingsSection>
@@ -138,19 +149,13 @@ export function SettingsPage() {
           type="selection"
           value={getLanguageOptionLabel(currentPreference, t)}
           options={languageOptions}
+          disabled={isPending("uiLocale")}
           onSelectionChanged={(label) => {
             const nextLocale = languageFromOptionLabel(label, t);
             if (!nextLocale || nextLocale === currentPreference) {
               return;
             }
-            setPending(true);
-            void setUiLocale(nextLocale)
-              .catch((updateError) => {
-                setError(
-                  updateError instanceof Error ? updateError.message : t("common.saveFailed")
-                );
-              })
-              .finally(() => setPending(false));
+            runPending("uiLocale", () => setUiLocale(nextLocale));
           }}
         />
       </SettingsSection>
@@ -165,15 +170,9 @@ export function SettingsPage() {
           title={t("settings.debugLogging")}
           type="toggle"
           toggleValue={state?.debugLogging ?? false}
+          disabled={isPending("debugLogging")}
           onToggleChanged={(enabled) => {
-            setPending(true);
-            void setDebugLogging(enabled)
-              .catch((updateError) => {
-                setError(
-                  updateError instanceof Error ? updateError.message : t("common.saveFailed")
-                );
-              })
-              .finally(() => setPending(false));
+            runPending("debugLogging", () => setDebugLogging(enabled));
           }}
         />
         <SettingItem
@@ -186,7 +185,7 @@ export function SettingsPage() {
       </SettingsSection>
 
       {error ? <p>{error}</p> : null}
-      {pending ? <p>{t("common.saving")}</p> : null}
+      {anyPending ? <p>{t("common.saving")}</p> : null}
 
       <AlertDialog
         isOpen={resetOpen}
