@@ -9,9 +9,7 @@ pub use model::{
     FocusRule, FocusSnapshot, InputSourceId, LanguageTag, MatchOperator, Platform, PlatformAppId,
     RuleCondition, RuleTarget, SearchScope,
 };
-pub use presets::{
-    default_rules, readytype_lab_switch_rules, LAB_SWITCH_FIELD_IDS, READYTYPE_BUNDLE_ID,
-};
+pub use presets::{readytype_lab_switch_rules, LAB_SWITCH_FIELD_IDS, READYTYPE_BUNDLE_ID};
 pub use propose::{propose_conditions, propose_field_label, propose_rule_name};
 
 #[cfg(test)]

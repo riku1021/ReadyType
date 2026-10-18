@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use crate::application::tray_strings::{self, map_language_tag};
 use crate::domain::{
     errors::DomainError,
-    input_source::{default_rules, FocusRule, InputSourceId, LanguageTag, RuleSet, RuleTarget},
+    input_source::{FocusRule, InputSourceId, LanguageTag, RuleSet, RuleTarget},
 };
 
 pub use crate::application::quick_set_shortcut::DEFAULT_QUICK_SET_SHORTCUT;
@@ -39,7 +39,8 @@ impl SwitcherSettings {
             schema_version: CURRENT_SCHEMA_VERSION,
             enabled: true,
             language_preferences: BTreeMap::new(),
-            rules: default_rules(),
+            // 製品プリセットは置かない。既存ユーザーの保存済みルールはロードで維持される。
+            rules: Vec::new(),
             debug_logging: false,
             snoozed_until_unix_ms: None,
             ui_locale: DEFAULT_UI_LOCALE_PREFERENCE.to_owned(),

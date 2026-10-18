@@ -20,9 +20,24 @@ use crate::{
         switcher_state::SwitcherState,
     },
     domain::input_source::{
-        readytype_lab_switch_rules, AxAttribute, InputSourceId, LanguageTag, LAB_SWITCH_FIELD_IDS,
+        readytype_lab_switch_rules, AxAttribute, FocusRule, InputSourceId, LanguageTag, Platform,
+        RuleTarget, LAB_SWITCH_FIELD_IDS,
     },
 };
+
+fn sample_rule(id: &str, priority: u32) -> FocusRule {
+    FocusRule::new(
+        id,
+        id,
+        true,
+        Platform::MacOs,
+        "com.example.app",
+        priority,
+        Vec::new(),
+        RuleTarget::PreferredLanguage(LanguageTag::en()),
+    )
+    .expect("sample rule")
+}
 
 struct FakeGateway;
 
@@ -254,6 +269,12 @@ fn permission_revocation_stops_monitoring_without_terminating_controller() {
 #[test]
 fn rules_can_be_deleted_reordered_and_reset() {
     let controller = controller(Arc::new(MonitorData::default()));
+    controller
+        .create_rule(sample_rule("custom-a", 0))
+        .expect("create a");
+    controller
+        .create_rule(sample_rule("custom-b", 1))
+        .expect("create b");
     let first_id = controller.rules().expect("rules")[0].id().to_owned();
     controller.delete_rule(&first_id).expect("delete");
     let mut ids: Vec<_> = controller
@@ -267,11 +288,7 @@ fn rules_can_be_deleted_reordered_and_reset() {
     assert_eq!(controller.rules().expect("rules")[0].id(), ids[0]);
 
     controller.reset_default_rules().expect("reset");
-    assert!(controller
-        .rules()
-        .expect("rules")
-        .iter()
-        .any(|rule| rule.id() == first_id));
+    assert!(controller.rules().expect("rules").is_empty());
 }
 
 #[test]
@@ -283,6 +300,9 @@ fn debug_options_and_duplicate_rules_are_validated() {
     assert!(settings.debug_logging);
     assert!(controller.is_debug_capture_enabled());
 
+    controller
+        .create_rule(sample_rule("custom-dup", 0))
+        .expect("create");
     let duplicate = controller.rules().expect("rules")[0].clone();
     assert!(controller.create_rule(duplicate).is_err());
     controller.clear_logs().expect("clear logs");

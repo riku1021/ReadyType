@@ -58,10 +58,10 @@
     "shortcutLoadFailed": "无法加载快捷键",
     "shortcutRegisterFailed": "快捷键注册失败。请尝试其他组合",
     "sectionOther": "其他",
-    "resetToDefaults": "重置为默认设置",
-    "resetConfirmTitle": "要重置为默认设置吗？",
-    "resetConfirmText": "规则列表将恢复为默认预设。",
-    "resetConfirmButton": "重置"
+    "resetToDefaults": "删除所有规则",
+    "resetConfirmTitle": "要删除所有规则吗？",
+    "resetConfirmText": "将删除全部已注册的规则。此操作无法撤销。",
+    "resetConfirmButton": "删除"
   },
   "accessibility": {
     "usageDescription": "用于检测输入框焦点，并根据应用或输入框自动切换到合适的输入语言。",
@@ -82,7 +82,7 @@
     "columnApp": "应用",
     "columnRules": "规则",
     "columnEnabled": "启用",
-    "emptyList": "没有可显示的应用设置。可在「一般」设置中重置为默认。",
+    "emptyList": "没有可显示的应用设置。可通过 Quick Set 或添加应用来创建规则。",
     "emptySearch": "没有匹配的应用",
     "detailAria": "应用详情",
     "notFound": "找不到指定应用的设置。",

@@ -58,10 +58,10 @@
     "shortcutLoadFailed": "ショートカットの読み込みに失敗しました",
     "shortcutRegisterFailed": "ショートカットの登録に失敗しました。別の組み合わせを試してください",
     "sectionOther": "その他",
-    "resetToDefaults": "既定設定へリセット",
-    "resetConfirmTitle": "既定設定へ戻しますか？",
-    "resetConfirmText": "ルール一覧を既定プリセットへ戻します。",
-    "resetConfirmButton": "リセット"
+    "resetToDefaults": "すべてのルールを削除",
+    "resetConfirmTitle": "すべてのルールを削除しますか？",
+    "resetConfirmText": "登録済みのルールをすべて削除します。この操作は取り消せません。",
+    "resetConfirmButton": "削除"
   },
   "accessibility": {
     "usageDescription": "入力欄のフォーカスを検出し、アプリや入力欄に応じて適切な入力言語を自動で切り替えるために使用します。",
@@ -82,7 +82,7 @@
     "columnApp": "アプリ",
     "columnRules": "ルール",
     "columnEnabled": "有効",
-    "emptyList": "表示できるアプリ設定がありません。一般設定から既定設定へリセットできます。",
+    "emptyList": "表示できるアプリ設定がありません。Quick Set やアプリ追加からルールを作成できます。",
     "emptySearch": "該当するアプリはありません",
     "detailAria": "アプリ詳細",
     "notFound": "指定されたアプリの設定が見つかりません。",

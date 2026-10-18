@@ -11,8 +11,8 @@ use std::{
 };
 
 use crate::domain::input_source::{
-    default_rules, readytype_lab_switch_rules, AxAttribute, AxElementSnapshot, FocusRule,
-    FocusSnapshot, InputSourceId, Platform, PlatformAppId, RuleTarget, READYTYPE_BUNDLE_ID,
+    readytype_lab_switch_rules, AxAttribute, AxElementSnapshot, FocusRule, FocusSnapshot,
+    InputSourceId, Platform, PlatformAppId, RuleTarget, READYTYPE_BUNDLE_ID,
 };
 
 use super::{
@@ -464,8 +464,9 @@ impl SwitcherController {
         self.replace_rules(reordered)
     }
 
+    /// ルール一覧を空にする（IPC 名 `reset_default_rules` は互換のため維持）。
     pub fn reset_default_rules(self: &Arc<Self>) -> Result<SwitcherState, ControllerError> {
-        self.replace_rules(default_rules())
+        self.replace_rules(Vec::new())
     }
 
     /// 既存ルールを保ったまま Lab 切替テスト用プリセットを upsert する。

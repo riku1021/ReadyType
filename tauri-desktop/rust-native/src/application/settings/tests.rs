@@ -12,22 +12,11 @@ use crate::{
 };
 
 #[test]
-fn defaults_include_terminal_cursor_and_vscode() {
+fn defaults_start_with_empty_rules() {
     let settings = SwitcherSettings::defaults();
 
     assert_eq!(settings.schema_version, CURRENT_SCHEMA_VERSION);
-    assert!(settings
-        .rules
-        .iter()
-        .any(|rule| rule.app_id() == "com.apple.Terminal"));
-    assert!(settings
-        .rules
-        .iter()
-        .any(|rule| rule.app_id() == "com.todesktop.230313mzl4w4u92"));
-    assert!(settings
-        .rules
-        .iter()
-        .any(|rule| rule.app_id() == "com.microsoft.VSCode"));
+    assert!(settings.rules.is_empty());
 }
 
 #[test]
@@ -376,7 +365,19 @@ fn rejects_a_schema_version_newer_than_supported() {
 #[test]
 fn rejects_duplicate_rule_ids() {
     let mut settings = SwitcherSettings::defaults();
-    settings.rules.push(settings.rules[0].clone());
+    let rule = FocusRule::new(
+        "custom-a",
+        "Custom A",
+        true,
+        Platform::MacOs,
+        "com.example.app",
+        0,
+        Vec::new(),
+        RuleTarget::PreferredLanguage(LanguageTag::en()),
+    )
+    .expect("rule");
+    settings.rules.push(rule.clone());
+    settings.rules.push(rule);
 
     assert!(settings.validate().is_err());
 }

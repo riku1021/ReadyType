@@ -58,10 +58,10 @@
     "shortcutLoadFailed": "Failed to load shortcut",
     "shortcutRegisterFailed": "Failed to register the shortcut. Try a different combination",
     "sectionOther": "Other",
-    "resetToDefaults": "Reset to defaults",
-    "resetConfirmTitle": "Reset to defaults?",
-    "resetConfirmText": "This will restore the rule list to the default preset.",
-    "resetConfirmButton": "Reset"
+    "resetToDefaults": "Delete all rules",
+    "resetConfirmTitle": "Delete all rules?",
+    "resetConfirmText": "This will remove every registered rule. This cannot be undone.",
+    "resetConfirmButton": "Delete"
   },
   "accessibility": {
     "usageDescription": "Used to detect input field focus and automatically switch to the appropriate input language based on the app or field.",
@@ -82,7 +82,7 @@
     "columnApp": "App",
     "columnRules": "Rules",
     "columnEnabled": "Enabled",
-    "emptyList": "No app settings to show. You can reset to defaults in General settings.",
+    "emptyList": "No app settings to show. Create rules from Quick Set or by adding an app.",
     "emptySearch": "No matching apps",
     "detailAria": "App details",
     "notFound": "Settings for the specified app were not found.",
