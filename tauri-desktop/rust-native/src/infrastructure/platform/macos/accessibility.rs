@@ -16,6 +16,11 @@ const FOCUSED_ELEMENT: &str = "AXFocusedUIElement";
 const PARENT: &str = "AXParent";
 const POSITION: &str = "AXPosition";
 const SIZE: &str = "AXSize";
+/// Electron / Chromium: modern opt-in for the web-content AX tree.
+/// See https://www.electronjs.org/docs/latest/tutorial/accessibility
+const MANUAL_ACCESSIBILITY: &str = "AXManualAccessibility";
+/// Legacy Chromium flag; some Electron builds only honor this.
+const ENHANCED_USER_INTERFACE: &str = "AXEnhancedUserInterface";
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ElementFrame {
@@ -49,6 +54,30 @@ pub fn request_process_trust() -> bool {
 pub fn application_element(pid: i32) -> CFRetained<AXUIElement> {
     // SAFETY: AXUIElementCreateApplication accepts any process identifier and returns an owned ref.
     unsafe { AXUIElement::new_application(pid) }
+}
+
+/// Chromium / Electron の Web コンテンツ AX ツリーを起こす。
+///
+/// これらのアプリは支援技術を検知するまでツリーを遅延構築する。第三者 AT は
+/// `AXManualAccessibility`（失敗時は `AXEnhancedUserInterface`）を立てるのが定石。
+/// Enhanced だけにしない理由（VoiceOver 予約・ウィンドウ操作の副作用）は
+/// `docs/input-source-chromium-ax.md`。
+/// ネイティブ Cocoa アプリは両方 `AttributeUnsupported` で無視される。
+///
+/// 戻り値: いずれかの属性設定に成功したら `true`（呼び出し側は初回のみ settle すること）。
+pub fn request_chromium_accessibility(application: &AXUIElement) -> bool {
+    if set_boolean_attribute(application, MANUAL_ACCESSIBILITY, true) {
+        return true;
+    }
+    set_boolean_attribute(application, ENHANCED_USER_INTERFACE, true)
+}
+
+fn set_boolean_attribute(element: &AXUIElement, name: &'static str, value: bool) -> bool {
+    let attribute = CFString::from_static_str(name);
+    let boolean = CFBoolean::new(value);
+    // SAFETY: CFBoolean is a CFType; AXUIElementSetAttributeValue copies the value.
+    let error = unsafe { element.set_attribute_value(&attribute, boolean.as_ref()) };
+    error == AXError::Success
 }
 
 pub fn snapshot_elements(

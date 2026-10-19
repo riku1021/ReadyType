@@ -7,6 +7,7 @@
 関連:
 
 - ドメインモデル: [rules/ja-JP/input-source-model.md](./rules/ja-JP/input-source-model.md)
+- Chromium / Electron の AX 有効化: [input-source-chromium-ax.md](./input-source-chromium-ax.md)
 - 手動確認: [input-source-switcher-manual-test.md](./input-source-switcher-manual-test.md)
 - テスト計画: [input-source-switch-test-plan.md](./input-source-switch-test-plan.md)
 
@@ -91,7 +92,7 @@ debug キャプチャ以外:
 | `EXPENSIVE_ATTRIBUTE_MAX_DEPTH=0` | AX スパイク抑制 | 祖先の Description マッチ不可（ルールは focused / Dom* 前提） |
 | 指紋に Description 非含有 | 不要な再評価減 | Description だけ変わっても再切替しない |
 | identity は focused のみ | 入力中の祖先揺れ・チェーン長変化で再切替しない | focused の属性が同一の別フィールドは同一扱い |
-| empty 非 commit | 空フォーカス blip で generation が進まない | FOCUSED 失敗中はフォーカス喪失をログに出さない |
+| empty 非 commit | 空フォーカス blip で generation が進まない | FOCUSED 失敗中はフォーカス喪失をログに出さない。Electron でツリー未起動だと `last_snapshot` が前アプリのまま残る → [chromium-ax](./input-source-chromium-ax.md) |
 | debug フル属性 1 パス | 診断用の完全 AX | 速度最適化パスをバイパス |
 | FOCUSED probe 50ms | `elements=0` の 150ms 級待ちを短縮 | 極端に遅い FOCUSED は一度空になり、次の通知で再試行 |
 | messaging timeout 0.15s（親/enrich） | 外れ値ハングの上限 | 極端に遅い AX は途中失敗し得る（フォールバック/欠落） |

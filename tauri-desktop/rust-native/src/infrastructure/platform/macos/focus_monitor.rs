@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     ffi::c_void,
     ptr::NonNull,
     sync::mpsc::{self, Receiver, Sender, TryRecvError},
@@ -26,12 +27,16 @@ use crate::{
 };
 
 use super::accessibility::{
-    application_element, is_process_trusted, request_process_trust, snapshot_elements,
+    application_element, is_process_trusted, request_chromium_accessibility, request_process_trust,
+    snapshot_elements,
 };
 
 const FOCUSED_ELEMENT_CHANGED: &str = "AXFocusedUIElementChanged";
 const PERMISSION_CHECK_INTERVAL: Duration = Duration::from_secs(1);
 const CONSISTENCY_CHECK_INTERVAL: Duration = Duration::from_secs(2);
+/// Chromium builds the AX tree asynchronously after AXManualAccessibility;
+/// walk too early and AXFocusedUIElement stays empty.
+const CHROMIUM_AX_SETTLE_MS: u64 = 500;
 
 enum MonitorCommand {
     ActiveApplication(PlatformAppId),
@@ -200,6 +205,7 @@ fn run_monitor(
     let normal_plan = AttributePlan::normal(attributes);
     let mut debug = debug_capture;
     let mut observer = None;
+    let mut chromium_ax_settled: HashSet<i32> = HashSet::new();
     let mut last_fallback = Instant::now();
     let mut last_consistency = Instant::now();
     let mut last_permission_check = Instant::now();
@@ -213,6 +219,7 @@ fn run_monitor(
             &normal_plan,
             debug,
             &sink,
+            &mut chromium_ax_settled,
         );
     }
 
@@ -231,10 +238,18 @@ fn run_monitor(
                     &normal_plan,
                     debug,
                     &sink,
+                    &mut chromium_ax_settled,
                 ),
                 Ok(MonitorCommand::Evaluate { pid }) => {
                     if state.enqueue(pid) {
-                        evaluate_pending(&mut state, &normal_plan, debug, &sink);
+                        evaluate_pending(
+                            &mut state,
+                            &normal_plan,
+                            debug,
+                            &sink,
+                            &run_loop,
+                            &mut chromium_ax_settled,
+                        );
                     }
                 }
                 Ok(MonitorCommand::SetDebug(enabled)) => debug = enabled,
@@ -265,6 +280,7 @@ fn run_monitor(
                         &normal_plan,
                         debug,
                         &sink,
+                        &mut chromium_ax_settled,
                     );
                 }
             }
@@ -278,7 +294,14 @@ fn run_monitor(
         if fallback_due || consistency_due {
             if let Some(pid) = state.active_app().map(PlatformAppId::pid) {
                 if state.enqueue(pid) {
-                    evaluate_pending(&mut state, &normal_plan, debug, &sink);
+                    evaluate_pending(
+                        &mut state,
+                        &normal_plan,
+                        debug,
+                        &sink,
+                        &run_loop,
+                        &mut chromium_ax_settled,
+                    );
                 }
             }
             if fallback_due {
@@ -307,11 +330,14 @@ fn activate(
     normal_plan: &AttributePlan,
     debug: bool,
     sink: &FocusEventSink,
+    chromium_ax_settled: &mut HashSet<i32>,
 ) {
     if let Some(active) = observer.take() {
         active.unregister(run_loop);
     }
-    match register_observer(app.pid(), sender.clone(), run_loop) {
+    let pid = app.pid();
+    ensure_chromium_accessibility(pid, run_loop, chromium_ax_settled);
+    match register_observer(pid, sender.clone(), run_loop) {
         Ok(active) => {
             state.activate(app, ObserverRegistration::Registered);
             *observer = Some(active);
@@ -320,8 +346,45 @@ fn activate(
     }
     if let Some(pid) = state.active_app().map(PlatformAppId::pid) {
         if state.enqueue(pid) {
-            evaluate_pending(state, normal_plan, debug, sink);
+            evaluate_pending(
+                state,
+                normal_plan,
+                debug,
+                sink,
+                run_loop,
+                chromium_ax_settled,
+            );
         }
+    }
+}
+
+/// Electron / Chromium: wake the web AX tree once per PID, then wait for async build.
+fn ensure_chromium_accessibility(
+    pid: i32,
+    run_loop: &CFRunLoop,
+    chromium_ax_settled: &mut HashSet<i32>,
+) {
+    let application = application_element(pid);
+    if !request_chromium_accessibility(&application) {
+        return;
+    }
+    if !chromium_ax_settled.insert(pid) {
+        return;
+    }
+    let _ = run_loop; // settle on this thread's current run loop (same as monitor worker)
+    pump_chromium_ax_settle();
+}
+
+fn pump_chromium_ax_settle() {
+    let mode = unsafe { kCFRunLoopDefaultMode };
+    let deadline = Instant::now() + Duration::from_millis(CHROMIUM_AX_SETTLE_MS);
+    while Instant::now() < deadline {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        let slice = remaining.min(Duration::from_millis(50)).as_secs_f64();
+        if slice <= 0.0 {
+            break;
+        }
+        CFRunLoop::run_in_mode(mode, slice, true);
     }
 }
 
@@ -390,6 +453,8 @@ fn evaluate_pending(
     normal_plan: &AttributePlan,
     debug: bool,
     sink: &FocusEventSink,
+    run_loop: &CFRunLoop,
+    chromium_ax_settled: &mut HashSet<i32>,
 ) {
     let Some(pid) = state.take_pending() else {
         return;
@@ -408,7 +473,12 @@ fn evaluate_pending(
     } else {
         normal_plan
     };
-    let elements = snapshot_elements(&application, plan);
+    let mut elements = snapshot_elements(&application, plan);
+    // 空のときは Chromium ツリー未起動の可能性がある。未 settle なら起こして一度だけ再試行。
+    if elements.is_empty() && !chromium_ax_settled.contains(&pid) {
+        ensure_chromium_accessibility(pid, run_loop, chromium_ax_settled);
+        elements = snapshot_elements(&application, plan);
+    }
     // 空フォーカスは sink しない（一時的な FOCUSED 失敗や WebView AX 欠落で
     // last_snapshot を潰し、Quick Set / 切替が死ぬのを防ぐ）。
     if elements.is_empty() {
