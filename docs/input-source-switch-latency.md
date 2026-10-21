@@ -8,6 +8,7 @@
 
 - ドメインモデル: [rules/ja-JP/input-source-model.md](./rules/ja-JP/input-source-model.md)
 - Chromium / Electron の AX 有効化: [input-source-chromium-ax.md](./input-source-chromium-ax.md)
+- 全アプリには対応できない理由: [input-source-ax-coverage.md](./input-source-ax-coverage.md)
 - 手動確認: [input-source-switcher-manual-test.md](./input-source-switcher-manual-test.md)
 - テスト計画: [input-source-switch-test-plan.md](./input-source-switch-test-plan.md)
 

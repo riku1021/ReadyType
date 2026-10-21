@@ -4,6 +4,7 @@
 
 関連:
 
+- 全アプリには対応できない理由: [input-source-ax-coverage.md](./input-source-ax-coverage.md)
 - レイテンシ・空フォーカス非 sink: [input-source-switch-latency.md](./input-source-switch-latency.md)
 - Accessibility 許可: [rules/ja-JP/input-source-model.md](./rules/ja-JP/input-source-model.md)
 
@@ -63,3 +64,5 @@ Electron が Manual を足した理由（要約）: `AXEnhancedUserInterface` �
 ## 5. 確認の目安
 
 Orca のターミナル等にフォーカスしたあと、`tmp/input-source-logs/current.jsonl` に `appId":"com.stablyai.orca"` の `switch` が出ること。その状態で Quick Set が前面アプリのセッションを開けること。
+
+この起こしは全アプリ対応ではない。範囲と限界は [input-source-ax-coverage.md](./input-source-ax-coverage.md)。

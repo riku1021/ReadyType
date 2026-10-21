@@ -60,4 +60,4 @@ System Settings で Accessibility 一覧が変わったとき（他アプリ含�
 
 窓フォーカス時の `refresh_permission` も併用する。`DeliverImmediately` は Accessory（ログイン起動）でも通知が届くようにするため。
 
-TCC 許可とは別に、**Electron / Chromium は Web の AX ツリーを遅延起動**する。第三者向けは `AXManualAccessibility` 優先・`AXEnhancedUserInterface` フォールバック。詳細は [input-source-chromium-ax.md](../../input-source-chromium-ax.md)。
+TCC 許可とは別に、**Electron / Chromium は Web の AX ツリーを遅延起動**する。第三者向けは `AXManualAccessibility` 優先・`AXEnhancedUserInterface` フォールバック。詳細は [input-source-chromium-ax.md](../../input-source-chromium-ax.md)。全アプリには対応できない。理由は [input-source-ax-coverage.md](../../input-source-ax-coverage.md)。
