@@ -249,18 +249,22 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
           />
         </div>
         <div className={styles.cardSection}>
-          <p className={styles.fieldLabel}>{t("apps.defaultInputLanguage")}</p>
-          <LanguageSelect
-            value={defaultInputSourceId}
-            label={t("apps.defaultInputLanguage")}
-            options={languageOptions}
-            wide
-            showWarningBadge={showWarningBadge(defaultInputSourceId)}
-            noneLabel={t("apps.defaultInputLanguageNone")}
-            onChange={(value) => {
-              void setDefaultInputLanguage(value);
-            }}
-          />
+          <div className={styles.defaultLanguageRow}>
+            <p className={styles.fieldLabel}>{t("apps.defaultInputLanguage")}</p>
+            <div className={styles.defaultLanguageControl}>
+              <LanguageSelect
+                value={defaultInputSourceId}
+                label={t("apps.defaultInputLanguage")}
+                options={languageOptions}
+                wide
+                showWarningBadge={showWarningBadge(defaultInputSourceId)}
+                noneLabel={t("apps.defaultInputLanguageNone")}
+                onChange={(value) => {
+                  void setDefaultInputLanguage(value);
+                }}
+              />
+            </div>
+          </div>
           <div className={styles.fieldHelp}>
             <IoInformationCircle className={styles.fieldHelpIcon} aria-hidden="true" />
             <span>{t("apps.defaultInputLanguageHelp")}</span>

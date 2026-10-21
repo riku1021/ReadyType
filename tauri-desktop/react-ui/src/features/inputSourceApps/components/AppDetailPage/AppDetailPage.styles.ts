@@ -28,6 +28,20 @@ export const cardSection = css({
   paddingBlock: "sm",
 });
 
+/** ラベル左・言語セレクト右 */
+export const defaultLanguageRow = css({
+  display: "flex",
+  alignItems: "center",
+  gap: "sm",
+  minWidth: "0",
+});
+
+export const defaultLanguageControl = css({
+  flex: "0 1 360px",
+  minWidth: "12rem",
+  maxWidth: "360px",
+});
+
 export const detailIdentity = css({
   display: "flex",
   alignItems: "center",
@@ -65,6 +79,7 @@ export const fieldBlock = css({
 
 export const fieldLabel = css({
   margin: "0",
+  flexShrink: "0",
   fontSize: "sm",
   fontWeight: "semibold",
   color: "text.main",
