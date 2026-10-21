@@ -1,9 +1,39 @@
+# Git worktree
 .worktrees/
+
+# macOS
 .DS_Store
+
 # ローカル診断ログ（切替 JSONL 等）。コミットしない。
 /tmp/
 tmp/
-tauri-desktop/react-ui/tmp/
-tauri-desktop/react-ui/test-results/
-tauri-desktop/react-ui/playwright-report/
-tauri-desktop/react-ui/blob-report/
+
+# 依存関係（Node / Vite / Astro）
+node_modules/
+
+# ログ（Node / Vite / Astro）
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ビルド出力（Vite / Astro）
+dist/
+
+# TypeScript
+*.tsbuildinfo
+
+# 環境変数
+.env
+.env.*
+!.env.example
+
+# エディタ
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
