@@ -297,7 +297,7 @@ export const timeline = css({
     position: "absolute",
     left: "16.66%",
     right: "16.66%",
-    top: "46px",
+    top: "16.5px",
     height: "5px",
     borderRadius: "5px",
     bg: "track",
@@ -307,7 +307,7 @@ export const timeline = css({
 export const timelineFill = css({
   position: "absolute",
   left: "16.66%",
-  top: "46px",
+  top: "16.5px",
   height: "5px",
   borderRadius: "5px",
   bgGradient: "brand",
@@ -329,23 +329,8 @@ export const step = css({
   "&[data-state='on'], &[data-state='done']": { opacity: "1" },
 });
 
-export const stepTime = css({
-  fontFamily: "latin",
-  fontWeight: "extrabold",
-  fontSize: "0.75rem",
-  fontStyle: "normal",
-  color: "muted",
-  bg: "white",
-  borderWidth: "1px",
-  borderStyle: "solid",
-  borderColor: "line",
-  borderRadius: "pill",
-  px: "12px",
-  py: "1px",
-  mb: "10px",
-});
-
 export const stepBadge = css({
+  position: "relative",
   width: "38px",
   height: "38px",
   borderRadius: "50%",
@@ -361,17 +346,27 @@ export const stepBadge = css({
   fontSize: "0.9375rem",
   mb: "10px",
   transition: ".4s",
-  "[data-state='on'] &": {
+  "&::before": {
+    content: '""',
+    position: "absolute",
+    inset: "0",
+    borderRadius: "inherit",
     bgGradient: "brand",
+    opacity: "0",
+    transition: "opacity .4s",
+  },
+  "& > *": { position: "relative", zIndex: "1" },
+  "[data-state='on'] &": {
     borderColor: "white",
     color: "white",
     boxShadow: "0 0 0 6px rgba(124, 92, 255, 0.2)",
     animation: "stepPulse 2s infinite",
+    "&::before": { opacity: "1" },
   },
   "[data-state='done'] &": {
-    bgGradient: "brand",
     borderColor: "white",
     color: "white",
+    "&::before": { opacity: "1" },
   },
 });
 

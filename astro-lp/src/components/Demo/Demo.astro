@@ -39,7 +39,6 @@ import {
   stepHint,
   stepLabel,
   stepNum,
-  stepTime,
   timeline,
   timelineFill,
   toast,
@@ -47,9 +46,9 @@ import {
 } from "./Demo.styles";
 
 const steps = [
-  { n: "1", time: "0:01", title: "チャット欄をクリック", hint: "日本語に切り替わる", arrow: true },
-  { n: "2", time: "0:03", title: "そのまま日本語で入力", hint: "打ち直しなし", arrow: false },
-  { n: "3", time: "0:05", title: "エディタをクリック", hint: "英語に切り替わる", arrow: true },
+  { n: "1", title: "チャット欄をクリック", hint: "日本語に切り替わる", arrow: true },
+  { n: "2", title: "そのまま日本語で入力", hint: "打ち直しなし", arrow: false },
+  { n: "3", title: "エディタをクリック", hint: "英語に切り替わる", arrow: true },
 ] as const;
 ---
 
@@ -104,7 +103,6 @@ const steps = [
         <div class={timelineFill}></div>
         {steps.map((item) => (
           <div class={step} data-demo-step={item.n}>
-            <em class={stepTime}>{item.time}</em>
             <b class={stepBadge}><span class={stepNum}>{item.n}</span><Glyph name="lucide:check" class={stepCheck} /></b>
             <span class={stepLabel}>{item.title}<small class={stepHint}>{item.arrow ? <Glyph name="lucide:arrow-right" /> : null}{item.hint}</small></span>
           </div>

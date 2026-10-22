@@ -180,16 +180,45 @@ function bindDemo(): void {
     }, 1700);
   };
 
-  const markStep = (step: number, label: string): void => {
-    caption.textContent = label;
-    const fill = step === 2 ? "0.5" : step === 3 ? "1" : "0";
-    timeline.style.setProperty("--f", fill);
+  const paintSteps = (step: number): void => {
     document.querySelectorAll<HTMLElement>("[data-demo-step]").forEach((element) => {
       const index = Number(element.dataset.demoStep);
       if (index === step) element.dataset.state = "on";
       else if (index < step) element.dataset.state = "done";
       else delete element.dataset.state;
     });
+  };
+
+  let returnFrame = 0;
+
+  const markStep = (step: number, label: string): void => {
+    caption.textContent = label;
+    const fill = step === 2 ? "0.5" : step === 3 ? "1" : "0";
+    const bar = timeline.firstElementChild;
+    const current = Number(timeline.style.getPropertyValue("--f") || "0");
+    const next = Number(fill);
+    cancelAnimationFrame(returnFrame);
+    if (bar instanceof HTMLElement && next < current) {
+      bar.style.transitionTimingFunction = "cubic-bezier(.2, .7, .2, 1)";
+      timeline.style.setProperty("--f", fill);
+      const started = performance.now();
+      const track = (): void => {
+        const span = timeline.clientWidth * 0.6666;
+        const progress = span === 0 ? next : bar.getBoundingClientRect().width / span;
+        const shown = progress > 0.66 ? 3 : progress > 0.33 ? 2 : 1;
+        paintSteps(shown);
+        if (Math.abs(progress - next) > 0.03 && performance.now() - started < 1100) {
+          returnFrame = requestAnimationFrame(track);
+          return;
+        }
+        paintSteps(step === 0 ? 1 : step);
+      };
+      returnFrame = requestAnimationFrame(track);
+      return;
+    }
+    if (bar instanceof HTMLElement) bar.style.transitionTimingFunction = "";
+    timeline.style.setProperty("--f", fill);
+    paintSteps(step);
   };
 
   const loop = async (): Promise<void> => {
