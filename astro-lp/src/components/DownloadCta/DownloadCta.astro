@@ -1,8 +1,28 @@
 ---
+import {
+  type DesktopOs,
+  desktopInstallerUrl,
+  desktopReleasePageUrl,
+} from "../../scripts/desktop-download";
 import { sectionFlush, wrap } from "../../styles/objects/layout.styles";
 import { reveal } from "../../styles/objects/motion.styles";
 import Button from "../Button/Button.astro";
-import { band, copy, key, keyPlace, kicker, title } from "./DownloadCta.styles";
+import {
+  band,
+  copy,
+  key,
+  keyPlace,
+  kicker,
+  otherOs,
+  otherOsLink,
+  title,
+} from "./DownloadCta.styles";
+
+const otherInstallers: { os: DesktopOs; label: string }[] = [
+  { os: "mac", label: "macOS（Apple Silicon）" },
+  { os: "windows", label: "Windows" },
+  { os: "linux", label: "Linux" },
+];
 
 const keys = ["あ", "A", "⌘", "⇧"] as const;
 ---
@@ -18,7 +38,18 @@ const keys = ["あ", "A", "⌘", "⇧"] as const;
       <p class={copy}>
         入力する場所に、適切な言語を。<br />ReadyTypeで、作業に集中できる時間を取り戻しましょう。
       </p>
-      <Button href="#" variant="white">⬇ ダウンロード（公開準備中）</Button>
+      <Button href={desktopReleasePageUrl} variant="white" desktopDownload desktopDownloadLabel>
+        ⬇ ダウンロード
+      </Button>
+      <nav class={otherOs} aria-label="OS ごとのダウンロード">
+        {
+          otherInstallers.map((item) => (
+            <a class={otherOsLink} href={desktopInstallerUrl(item.os)}>
+              {item.label}
+            </a>
+          ))
+        }
+      </nav>
     </div>
   </div>
 </section>

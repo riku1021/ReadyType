@@ -73,3 +73,19 @@ export const title = css({
 });
 
 export const copy = css({ mb: "30px", opacity: "0.92" });
+
+export const otherOs = css({
+  display: "flex",
+  justifyContent: "center",
+  flexWrap: "wrap",
+  gap: "8px 20px",
+  mt: "18px",
+  fontSize: "14px",
+  fontWeight: "black",
+});
+
+export const otherOsLink = css({
+  color: "white",
+  textDecoration: "underline",
+  textUnderlineOffset: "3px",
+});

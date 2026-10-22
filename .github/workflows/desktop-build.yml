@@ -1,8 +1,17 @@
 # Desktop installers for macOS, Windows, and Linux.
 #
 # Tauri cannot cross-compile these bundles from macOS. Each job builds on a
-# native runner. Download the installers from the workflow run's Artifacts.
-# This workflow does not create a GitHub Release.
+# native runner and uploads the run's Artifacts. On main, the publish job also
+# attaches three stable filenames to the GitHub Release `app-v<version>`
+# (version is tauri.conf.json). The landing page links to
+# `releases/latest/download/<filename>`.
+#
+# Filenames must match `desktopInstallerFile` in
+# astro-lp/src/scripts/desktop-download.ts:
+#   ReadyType-aarch64.dmg, ReadyType-x64-setup.exe, ReadyType-x64.AppImage
+#
+# macOS CI is ad-hoc signed (no Developer ID). Gatekeeper can block that DMG
+# on other Macs until notarization is configured.
 #
 # Layout is sibling directories, so the CLI only finds them via
 # TAURI_APP_PATH / TAURI_FRONTEND_PATH (see .mise.toml).
@@ -25,7 +34,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
   actions: write
 
 jobs:
@@ -35,9 +44,9 @@ jobs:
       matrix:
         include:
           # Host is Apple Silicon. No --target, so the macOS sidecar triple matches.
-          # targets: all would also build a DMG; mise run build skips that.
+          # The public download is the DMG. Local `mise run build` still skips it.
           - platform: macos-latest
-            args: --bundles app
+            args: --bundles dmg
           # Ubuntu 22.04 keeps the glibc baseline low enough for older distros.
           # https://v2.tauri.app/distribute/appimage/
           # Linux and Windows use tauri.conf.json targets: all (deb, rpm, appimage / nsis, msi).
@@ -109,3 +118,82 @@ jobs:
           tauriScript: pnpm --dir ../react-ui exec tauri
           args: ${{ matrix.args }}
           uploadWorkflowArtifacts: true
+
+      # Stable names for releases/latest/download. The .app directory is not a
+      # release asset (tauri-action would try to upload it as a file).
+      - name: Stage installer for the GitHub Release
+        shell: bash
+        run: |
+          set -eu
+          shopt -s failglob
+          mkdir -p release-assets
+          case "${RUNNER_OS}" in
+            macOS)
+              cp tauri-desktop/rust-native/target/release/bundle/dmg/ReadyType_*.dmg \
+                release-assets/ReadyType-aarch64.dmg
+              ;;
+            Linux)
+              cp tauri-desktop/rust-native/target/release/bundle/appimage/ReadyType_*.AppImage \
+                release-assets/ReadyType-x64.AppImage
+              ;;
+            Windows)
+              cp tauri-desktop/rust-native/target/release/bundle/nsis/ReadyType_*-setup.exe \
+                release-assets/ReadyType-x64-setup.exe
+              ;;
+            *)
+              echo "Unsupported runner: ${RUNNER_OS}" >&2
+              exit 1
+              ;;
+          esac
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-installer-${{ runner.os }}
+          path: release-assets/*
+          if-no-files-found: error
+
+  publish:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-installer-*
+          merge-multiple: true
+          path: release-assets
+
+      # Push the tag before creating the release. A release whose target commit
+      # changes .github/workflows and has no ref yet needs workflows:write, which
+      # GITHUB_TOKEN cannot have (it 404s or 403s). The tag gives that commit a ref.
+      # https://github.blog/changelog/2023-11-02-github-actions-enforcing-workflow-scope-when-creating-a-release/
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          version="$(jq -r .version tauri-desktop/rust-native/tauri.conf.json)"
+          tag="app-v${version}"
+          title="ReadyType ${version}"
+          notes="$(cat <<EOF
+          デスクトップ版のインストーラです。
+
+          - macOS（Apple Silicon）: ReadyType-aarch64.dmg
+          - Windows: ReadyType-x64-setup.exe
+          - Linux: ReadyType-x64.AppImage
+
+          macOS の CI ビルドは ad-hoc 署名です。
+          EOF
+          )"
+          if ! git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null; then
+            git tag "${tag}" "${GITHUB_SHA}"
+            git push origin "refs/tags/${tag}"
+          fi
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            gh release upload "${tag}" release-assets/* --clobber
+            gh release edit "${tag}" --latest --title "${title}" --notes "${notes}"
+          else
+            gh release create "${tag}" release-assets/* --latest --title "${title}" --notes "${notes}"
+          fi

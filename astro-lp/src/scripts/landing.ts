@@ -1,3 +1,5 @@
+import { bindDesktopDownload } from "./desktop-download";
+
 function asElement(node: Element | null): HTMLElement | null {
   return node instanceof HTMLElement ? node : null;
 }
@@ -319,4 +321,5 @@ export function startLanding(): void {
   bindDemo();
   bindHow();
   bindSideNav();
+  bindDesktopDownload();
 }
