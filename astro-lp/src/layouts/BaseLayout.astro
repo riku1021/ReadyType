@@ -1,9 +1,9 @@
 ---
-import FloatingCta from "../components/FloatingCta/FloatingCta.astro";
-import ProgressBar from "../components/ProgressBar/ProgressBar.astro";
-import { skipLink } from "../styles/objects/layout.styles";
+import FloatingCta from "@/components/FloatingCta/FloatingCta.astro";
+import ProgressBar from "@/components/ProgressBar/ProgressBar.astro";
+import { skipLink } from "@/styles/objects/layout.styles";
 import SideNav from "./SideNav/SideNav.astro";
-import "../styles/index.css";
+import "@/styles/index.css";
 import SiteFooter from "./SiteFooter/SiteFooter.astro";
 import SiteHeader from "./SiteHeader/SiteHeader.astro";
 
@@ -47,7 +47,7 @@ const {
     <SideNav />
     <FloatingCta />
     <script>
-      import { startLanding } from "../scripts/landing";
+      import { startLanding } from "@/scripts/landing";
       startLanding();
     </script>
   </body>
