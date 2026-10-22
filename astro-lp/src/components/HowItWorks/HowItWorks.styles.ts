@@ -276,6 +276,24 @@ export const menu = css({
 
 export const menuGrow = css({ flex: "1" });
 
+export const toast = css({
+  position: "absolute",
+  right: "2.2%",
+  top: "9%",
+  bg: "white",
+  color: "ink",
+  fontWeight: "black",
+  borderRadius: "1em",
+  py: "0.7em",
+  px: "1.2em",
+  boxShadow: "0 1em 2.4em rgba(15, 27, 61, 0.3)",
+  opacity: "0",
+  transform: "translateY(-0.8em)",
+  transition: ".35s",
+  zIndex: "6",
+  "[data-step='2'] &": { opacity: "1", transform: "none" },
+});
+
 export const ime = css({
   minWidth: "2.6em",
   textAlign: "center",
