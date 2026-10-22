@@ -1,0 +1,43 @@
+---
+import { chip, chipMark, marquee, outline, outlineFill, row, spark, track } from "./Marquee.styles";
+
+const chips = [
+  { tone: "brand", mark: "あ", label: "フォーカスするだけで自動切り替え" },
+  { tone: "accent", mark: "A", label: "アプリ単位ではなく入力欄単位" },
+  { tone: "gold", mark: "⚡", label: "高速に、確実に切り替え" },
+  { tone: "success", mark: "🔒", label: "入力内容は読み取らない" },
+  { tone: "brand", mark: "⌨️", label: "打ち直しは、もう不要。" },
+  { tone: "accent", mark: "🎯", label: "入力欄ごとにルール設定" },
+] as const;
+
+const loop = [0, 1] as const;
+---
+
+<div class={marquee} aria-hidden="true">
+  <div class={row}>
+    <div class={track({ direction: "forward" })}>
+      {loop.map(() =>
+        chips.map((item) => (
+          <span class={chip}>
+            <i class={chipMark({ tone: item.tone })}>{item.mark}</i>
+            {item.label}
+          </span>
+        )),
+      )}
+    </div>
+  </div>
+  <div class={row}>
+    <div class={track({ direction: "reverse" })}>
+      {loop.map(() => (
+        <>
+          <span class={outline}>入力する場所に、適切な言語を。</span>
+          <span class={spark}>✦</span>
+          <span class={outlineFill}>READY TYPE</span>
+          <span class={spark}>✦</span>
+          <span class={outline}>あ ⇄ A</span>
+          <span class={spark}>✦</span>
+        </>
+      ))}
+    </div>
+  </div>
+</div>

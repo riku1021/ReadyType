@@ -1,0 +1,14 @@
+---
+import { logo, logoAccent, logoMark } from "./Logo.styles";
+
+interface Props {
+  tone?: "default" | "inverse";
+}
+
+const { tone = "default" } = Astro.props;
+---
+
+<a href="#" class={logo({ tone })}>
+  <span class={logoMark} aria-hidden="true">I</span>
+  <span>Ready<span class={logoAccent({ tone })}>Type</span></span>
+</a>

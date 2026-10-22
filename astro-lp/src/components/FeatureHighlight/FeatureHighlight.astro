@@ -1,0 +1,56 @@
+---
+import { section, wrap } from "../../styles/objects/layout.styles";
+import { reveal } from "../../styles/objects/motion.styles";
+import { eyebrow, gradText } from "../../styles/objects/type.styles";
+import WindowChrome from "../WindowChrome/WindowChrome.astro";
+import { windowFrame } from "../WindowChrome/WindowChrome.styles";
+import {
+  aside,
+  check,
+  checks,
+  copy,
+  hint,
+  list,
+  rule,
+  split,
+  tag,
+  title,
+} from "./FeatureHighlight.styles";
+
+const rules = [
+  { icon: "💬", name: "チャット欄", hint: "メッセージ入力", label: "あ 日本語", tone: "ja" },
+  { icon: "</>", name: "コードエディタ", hint: "メインエディタ", label: "A 英語", tone: "en" },
+  { icon: "▣", name: "ターミナル", hint: "コマンド入力", label: "A 英語", tone: "en" },
+] as const;
+---
+
+<section class={section} id="features">
+  <div class={wrap}>
+    <div class={split}>
+      <div class={reveal} data-reveal data-stagger>
+        <span class={eyebrow({ tone: "start" })}>いちばんの特長</span>
+        <h2 class={title}>切り替えは<br /><span class={gradText}>アプリ単位</span>じゃない。<br /><span class={gradText}>入力欄単位</span>。</h2>
+        <p class={copy}>
+          同じアプリの中でも、入力する場所によって必要な言語は違います。ReadyTypeなら、Cursorのチャット欄は日本語、コードエディタは英語、のように入力欄ごとにルールを決められます。
+        </p>
+        <ul class={checks}>
+          <li class={check}>アプリ単位で固定しても解決できなかった悩みを解消</li>
+          <li class={check}>VS Code、Slack、Notionなど、よく使うアプリで活躍</li>
+        </ul>
+      </div>
+      <div class:list={[windowFrame, reveal]} data-reveal data-stagger>
+        <WindowChrome />
+        <div class={list}>
+          <div class={rule}><b>Cursor</b><small class={aside}>のルール</small></div>
+          {rules.map((item) => (
+            <div class={rule}>
+              <span aria-hidden="true">{item.icon}</span>
+              <div>{item.name}<small class={hint}>{item.hint}</small></div>
+              <span class={tag({ tone: item.tone })}>{item.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

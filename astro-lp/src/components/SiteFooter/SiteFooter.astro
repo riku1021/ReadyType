@@ -1,0 +1,32 @@
+---
+import { footerProduct, footerSupport } from "../../content/landing";
+import { wrap } from "../../styles/objects/layout.styles";
+import Logo from "../Logo/Logo.astro";
+import { blurb, columnTitle, footer, footerLink, grid, legal } from "./SiteFooter.styles";
+---
+
+<footer class={footer}>
+  <div class={wrap}>
+    <div class={grid}>
+      <div>
+        <Logo tone="inverse" />
+        <p class={blurb}>
+          入力する場所に、適切な言語を。<br />入力欄にフォーカスするだけで、日本語と英語を自動で切り替えるデスクトップアプリ。
+        </p>
+      </div>
+      <div>
+        <h4 class={columnTitle}>ReadyType</h4>
+        {footerProduct.map((item) => (
+          <a class={footerLink} href={item.href}>{item.label}</a>
+        ))}
+      </div>
+      <div>
+        <h4 class={columnTitle}>サポート</h4>
+        {footerSupport.map((item) => (
+          <a class={footerLink} href={item.href}>{item.label}</a>
+        ))}
+      </div>
+    </div>
+    <div class={legal}>© 2026 ReadyType. All rights reserved.</div>
+  </div>
+</footer>

@@ -1,2 +1,5 @@
 # generated types
 .astro/
+
+# Panda codegen（prepare と Vite プラグインが再生成する）
+styled-system/

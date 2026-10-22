@@ -1,0 +1,42 @@
+---
+import "../styles/index.css";
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = "ReadyType | 入力する場所に、適切な言語を。",
+  description = "入力欄にフォーカスするだけで、日本語と英語の入力ソースを自動で切り替えるデスクトップアプリ。",
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&family=Inter:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <title>{title}</title>
+    <script is:inline>
+      document.documentElement.classList.add("js");
+    </script>
+  </head>
+  <body>
+    <slot />
+    <script>
+      import { startLanding } from "../scripts/landing";
+      startLanding();
+    </script>
+  </body>
+</html>

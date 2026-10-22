@@ -1,0 +1,14 @@
+---
+import { sideNavItems } from "../../content/landing";
+import { sideLink, sideNav } from "./SideNav.styles";
+---
+
+<nav class={sideNav} data-side-nav aria-label="セクション">
+  {
+    sideNavItems.map((item) => (
+      <a class={sideLink} data-side-link data-section={item.id} href={item.href}>
+        <span>{item.label}</span>
+      </a>
+    ))
+  }
+</nav>

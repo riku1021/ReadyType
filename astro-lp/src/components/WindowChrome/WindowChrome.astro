@@ -1,0 +1,9 @@
+---
+import { windowBar, windowDot } from "./WindowChrome.styles";
+---
+
+<div class={windowBar} aria-hidden="true">
+  <span class={windowDot({ tone: "close" })}></span>
+  <span class={windowDot({ tone: "min" })}></span>
+  <span class={windowDot({ tone: "max" })}></span>
+</div>

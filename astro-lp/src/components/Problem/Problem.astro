@@ -1,0 +1,41 @@
+---
+import { caret } from "../../styles/objects/caret.styles";
+import { section, wrap } from "../../styles/objects/layout.styles";
+import { reveal, tilt } from "../../styles/objects/motion.styles";
+import SectionIntro from "../SectionIntro/SectionIntro.astro";
+import {
+  bad,
+  card,
+  cards,
+  cardTitle,
+  highlight,
+  miss,
+  problem,
+  punch,
+  punchMark,
+  typed,
+} from "./Problem.styles";
+---
+
+<section class:list={[section, problem]} id="problem">
+  <div class={wrap}>
+    <SectionIntro kicker="PROBLEM" lead="たった一瞬のことなのに、1日に何度も起きるから、地味にストレス。">
+      こんな経験、ありませんか？
+    </SectionIntro>
+    <div class={cards}>
+      <div class:list={[card, tilt, reveal]} data-reveal data-stagger data-tilt>
+        <h3 class={cardTitle}>💬 日本語を入力したいのに…</h3>
+        <div class={bad}><span class={typed} style="--w: 10.5ch">konnichiwa</span><span class={caret()}></span></div>
+        <p><span class={miss}>✕</span> 英語のままで、打ち直し</p>
+      </div>
+      <div class:list={[card, tilt, reveal]} data-reveal data-stagger data-tilt>
+        <h3 class={cardTitle}>&lt;/&gt; 英語を入力したいのに…</h3>
+        <div class={bad}><span class={typed} style="--w: 6.5ch">こんst</span><span class={caret()}></span></div>
+        <p><span class={miss}>✕</span> 日本語のままで、変換候補が出てくる</p>
+      </div>
+    </div>
+    <p class:list={[punch, reveal]} data-reveal data-stagger>
+      毎回、入力ソースを切り替えて、<br /><b class={punchMark}><span class={highlight}>打ち直していませんか？</span></b>
+    </p>
+  </div>
+</section>

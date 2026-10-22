@@ -1,6 +1,7 @@
 # 公式ドキュメントのベストプラクティスに沿った設定
-# 対象: tauri-desktop/react-ui + tauri-desktop/rust-native
+# 対象: tauri-desktop/react-ui + tauri-desktop/rust-native + astro-lp
 # Naming: <package>:<role>（tasks.toml と同じ）
+# glob の ** は 1 段以上。パッケージ直下の設定ファイルは別パターンで含める。
 pre-commit:
   parallel: true
   jobs:
@@ -29,3 +30,20 @@ pre-commit:
       glob: "tauri-desktop/rust-native/**/*.rs"
       run: cargo clippy --all-targets -- -D warnings
       description: "Lint rust-native"
+
+    - name: astro-lp:format-lint
+      root: astro-lp/
+      glob:
+        - "astro-lp/**/*.{astro,ts,tsx,js,jsx,mjs,cjs,json,css,yml,yaml}"
+        - "astro-lp/*.{astro,ts,tsx,js,jsx,mjs,cjs,json,css,yml,yaml}"
+      run: pnpm fix
+      stage_fixed: true
+      description: "Format and lint astro-lp"
+
+    - name: astro-lp:typecheck
+      root: astro-lp/
+      glob:
+        - "astro-lp/**/*.{astro,ts,tsx,js,jsx,mjs,cjs}"
+        - "astro-lp/*.{astro,ts,tsx,js,jsx,mjs,cjs}"
+      run: pnpm run typecheck
+      description: "Type check astro-lp"

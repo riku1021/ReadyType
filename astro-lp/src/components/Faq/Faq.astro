@@ -1,0 +1,21 @@
+---
+import { faqs } from "../../content/landing";
+import { sectionFlush, wrap } from "../../styles/objects/layout.styles";
+import { reveal } from "../../styles/objects/motion.styles";
+import SectionIntro from "../SectionIntro/SectionIntro.astro";
+import { answer, item, list, summary } from "./Faq.styles";
+---
+
+<section class={sectionFlush} id="faq">
+  <div class={wrap}>
+    <SectionIntro kicker="FAQ" lead="よくある質問">Frequently Asked Questions</SectionIntro>
+    <div class={list}>
+      {faqs.map((faq) => (
+        <details class:list={[item, reveal]} data-reveal data-stagger>
+          <summary class={summary}>{faq.q}</summary>
+          <p class={answer}>{faq.a}</p>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>

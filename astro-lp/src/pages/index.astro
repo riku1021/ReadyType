@@ -1,16 +1,42 @@
 ---
+import AppStrip from "../components/AppStrip/AppStrip.astro";
+import Demo from "../components/Demo/Demo.astro";
+import DownloadCta from "../components/DownloadCta/DownloadCta.astro";
+import Faq from "../components/Faq/Faq.astro";
+import FeatureHighlight from "../components/FeatureHighlight/FeatureHighlight.astro";
+import FloatingCta from "../components/FloatingCta/FloatingCta.astro";
+import Hero from "../components/Hero/Hero.astro";
+import HowItWorks from "../components/HowItWorks/HowItWorks.astro";
+import Marquee from "../components/Marquee/Marquee.astro";
+import Problem from "../components/Problem/Problem.astro";
+import ProgressBar from "../components/ProgressBar/ProgressBar.astro";
+import Reviews from "../components/Reviews/Reviews.astro";
+import SideNav from "../components/SideNav/SideNav.astro";
+import SiteFooter from "../components/SiteFooter/SiteFooter.astro";
+import SiteHeader from "../components/SiteHeader/SiteHeader.astro";
+import Solution from "../components/Solution/Solution.astro";
+import UxFeatures from "../components/UxFeatures/UxFeatures.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<BaseLayout>
+  <ProgressBar />
+  <SiteHeader />
+  <main>
+    <Hero />
+    <Marquee />
+    <AppStrip />
+    <Problem />
+    <Solution />
+    <Demo />
+    <HowItWorks />
+    <FeatureHighlight />
+    <UxFeatures />
+    <Reviews />
+    <Faq />
+    <DownloadCta />
+  </main>
+  <SiteFooter />
+  <SideNav />
+  <FloatingCta />
+</BaseLayout>

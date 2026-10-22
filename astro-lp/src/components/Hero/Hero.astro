@@ -1,0 +1,91 @@
+---
+import { caret } from "../../styles/objects/caret.styles";
+import { keycap } from "../../styles/objects/keycap.styles";
+import { wrap } from "../../styles/objects/layout.styles";
+import { heroGrad } from "../../styles/objects/type.styles";
+import Button from "../Button/Button.astro";
+import WindowChrome from "../WindowChrome/WindowChrome.astro";
+import { windowFrame } from "../WindowChrome/WindowChrome.styles";
+import {
+  actions,
+  aurora,
+  chip,
+  chipLabel,
+  chipMark,
+  copy,
+  field,
+  floatCard,
+  floatIcon,
+  grid,
+  hero,
+  mock,
+  mockBody,
+  mockLabel,
+  orb,
+  pill,
+  pills,
+  stage,
+  stageBox,
+  title,
+  wave,
+  word,
+} from "./Hero.styles";
+---
+
+<section class={hero} data-hero>
+  <div class={aurora} aria-hidden="true"></div>
+  <div class={orb({ place: "right" })} aria-hidden="true"></div>
+  <div class={orb({ place: "left" })} aria-hidden="true"></div>
+  <div class:list={[wrap, grid]}>
+    <div>
+      <h1 class={title}>
+        <span class={word[0]}>入力する</span>
+        <span class={word[1]}>場所に、</span><br />
+        <span class={word[2]}><span class={heroGrad}>適切な言語</span></span>
+        <span class={word[3]}>を。</span>
+      </h1>
+      <p class={copy}>
+        入力欄にフォーカスするだけで、日本語と英語を自動で切り替え。「あ、英語のままだった…」を、もう終わりにしませんか。
+      </p>
+      <div class={actions}>
+        <Button href="#download">⬇ 今すぐダウンロード</Button>
+        <Button href="#how" variant="sub">使い方を見る</Button>
+      </div>
+      <div class={pills}>
+        <span class={pill}>⚡ 高速・低遅延で切り替え</span>
+        <span class={pill}>🎯 入力欄ごとに設定</span>
+        <span class={pill}>🔒 入力内容は読み取らない</span>
+      </div>
+    </div>
+    <div class={stageBox}>
+      <div class={wave} aria-hidden="true"></div>
+      <div class={floatCard({ place: "auto" })}><span class={floatIcon}>⚡</span>自動で切り替え</div>
+      <div class={floatCard({ place: "rules" })}><span class={floatIcon}>✓</span>入力欄ごとにルール</div>
+      <div class={floatCard({ place: "privacy" })}><span class={floatIcon}>🔒</span>入力内容は読み取らない</div>
+      <div class={floatCard({ place: "shortcut" })}>
+        <kbd class={keycap({ size: "mini" })}>⌘</kbd>
+        <kbd class={keycap({ size: "mini" })}>⇧</kbd>
+        <kbd class={keycap({ size: "mini" })}>L</kbd>
+        で登録
+      </div>
+      <div class={stage} data-stage>
+        <div class:list={[windowFrame, mock({ scene: "ja" })]}>
+          <WindowChrome />
+          <div class={mockBody}>
+            <div class={mockLabel}>💬 チャット欄</div>
+            <div class={field({ scene: "ja" })}>こんにちは<span class={caret()}></span></div>
+          </div>
+          <div class={chip({ tone: "ja" })}><span><b class={chipMark}>あ</b><small class={chipLabel}>日本語</small></span></div>
+        </div>
+        <div class:list={[windowFrame, mock({ scene: "en" })]}>
+          <WindowChrome />
+          <div class={mockBody}>
+            <div class={mockLabel}>&lt;/&gt; コードエディタ</div>
+            <div class={field({ scene: "en" })}>console.log("Hello")<span class={caret({ tone: "accent" })}></span></div>
+          </div>
+          <div class={chip({ tone: "en" })}><span><b class={chipMark}>A</b><small class={chipLabel}>英語</small></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

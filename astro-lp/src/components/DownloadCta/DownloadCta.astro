@@ -1,0 +1,24 @@
+---
+import { sectionFlush, wrap } from "../../styles/objects/layout.styles";
+import { reveal } from "../../styles/objects/motion.styles";
+import Button from "../Button/Button.astro";
+import { band, copy, key, keyPlace, kicker, title } from "./DownloadCta.styles";
+
+const keys = ["あ", "A", "⌘", "⇧"] as const;
+---
+
+<section class={sectionFlush} id="download">
+  <div class={wrap}>
+    <div class:list={[band, reveal]} data-reveal data-stagger>
+      {keys.map((mark, index) => (
+        <span class:list={[key, keyPlace[index]]}>{mark}</span>
+      ))}
+      <span class={kicker}>🚀 さらに、作業を効率化しよう！</span>
+      <h2 class={title}>入力する前から、<br />準備完了に。</h2>
+      <p class={copy}>
+        入力する場所に、適切な言語を。<br />ReadyTypeで、作業に集中できる時間を取り戻しましょう。
+      </p>
+      <Button href="#" variant="white">⬇ ダウンロード（公開準備中）</Button>
+    </div>
+  </div>
+</section>

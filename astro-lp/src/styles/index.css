@@ -1,0 +1,21 @@
+@layer reset, base, tokens, recipes, utilities;
+
+@keyframes angr {
+  to {
+    --ang: 360deg;
+  }
+}
+
+/*
+  utilities レイヤーより後ろで勝たせるため、レイヤーの外に置く。
+  example.html の prefers-reduced-motion と同じ役割。
+*/
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

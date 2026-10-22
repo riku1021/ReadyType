@@ -1,0 +1,111 @@
+---
+import { section, wrap } from "../../styles/objects/layout.styles";
+import { reveal } from "../../styles/objects/motion.styles";
+import { gradText } from "../../styles/objects/type.styles";
+import SectionIntro from "../SectionIntro/SectionIntro.astro";
+import {
+  bubble,
+  captionBar,
+  code,
+  controls,
+  demo,
+  demoCaret,
+  demoCaretCode,
+  demoField,
+  dot,
+  dots,
+  frame,
+  ime,
+  keyword,
+  menu,
+  menuDot,
+  menuSpacer,
+  note,
+  notes,
+  pane,
+  panes,
+  paneTitle,
+  play,
+  pointer,
+  pointerRing,
+  screen,
+  step,
+  stepBadge,
+  stepHint,
+  stepLabel,
+  stepTime,
+  timeline,
+  timelineFill,
+  toast,
+  window,
+} from "./Demo.styles";
+
+const steps = [
+  { n: "1", time: "0:01", title: "チャット欄をクリック", hint: "→ 日本語に切り替わる" },
+  { n: "2", time: "0:03", title: "そのまま日本語で入力", hint: "打ち直しなし" },
+  { n: "3", time: "0:05", title: "エディタをクリック", hint: "→ 英語に切り替わる" },
+] as const;
+---
+
+<section class={section} id="video">
+  <div class={wrap}>
+    <SectionIntro kicker="DEMO VIDEO" lead="入力欄をクリックするだけで、入力ソースが切り替わる様子をご覧ください。">
+      動いているところを、<span class={gradText}>30秒で。</span>
+    </SectionIntro>
+    <div class:list={[frame, reveal]} data-reveal>
+      <div class={screen}>
+        <div class={demo} id="demo">
+          <div class={menu}>
+            <b class={menuDot}></b>
+            <span>Cursor</span><span>ファイル</span><span>編集</span>
+            <span class={menuSpacer}></span>
+            <span>⚡ ReadyType</span>
+            <span class={ime} id="ime" data-ime="en">A</span>
+          </div>
+          <div class={window}>
+            <div class={dots} aria-hidden="true"><i class={dot}></i><i class={dot}></i><i class={dot}></i></div>
+            <div class={panes}>
+              <div class={pane} id="pChat">
+                <div class={paneTitle}>💬 Chat</div>
+                <div class={bubble}>このコードについて説明してください。</div>
+                <div class={demoField} id="fChat"><span id="tChat"></span><span class={demoCaret}></span></div>
+              </div>
+              <div class={pane} id="pCode" data-surface="code" data-active="true">
+                <div class={paneTitle}>&lt;/&gt; main.ts</div>
+                <pre class={code}><span class={keyword}>function</span> greet(name: string) {"{"}
+  <span class={keyword}>return</span> `Hello, ${"{"}name{"}"}!`;
+{"}"}
+<span id="tCode"></span><span class={demoCaretCode}></span></pre>
+              </div>
+            </div>
+          </div>
+          <div class={pointer} id="ptr">
+            <svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true">
+              <path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#0F1B3D" stroke-width="1.6" stroke-linejoin="round"></path>
+            </svg>
+            <s class={pointerRing}></s>
+          </div>
+          <div class={toast} id="toast"></div>
+          <div class={captionBar} id="cap">▶ 再生中</div>
+        </div>
+      </div>
+    </div>
+    <div class={controls}>
+      <button class={play} type="button" id="dplay" aria-label="一時停止">⏸</button>
+      <div class={timeline} id="tline">
+        <div class={timelineFill}></div>
+        {steps.map((item) => (
+          <div class={step} data-demo-step={item.n}>
+            <em class={stepTime}>{item.time}</em>
+            <b class={stepBadge}>{item.n}</b>
+            <span class={stepLabel}>{item.title}<small class={stepHint}>{item.hint}</small></span>
+          </div>
+        ))}
+      </div>
+    </div>
+    <div class={notes}>
+      <span class={note}>💬 チャット欄 → 日本語</span>
+      <span class={note}>⌨️ コードエディタ → 英語</span>
+    </div>
+  </div>
+</section>

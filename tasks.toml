@@ -108,6 +108,26 @@ description = "Lint rust-native"
 dir = "tauri-desktop/rust-native"
 run = "cargo clippy --all-targets -- -D warnings"
 
+["astro-lp:typecheck"]
+description = "Type-check astro-lp"
+dir = "astro-lp"
+run = "pnpm typecheck"
+
+["astro-lp:lint"]
+description = "Lint & format-check astro-lp"
+dir = "astro-lp"
+run = "pnpm lint"
+
+["astro-lp:fix"]
+description = "Auto-fix astro-lp lint & format issues"
+dir = "astro-lp"
+run = "pnpm fix"
+
+["astro-lp:format"]
+description = "Format astro-lp"
+dir = "astro-lp"
+run = "pnpm format"
+
 ["rust-native:lab-smoke"]
 description = "macOS Lab input-source smoke (AppKit window on process main; needs AX)"
 dir = "tauri-desktop/rust-native"

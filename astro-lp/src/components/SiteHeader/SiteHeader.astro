@@ -1,0 +1,19 @@
+---
+import { navItems } from "../../content/landing";
+import { wrap } from "../../styles/objects/layout.styles";
+import Button from "../Button/Button.astro";
+import Logo from "../Logo/Logo.astro";
+import { header, nav, navLink, navList } from "./SiteHeader.styles";
+---
+
+<header class={header} data-header>
+  <div class:list={[wrap, nav]}>
+    <Logo />
+    <ul class={navList}>
+      {navItems.map((item) => (
+        <li><a class={navLink} href={item.href}>{item.label}</a></li>
+      ))}
+    </ul>
+    <Button href="#download" size="nav">ダウンロード</Button>
+  </div>
+</header>

@@ -1,0 +1,23 @@
+---
+import { apps } from "../../content/landing";
+import { appMark } from "../../styles/objects/appMark.styles";
+import { appChip, label, strip, track, viewport } from "./AppStrip.styles";
+
+const copies = [0, 1, 2] as const;
+---
+
+<div class={strip}>
+  <span class={label}>こんなアプリで活躍</span>
+  <div class={viewport}>
+    <div class={track}>
+      {copies.map((copy) =>
+        apps.map((app) => (
+          <i class={appChip} aria-hidden={copy === 0 ? undefined : "true"}>
+            <b class={appMark({ tone: app.tone })}>{app.mark}</b>
+            {app.name}
+          </i>
+        )),
+      )}
+    </div>
+  </div>
+</div>

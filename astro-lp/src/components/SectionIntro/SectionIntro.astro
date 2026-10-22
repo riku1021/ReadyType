@@ -1,0 +1,14 @@
+---
+import { eyebrow, heading, lead } from "../../styles/objects/type.styles";
+
+interface Props {
+  kicker?: string;
+  lead: string;
+}
+
+const { kicker, lead: leadText } = Astro.props;
+---
+
+{kicker ? <span class={eyebrow()}>{kicker}</span> : null}
+<h2 class={heading}><slot /></h2>
+<p class={lead}>{leadText}</p>

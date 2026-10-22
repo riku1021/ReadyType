@@ -1,0 +1,92 @@
+---
+import { apps } from "../../content/landing";
+import { appMark } from "../../styles/objects/appMark.styles";
+import { keycap } from "../../styles/objects/keycap.styles";
+import { sectionFlush, wrap } from "../../styles/objects/layout.styles";
+import { reveal, tilt } from "../../styles/objects/motion.styles";
+import SectionIntro from "../SectionIntro/SectionIntro.astro";
+import {
+  appRow,
+  card,
+  cardCopy,
+  cardTitle,
+  dot,
+  dots,
+  grid,
+  miniTag,
+  privacy,
+  privacyCopy,
+  privacyIcon,
+  privacyTitle,
+  search,
+  toggle,
+  visual,
+  visualStack,
+  welcome,
+} from "./UxFeatures.styles";
+
+const managed = [
+  { tone: "vscode", shift: false, tags: ["ja", "en"] },
+  { tone: "slack", shift: true, tags: ["ja"] },
+  { tone: "chrome", shift: true, tags: ["en", "ja"] },
+] as const;
+---
+
+<section class={sectionFlush}>
+  <div class={wrap}>
+    <SectionIntro lead="設定で作業の手を止めない。そのためのUXを詰め込みました。">
+      使いやすさも、ちゃんと。
+    </SectionIntro>
+    <div class={grid}>
+      <div class:list={[card, tilt, reveal]} data-feature data-reveal data-stagger data-tilt>
+        <div class={visual} data-icon>
+          <kbd class={keycap({ size: "lg" })}>⌘</kbd>
+          <kbd class={keycap({ size: "lg" })}>⇧</kbd>
+          <kbd class={keycap({ size: "lg" })}>L</kbd>
+          <span>で登録</span>
+        </div>
+        <h3 class={cardTitle}>ショートカットで登録</h3>
+        <p class={cardCopy}>
+          登録したい入力欄で <kbd class={keycap()}>⌘</kbd> <kbd class={keycap()}>⇧</kbd> <kbd class={keycap()}>L</kbd>。言語を選んで登録するだけで、ルールが完成します。
+        </p>
+      </div>
+      <div class:list={[card, tilt, reveal]} data-feature data-reveal data-stagger data-tilt>
+        <div class:list={[visual, visualStack]}>
+          <div class={search}>🔍 アプリを検索…</div>
+          {managed.map((row) => {
+            const app = apps.find((item) => item.tone === row.tone);
+            return (
+              <div class={appRow} data-shift={row.shift ? "true" : undefined}>
+                {app ? <b class={appMark({ tone: app.tone })}>{app.mark}</b> : null}
+                {app?.name}
+                {row.tags.map((tag, index) => (
+                  <em class={miniTag({ tone: tag, edge: index === 0 })}>{tag === "ja" ? "あ" : "A"}</em>
+                ))}
+                <span class={toggle}></span>
+              </div>
+            );
+          })}
+        </div>
+        <h3 class={cardTitle}>アプリ・ルール一覧で管理</h3>
+        <p class={cardCopy}>アプリを選んで、入力欄ごとのルールを一覧でチェック。追加も修正もすっきり。</p>
+      </div>
+      <div class:list={[card, tilt, reveal]} data-feature data-reveal data-stagger data-tilt>
+        <div class:list={[visual, visualStack]}>
+          <div class={dots}><i class={dot} data-on="true"></i><i class={dot}></i><i class={dot}></i><i class={dot}></i></div>
+          <div class={welcome}>ReadyType へようこそ</div>
+        </div>
+        <h3 class={cardTitle}>初めてでも安心</h3>
+        <p class={cardCopy}>オンボーディングが基本設定から使い方までガイド。その日から使い始められます。</p>
+      </div>
+    </div>
+    <div class:list={[privacy, reveal]} data-reveal data-stagger>
+      <div class={privacyIcon}>🔒</div>
+      <div>
+        <h3 class={privacyTitle}>入力した文章の内容は、読み取りません。</h3>
+        <p class={privacyCopy}>
+          ReadyTypeが使うのは、入力欄を識別するために必要な情報のみ。入力内容や個人データを送信することはありません。
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
