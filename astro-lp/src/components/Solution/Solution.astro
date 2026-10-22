@@ -5,7 +5,6 @@ import SectionIntro from "@/components/SectionIntro/SectionIntro.astro";
 import { caret } from "@/styles/objects/caret.styles";
 import { section, wrap } from "@/styles/objects/layout.styles";
 import { reveal, tilt } from "@/styles/objects/motion.styles";
-import { gradText } from "@/styles/objects/type.styles";
 import {
   boost,
   boostCopy,
@@ -52,9 +51,12 @@ const ideas = [
 
 <section class:list={[section, solution]} id="solution">
   <div class={wrap}>
-    <SectionIntro kicker="SOLUTION" lead="日本語も英語も、入力欄に合わせて自動で切り替わります。">
-      ReadyTypeなら、<span class={gradText}>クリックするだけ。</span>
-    </SectionIntro>
+    <SectionIntro
+      kicker="SOLUTION"
+      title="ReadyTypeなら、"
+      accent="クリックするだけ。"
+      lead="日本語も英語も、入力欄に合わせて自動で切り替わります。"
+    />
     <div class={glanceWrap}><div class={glance}>
       <div class:list={[glanceCard({ tone: "bad" }), tilt]} data-tilt>
         <div class={glanceTag}>😮‍💨 これまで</div>

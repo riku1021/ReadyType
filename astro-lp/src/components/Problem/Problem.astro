@@ -24,9 +24,11 @@ const retryChars = [..."打ち直していませんか？"];
 
 <section class:list={[section, problem]} id="problem">
   <div class={wrap}>
-    <SectionIntro kicker="PROBLEM" lead="たった一瞬のことなのに、1日に何度も起きるから、地味にストレス。">
-      こんな経験、ありませんか？
-    </SectionIntro>
+    <SectionIntro
+      kicker="PROBLEM"
+      title="こんな経験、ありませんか？"
+      lead="たった一瞬のことなのに、1日に何度も起きるから、地味にストレス。"
+    />
     <div class={cards}>
       <div class:list={[card, tilt, reveal]} data-reveal data-stagger data-tilt>
         <h3 class={cardTitle}><Glyph name="lucide:message-circle" /> 日本語を入力したいのに…</h3>

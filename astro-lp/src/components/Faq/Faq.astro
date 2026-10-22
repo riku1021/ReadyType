@@ -8,7 +8,11 @@ import { answer, answerBody, item, list, mark, summary } from "./Faq.styles";
 
 <section class={sectionFlush} id="faq">
   <div class={wrap}>
-    <SectionIntro kicker="FAQ" lead="導入の前に、気になる点をまとめました。">よくある質問</SectionIntro>
+    <SectionIntro
+      kicker="FAQ"
+      title="よくある質問"
+      lead="導入の前に、気になる点をまとめました。"
+    />
     <div class={list}>
       {faqs.map((faq) => (
         <details class:list={[item, reveal]} data-reveal data-stagger>

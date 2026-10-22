@@ -1,14 +1,40 @@
 ---
-import { eyebrow, heading, lead } from "@/styles/objects/type.styles";
+import { eyebrow, gradText, heading, lead } from "@/styles/objects/type.styles";
 
-interface Props {
+interface SharedProps {
   kicker?: string;
+  title: string;
   lead: string;
 }
 
-const { kicker, lead: leadText } = Astro.props;
+interface PlainProps extends SharedProps {
+  accent?: never;
+  accentAt?: never;
+}
+
+interface AccentProps extends SharedProps {
+  /** グラデーションにする部分 */
+  accent: string;
+  /** 省略時は title の直後 */
+  accentAt?: "start" | "end";
+}
+
+type Props = PlainProps | AccentProps;
+
+const { kicker, title, accent, accentAt = "end", lead: leadText } = Astro.props;
+
+const headingParts: { text: string; gradient: boolean }[] = [];
+if (accent && accentAt === "start") headingParts.push({ text: accent, gradient: true });
+headingParts.push({ text: title, gradient: false });
+if (accent && accentAt === "end") headingParts.push({ text: accent, gradient: true });
 ---
 
 {kicker ? <span class={eyebrow()}>{kicker}</span> : null}
-<h2 class={heading}><slot /></h2>
+<h2 class={heading}>
+  {
+    headingParts.map((part) =>
+      part.gradient ? <span class={gradText}>{part.text}</span> : part.text,
+    )
+  }
+</h2>
 <p class={lead}>{leadText}</p>

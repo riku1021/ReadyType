@@ -3,7 +3,6 @@ import Glyph from "@/components/Glyph/Glyph.astro";
 import SectionIntro from "@/components/SectionIntro/SectionIntro.astro";
 import { section, wrap } from "@/styles/objects/layout.styles";
 import { reveal } from "@/styles/objects/motion.styles";
-import { gradText } from "@/styles/objects/type.styles";
 import {
   bubble,
   captionBar,
@@ -51,9 +50,12 @@ const steps = [
 
 <section class={section} id="video">
   <div class={wrap}>
-    <SectionIntro kicker="DEMO VIDEO" lead="入力欄をクリックするだけで、入力ソースが切り替わる様子をご覧ください。">
-      動いているところを、<span class={gradText}>30秒で。</span>
-    </SectionIntro>
+    <SectionIntro
+      kicker="DEMO VIDEO"
+      title="動いているところを、"
+      accent="30秒で。"
+      lead="入力欄をクリックするだけで、入力ソースが切り替わる様子をご覧ください。"
+    />
     <div class:list={[frame, reveal]} data-reveal>
       <div class={screen}>
         <div class={demo} id="demo" aria-hidden="true">
