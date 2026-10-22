@@ -312,8 +312,12 @@ fn position_near_focus(
         }
         #[cfg(not(target_os = "macos"))]
         {
+            // Windows / Linux は入力欄の矩形をまだ取れない。正式対応するときは
+            // この None を、フォーカス中の入力欄の Some(LogicalRect { x, y, width, height })
+            // に差し替える。macOS の ElementFrame は別モジュールにあるため、ここでは使わない。
+            // 型を省いた None は E0282 になり、Windows / Linux のビルドが通らない。
             let _ = session;
-            None
+            None::<LogicalRect>
         }
     };
 
