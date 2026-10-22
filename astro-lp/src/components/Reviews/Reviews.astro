@@ -11,7 +11,7 @@ const rating = [0, 1, 2, 3, 4] as const;
 
 <section class={section} id="review">
   <div class={wrap}>
-    <SectionIntro kicker="REVIEW" lead="ここにレビューの説明文を入れてください。">ご利用者の声</SectionIntro>
+    <SectionIntro kicker="REVIEW" lead="使っている方の声を集めました。">ご利用者の声</SectionIntro>
     <div class={grid}>
       {reviews.map((text) => (
         <div class:list={[card, reveal]} data-reveal data-stagger>
