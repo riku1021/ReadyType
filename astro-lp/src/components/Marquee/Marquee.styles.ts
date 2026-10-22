@@ -24,19 +24,12 @@ export const row = css({
   WebkitMaskImage: "linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent)",
 });
 
-export const track = cva({
-  base: {
-    display: "flex",
-    alignItems: "center",
-    gap: "16px",
-    width: "max-content",
-  },
-  variants: {
-    direction: {
-      forward: { animation: "mqa 42s linear infinite" },
-      reverse: { animation: "mqa 56s linear infinite reverse" },
-    },
-  },
+export const track = css({
+  display: "flex",
+  alignItems: "center",
+  gap: "16px",
+  width: "max-content",
+  animation: "mqa 42s linear infinite",
 });
 
 export const chip = css({
@@ -78,32 +71,4 @@ export const chipMark = cva({
       success: { bgGradient: "success" },
     },
   },
-});
-
-export const outline = css({
-  fontWeight: "black",
-  fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
-  lineHeight: "1.2",
-  whiteSpace: "nowrap",
-  color: "transparent",
-  WebkitTextStroke: "1.4px rgba(255, 255, 255, 0.6)",
-  letterSpacing: "0.02em",
-});
-
-export const outlineFill = css({
-  fontWeight: "black",
-  fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
-  lineHeight: "1.2",
-  whiteSpace: "nowrap",
-  fontFamily: "latin",
-  letterSpacing: "0.12em",
-  WebkitTextStroke: "0",
-  textGradient: "outlineText",
-});
-
-export const spark = css({
-  color: "gold",
-  fontSize: "1.625rem",
-  animation: "orbit 8s linear infinite",
-  display: "inline-block",
 });

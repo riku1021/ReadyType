@@ -1,5 +1,5 @@
 ---
-import { chip, chipMark, marquee, outline, outlineFill, row, spark, track } from "./Marquee.styles";
+import { chip, chipMark, marquee, row, track } from "./Marquee.styles";
 
 const chips = [
   { tone: "brand", mark: "あ", label: "フォーカスするだけで自動切り替え" },
@@ -15,7 +15,7 @@ const loop = [0, 1] as const;
 
 <div class={marquee} aria-hidden="true">
   <div class={row}>
-    <div class={track({ direction: "forward" })}>
+    <div class={track}>
       {loop.map(() =>
         chips.map((item) => (
           <span class={chip}>
@@ -24,20 +24,6 @@ const loop = [0, 1] as const;
           </span>
         )),
       )}
-    </div>
-  </div>
-  <div class={row}>
-    <div class={track({ direction: "reverse" })}>
-      {loop.map(() => (
-        <>
-          <span class={outline}>入力する場所に、適切な言語を。</span>
-          <span class={spark}>✦</span>
-          <span class={outlineFill}>READY TYPE</span>
-          <span class={spark}>✦</span>
-          <span class={outline}>あ ⇄ A</span>
-          <span class={spark}>✦</span>
-        </>
-      ))}
     </div>
   </div>
 </div>

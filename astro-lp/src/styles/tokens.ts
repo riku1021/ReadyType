@@ -71,9 +71,6 @@ export const tokens = defineTokens({
     accentSoft: { value: "linear-gradient(135deg, {colors.accent}, {colors.accentSoft})" },
     shine: { value: "linear-gradient(90deg, {colors.brand}, {colors.accent}, {colors.brand})" },
     howText: { value: "linear-gradient(90deg, {colors.howTextA}, {colors.howTextB})" },
-    outlineText: {
-      value: "linear-gradient(90deg, {colors.howTextA}, {colors.howTextB}, {colors.gold})",
-    },
     codeField: { value: "linear-gradient(135deg, {colors.codeWash}, {colors.goodWash})" },
     inkText: { value: "linear-gradient(90deg, {colors.ink}, {colors.inkSoft})" },
     success: { value: "linear-gradient(135deg, {colors.success}, {colors.successSoft})" },
