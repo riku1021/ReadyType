@@ -21,14 +21,10 @@ export const logo = cva({
 });
 
 export const logoMark = css({
-  width: "32px",
+  display: "block",
+  flex: "none",
   height: "32px",
-  borderRadius: "10px",
-  bgGradient: "brand",
-  display: "grid",
-  placeItems: "center",
-  color: "white",
-  fontStyle: "normal",
+  width: "auto",
 });
 
 export const logoAccent = cva({
