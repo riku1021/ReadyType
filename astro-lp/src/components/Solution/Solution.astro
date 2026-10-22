@@ -19,6 +19,7 @@ import {
   glanceLabel,
   glanceSurface,
   glanceTag,
+  glanceWrap,
   lang,
   mid,
   point,
@@ -45,7 +46,7 @@ const ideas = [
     <SectionIntro kicker="SOLUTION" lead="日本語も英語も、入力欄に合わせて自動で切り替わります。">
       ReadyTypeなら、<span class={gradText}>クリックするだけ。</span>
     </SectionIntro>
-    <div class={glance}>
+    <div class={glanceWrap}><div class={glance}>
       <div class:list={[glanceCard({ tone: "bad" }), tilt]} data-tilt>
         <div class={glanceTag}>😮‍💨 これまで</div>
         <div class={glanceSurface({ tone: "bad" })}>
@@ -77,7 +78,7 @@ const ideas = [
           <div class={caption({ tone: "good" })}>自動で英語に ✓</div>
         </div>
       </div>
-    </div>
+    </div></div>
     <div class={points}>
       {ideas.map((idea) => (
         <div class:list={[point, tilt, reveal]} data-reveal data-stagger data-tilt>

@@ -4,8 +4,11 @@ export const strip = css({
   bg: "white",
   py: "22px",
   display: "flex",
+  flexWrap: "wrap",
   alignItems: "center",
+  justifyContent: "center",
   gap: "18px",
+  rowGap: "10px",
   overflow: "hidden",
   borderBottomWidth: "1px",
   borderBottomStyle: "solid",
@@ -14,18 +17,17 @@ export const strip = css({
 
 export const label = css({
   flex: "none",
-  ml: "24px",
+  ml: "gutter",
   fontWeight: "black",
-  fontSize: "13px",
+  fontSize: "0.8125rem",
   color: "muted",
   letterSpacing: "0.06em",
   whiteSpace: "nowrap",
-  _bp700: { display: "none" },
 });
 
 export const viewport = css({
   overflow: "hidden",
-  flex: "1",
+  flex: "1 1 280px",
   maskImage: "linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent)",
   WebkitMaskImage: "linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent)",
 });
@@ -51,7 +53,7 @@ export const appChip = css({
   pr: "16px",
   pl: "6px",
   fontWeight: "extrabold",
-  fontSize: "13.5px",
+  fontSize: "0.8438rem",
   fontStyle: "normal",
   transition: ".25s",
   _hover: { transform: "translateY(-4px)", boxShadow: "card", bg: "white" },

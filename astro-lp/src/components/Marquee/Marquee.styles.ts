@@ -5,7 +5,7 @@ export const marquee = css({
   py: "20px",
   display: "grid",
   gap: "14px",
-  overflow: "hidden",
+  overflow: "clip",
   position: "relative",
   "&::before": {
     content: '""',
@@ -45,7 +45,7 @@ export const chip = css({
   gap: "12px",
   color: "white",
   fontWeight: "black",
-  fontSize: "16px",
+  fontSize: "clamp(0.875rem, 1.6vw, 1rem)",
   whiteSpace: "nowrap",
   py: "7px",
   pr: "22px",
@@ -56,7 +56,6 @@ export const chip = css({
   borderStyle: "solid",
   borderColor: "rgba(255, 255, 255, 0.18)",
   backdropFilter: "blur(6px)",
-  _bp700: { fontSize: "14px" },
 });
 
 export const chipMark = cva({
@@ -67,7 +66,7 @@ export const chipMark = cva({
     display: "grid",
     placeItems: "center",
     fontWeight: "black",
-    fontSize: "16px",
+    fontSize: "1rem",
     color: "white",
     fontStyle: "normal",
   },
@@ -83,30 +82,28 @@ export const chipMark = cva({
 
 export const outline = css({
   fontWeight: "black",
-  fontSize: "40px",
+  fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
   lineHeight: "1.2",
   whiteSpace: "nowrap",
   color: "transparent",
   WebkitTextStroke: "1.4px rgba(255, 255, 255, 0.6)",
   letterSpacing: "0.02em",
-  _bp700: { fontSize: "28px" },
 });
 
 export const outlineFill = css({
   fontWeight: "black",
-  fontSize: "40px",
+  fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
   lineHeight: "1.2",
   whiteSpace: "nowrap",
   fontFamily: "latin",
   letterSpacing: "0.12em",
   WebkitTextStroke: "0",
   textGradient: "outlineText",
-  _bp700: { fontSize: "28px" },
 });
 
 export const spark = css({
   color: "gold",
-  fontSize: "26px",
+  fontSize: "1.625rem",
   animation: "orbit 8s linear infinite",
   display: "inline-block",
 });

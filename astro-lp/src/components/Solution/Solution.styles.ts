@@ -2,29 +2,34 @@ import { css, cva } from "styled-system/css";
 
 export const solution = css({
   bgGradient: "solution",
-  borderTopRadius: "56px",
+  borderTopRadius: "clamp(32px, 5vw, 56px)",
   mt: "-1px",
-  _bp900: { borderTopRadius: "36px" },
 });
 
 const conic =
   "conic-gradient(from var(--ang), var(--colors-brand), var(--colors-accent), var(--colors-gold), var(--colors-brand)) border-box";
 
-export const glance = css({
-  display: "grid",
-  gridTemplateColumns: "1fr auto 1fr",
-  gap: "18px",
-  alignItems: "stretch",
+export const glanceWrap = css({
+  containerType: "inline-size",
   maxWidth: "1000px",
   mx: "auto",
-  mb: "34px",
-  _bp900: { gridTemplateColumns: "1fr" },
+  mb: "clamp(24px, 4vw, 34px)",
+});
+
+export const glance = css({
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)",
+  gap: "clamp(12px, 2vw, 18px)",
+  alignItems: "stretch",
+  maxWidth: "none",
+  m: "0",
+  _glanceTight: { gridTemplateColumns: "minmax(0, 1fr)" },
 });
 
 export const glanceCard = cva({
   base: {
     borderRadius: "30px",
-    p: "26px 24px",
+    p: "clamp(18px, 3vw, 26px) clamp(16px, 2.6vw, 24px)",
     borderWidth: "2px",
     borderStyle: "solid",
     borderColor: "line",
@@ -48,7 +53,7 @@ export const glanceCard = cva({
   },
 });
 
-export const glanceTag = css({ fontWeight: "black", fontSize: "17px" });
+export const glanceTag = css({ fontWeight: "black", fontSize: "1.0625rem" });
 
 export const glanceSurface = cva({
   base: { borderRadius: "20px", p: "16px" },
@@ -61,7 +66,7 @@ export const glanceSurface = cva({
 });
 
 export const glanceLabel = css({
-  fontSize: "12px",
+  fontSize: "0.75rem",
   fontWeight: "extrabold",
   color: "muted",
   mb: "8px",
@@ -78,9 +83,11 @@ export const glanceField = cva({
     px: "16px",
     py: "14px",
     fontWeight: "extrabold",
-    fontSize: "18px",
+    fontSize: "1.125rem",
     display: "flex",
+    flexWrap: "wrap",
     alignItems: "center",
+    gap: "6px",
     minHeight: "56px",
   },
   variants: {
@@ -102,7 +109,7 @@ export const glanceField = cva({
         color: "dangerText",
         fontFamily: "mono",
         fontWeight: "semibold",
-        fontSize: "15px",
+        fontSize: "0.9375rem",
       },
     },
     {
@@ -114,7 +121,7 @@ export const glanceField = cva({
         color: "code",
         fontFamily: "mono",
         fontWeight: "semibold",
-        fontSize: "15px",
+        fontSize: "0.9375rem",
       },
     },
   ],
@@ -124,7 +131,7 @@ export const cross = css({
   ml: "auto",
   color: "danger",
   fontWeight: "black",
-  fontSize: "20px",
+  fontSize: "1.25rem",
   fontStyle: "normal",
   animation: "shk 2.6s infinite",
 });
@@ -134,7 +141,7 @@ export const lang = cva({
     ml: "auto",
     color: "white",
     fontWeight: "black",
-    fontSize: "12.5px",
+    fontSize: "0.7812rem",
     px: "12px",
     py: "5px",
     borderRadius: "pill",
@@ -150,7 +157,7 @@ export const lang = cva({
 });
 
 export const caption = cva({
-  base: { fontSize: "13.5px", fontWeight: "extrabold", mt: "8px" },
+  base: { fontSize: "0.8438rem", fontWeight: "extrabold", mt: "8px" },
   variants: {
     tone: {
       bad: { color: "danger" },
@@ -171,21 +178,20 @@ export const mid = css({
   display: "grid",
   placeItems: "center",
   fontWeight: "black",
-  fontSize: "24px",
+  fontSize: "1.5rem",
   color: "brand",
   boxShadow: "card",
   animation: "nudge 1.4s ease-in-out infinite",
-  _bp900: { transform: "rotate(90deg)", mx: "auto" },
+  _glanceTight: { transform: "rotate(90deg)", justifySelf: "center" },
 });
 
 export const points = css({
   display: "grid",
-  gridTemplateColumns: "repeat(3, 1fr)",
-  gap: "20px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 230px), 1fr))",
+  gap: "clamp(14px, 2vw, 20px)",
   maxWidth: "980px",
   mx: "auto",
   mb: "36px",
-  _bp900: { gridTemplateColumns: "1fr" },
 });
 
 export const point = css({
@@ -208,27 +214,27 @@ export const pointIcon = css({
   height: "56px",
   borderRadius: "18px",
   bg: "soft",
-  fontSize: "28px",
+  fontSize: "1.75rem",
   mx: "auto",
   mb: "10px",
   fontStyle: "normal",
 });
 
 export const pointTitle = css({
-  fontSize: "17px",
+  fontSize: "1.0625rem",
   lineHeight: "1.35",
   fontWeight: "black",
   mb: "4px",
 });
 
-export const pointCopy = css({ fontSize: "14px", color: "muted" });
+export const pointCopy = css({ fontSize: "0.875rem", color: "muted" });
 
 export const boost = css({
   maxWidth: "980px",
   mx: "auto",
   borderRadius: "30px",
   color: "white",
-  p: "26px 32px",
+  p: "clamp(20px, 3vw, 26px) clamp(20px, 3.4vw, 32px)",
   display: "flex",
   gap: "20px",
   alignItems: "center",
@@ -240,7 +246,6 @@ export const boost = css({
   borderColor: "transparent",
   background: `linear-gradient(var(--colors-ink), var(--colors-ink)) padding-box, ${conic}`,
   animation: "angr 7s linear infinite",
-  _bp900: { textAlign: "center", justifyContent: "center" },
   "&::after": {
     content: '""',
     position: "absolute",
@@ -256,15 +261,15 @@ export const boost = css({
   "& > *": { position: "relative", zIndex: "1" },
 });
 
-export const boostIcon = css({ fontSize: "38px", animation: "bob 3s ease-in-out infinite" });
+export const boostIcon = css({ fontSize: "2.375rem", animation: "bob 3s ease-in-out infinite" });
 
 export const boostCopy = css({ flex: "1", minWidth: "240px" });
 
 export const boostTitle = css({
-  fontSize: "clamp(20px, 2.6vw, 26px)",
+  fontSize: "clamp(1.25rem, 2.6vw, 1.625rem)",
   display: "block",
   fontWeight: "black",
   lineHeight: "1.35",
 });
 
-export const boostSub = css({ color: "mist", fontSize: "14px" });
+export const boostSub = css({ color: "mist", fontSize: "0.875rem" });

@@ -4,7 +4,7 @@ const headingBase = {
   lineHeight: "1.35",
   fontWeight: "black",
   letterSpacing: "0.01em",
-  fontSize: "clamp(28px, 4.2vw, 42px)",
+  fontSize: "clamp(1.75rem, 4.2vw, 2.625rem)",
   mb: "14px",
 } as const;
 
@@ -18,7 +18,7 @@ export const lead = css({
   color: "muted",
   maxWidth: "640px",
   mx: "auto",
-  mb: "56px",
+  mb: "clamp(32px, 5vw, 56px)",
 });
 
 export const eyebrow = cva({
@@ -26,7 +26,7 @@ export const eyebrow = cva({
     display: "table",
     fontFamily: "latin",
     fontWeight: "extrabold",
-    fontSize: "13px",
+    fontSize: "0.8125rem",
     lineHeight: "1",
     letterSpacing: "0.14em",
     px: "16px",
@@ -38,13 +38,13 @@ export const eyebrow = cva({
       brand: {
         mx: "auto",
         mb: "14px",
-        color: "brand",
+        color: "eyebrowInk",
         bg: "soft",
         boxShadow: "inset 0 0 0 1px var(--colors-eyebrow-ring)",
       },
       start: {
         mb: "14px",
-        color: "brand",
+        color: "eyebrowInk",
         bg: "soft",
         boxShadow: "inset 0 0 0 1px var(--colors-eyebrow-ring)",
       },
@@ -54,7 +54,7 @@ export const eyebrow = cva({
         color: "mistBlue",
         bg: "rgba(78, 141, 255, 0.16)",
         boxShadow: "none",
-        _bp900: { display: "none" },
+        _howTight: { display: "none" },
       },
     },
   },

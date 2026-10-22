@@ -2,9 +2,9 @@ import { css, cva } from "styled-system/css";
 
 export const hero = css({
   position: "relative",
-  overflow: "hidden",
-  pt: "72px",
-  pb: "110px",
+  overflow: "clip",
+  pt: "clamp(40px, 7vw, 72px)",
+  pb: "clamp(64px, 9vw, 110px)",
   "&::before": {
     content: '""',
     position: "absolute",
@@ -70,15 +70,15 @@ export const orb = cva({
 });
 
 export const grid = css({
-  display: "grid",
-  gridTemplateColumns: "1.05fr 1fr",
-  gap: "48px",
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "clamp(32px, 5vw, 48px)",
   alignItems: "center",
-  _bp900: { gridTemplateColumns: "1fr" },
+  "& > :first-child": { flex: "1.05 1 min(100%, 420px)" },
 });
 
 export const title = css({
-  fontSize: "clamp(38px, 5.8vw, 64px)",
+  fontSize: "clamp(2.375rem, 5.8vw, 4rem)",
   lineHeight: "1.35",
   fontWeight: "black",
   mb: "22px",
@@ -99,10 +99,10 @@ export const word = [
 ];
 
 export const copy = css({
-  fontSize: "18px",
+  fontSize: "1.125rem",
   color: "muted",
   mb: "32px",
-  maxWidth: "480px",
+  maxWidth: "30rem",
   animation: "up 1s .5s both cubic-bezier(.2,.7,.2,1)",
 });
 
@@ -118,7 +118,7 @@ export const pills = css({
   gap: "10px",
   flexWrap: "wrap",
   mt: "28px",
-  fontSize: "13px",
+  fontSize: "0.8125rem",
   fontWeight: "extrabold",
   color: "muted",
   animation: "up 1s .5s both cubic-bezier(.2,.7,.2,1)",
@@ -132,7 +132,14 @@ export const pill = css({
   boxShadow: "inset 0 0 0 1px var(--colors-line)",
 });
 
-export const stageBox = css({ position: "relative" });
+export const stageBox = css({
+  position: "relative",
+  flex: "1 1 min(100%, 420px)",
+  maxWidth: "600px",
+  mx: "auto",
+  containerType: "inline-size",
+  "--bl": "clamp(0px, 2.4vw, 30px)",
+});
 
 export const wave = css({
   position: "absolute",
@@ -156,20 +163,24 @@ export const floatCard = cva({
     px: "14px",
     py: "10px",
     fontWeight: "black",
-    fontSize: "13px",
+    fontSize: "0.8125rem",
     display: "flex",
     gap: "8px",
     alignItems: "center",
     zIndex: "float",
     animation: "bob 5s ease-in-out infinite",
-    _bp900: { display: "none" },
   },
   variants: {
     place: {
-      auto: { left: "-30px", top: "36%" },
+      auto: { left: "calc(var(--bl) * -1)", top: "36%", _stageTight: { display: "none" } },
       rules: { right: "-8px", bottom: "-14px", animationDelay: "-2s" },
-      privacy: { left: "6%", top: "-22px", animationDelay: "-3.2s" },
-      shortcut: { right: "-30px", top: "30%", animationDelay: "-1s" },
+      privacy: {
+        left: "6%",
+        top: "-22px",
+        animationDelay: "-3.2s",
+        _stageTight: { display: "none" },
+      },
+      shortcut: { right: "calc(var(--bl) * -1)", top: "30%", animationDelay: "-1s" },
     },
   },
 });
@@ -182,7 +193,7 @@ export const floatIcon = css({
   display: "grid",
   placeItems: "center",
   color: "white",
-  fontSize: "12px",
+  fontSize: "0.75rem",
 });
 
 export const stage = css({
@@ -208,7 +219,7 @@ export const mock = cva({
 export const mockBody = css({ pt: "10px", px: "20px" });
 
 export const mockLabel = css({
-  fontSize: "12px",
+  fontSize: "0.75rem",
   fontWeight: "extrabold",
   color: "muted",
   mb: "6px",
@@ -222,7 +233,7 @@ export const field = cva({
     borderRadius: "14px",
     px: "16px",
     py: "12px",
-    fontSize: "18px",
+    fontSize: "1.125rem",
     fontWeight: "extrabold",
     minHeight: "54px",
     display: "flex",
@@ -238,7 +249,7 @@ export const field = cva({
         borderColor: "codeLine",
         fontFamily: "mono",
         fontWeight: "semibold",
-        fontSize: "15px",
+        fontSize: "0.9375rem",
         animation: "r2 6s infinite",
       },
     },
@@ -248,7 +259,7 @@ export const field = cva({
 export const chip = cva({
   base: {
     position: "absolute",
-    right: "-12px",
+    right: "calc(var(--bl) * -0.4)",
     top: "-16px",
     width: "70px",
     height: "70px",
@@ -269,5 +280,5 @@ export const chip = cva({
   },
 });
 
-export const chipMark = css({ fontSize: "28px", display: "block" });
-export const chipLabel = css({ fontSize: "10.5px", opacity: "0.9", fontWeight: "black" });
+export const chipMark = css({ fontSize: "1.75rem", display: "block" });
+export const chipLabel = css({ fontSize: "0.6562rem", opacity: "0.9", fontWeight: "black" });

@@ -32,6 +32,7 @@ import {
   ring,
   scan,
   scanLabel,
+  screenScale,
   shadow,
   source,
   stage,
@@ -65,7 +66,7 @@ const flow = [
 
 <section class={how} id="how" data-step="0">
   <div class={track} data-how-track>
-    <div class={stick}>
+    <div class={stick} data-how-stick>
       <div class:list={[wrap, grid]}>
         <div>
           <span class={eyebrow({ tone: "onDark" })}>HOW IT WORKS</span>
@@ -73,7 +74,7 @@ const flow = [
           <p class={lead}>アプリが入力欄の種類を見分け、入力ソースを切り替えます。スクロールすると、流れを順に確認できます。</p>
           <ol class={steps}>
             {flow.map((item, index) => (
-              <li class={step} data-how-step data-state={index === 0 ? "cur" : undefined}>
+              <li class={step} tabindex="0" data-how-step data-state={index === 0 ? "cur" : undefined}>
                 <span class={ring}>{item.icon}</span>
                 <div>
                   <h3 class={stepTitle}>{item.title}</h3>
@@ -84,9 +85,10 @@ const flow = [
           </ol>
         </div>
         <div class={stage}>
-          <div class={laptop}>
+          <div class={laptop} aria-hidden="true">
             <div class={lid}>
               <div class={display}>
+                <div class={screenScale}>
                 <div class={menu}><span>Cursor</span><i class={menuGrow}></i><b class={ime}><span class={imeEn}>A</span><span class={imeJa}>あ</span></b></div>
                 <div class={workspace}>
                   <div class={column}>
@@ -114,6 +116,7 @@ const flow = [
                   <span class={statusText} data-at="0">① 入力欄をクリック</span>
                   <span class={statusText} data-at="1">② 種類を判定中…</span>
                   <span class={statusText} data-at="2">③ 日本語に切り替え完了</span>
+                </div>
                 </div>
               </div>
             </div>

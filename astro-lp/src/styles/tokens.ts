@@ -41,7 +41,8 @@ export const tokens = defineTokens({
     success: { value: "#27C486" },
     successSoft: { value: "#7DE3B6" },
     reviewLine: { value: "#B9C7EC" },
-    reviewText: { value: "#9AA5C4" },
+    reviewText: { value: "#6F7BA0" },
+    eyebrowInk: { value: "#1456D6" },
     keyShadow: { value: "#C7D2EE" },
     track: { value: "#DCE4F8" },
     dot: { value: "#C9D3EC" },
@@ -116,9 +117,8 @@ export const tokens = defineTokens({
     wrap: { value: "1120px" },
   },
   spacing: {
-    section: { value: "96px" },
-    sectionCompact: { value: "72px" },
-    gutter: { value: "24px" },
+    section: { value: "clamp(56px, 9vw, 96px)" },
+    gutter: { value: "clamp(16px, 4vw, 24px)" },
   },
   zIndex: {
     float: { value: 3 },

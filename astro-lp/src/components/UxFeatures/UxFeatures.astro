@@ -15,6 +15,7 @@ import {
   grid,
   miniTag,
   privacy,
+  privacyBody,
   privacyCopy,
   privacyIcon,
   privacyTitle,
@@ -81,7 +82,7 @@ const managed = [
     </div>
     <div class:list={[privacy, reveal]} data-reveal data-stagger>
       <div class={privacyIcon}>🔒</div>
-      <div>
+      <div class={privacyBody}>
         <h3 class={privacyTitle}>入力した文章の内容は、読み取りません。</h3>
         <p class={privacyCopy}>
           ReadyTypeが使うのは、入力欄を識別するために必要な情報のみ。入力内容や個人データを送信することはありません。

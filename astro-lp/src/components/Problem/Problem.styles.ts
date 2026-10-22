@@ -6,9 +6,8 @@ export const problem = css({
 
 export const cards = css({
   display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  gap: "24px",
-  _bp900: { gridTemplateColumns: "1fr" },
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
+  gap: "clamp(16px, 3vw, 24px)",
 });
 
 export const card = css({
@@ -18,14 +17,14 @@ export const card = css({
   borderColor: "line",
   borderBottomWidth: "7px",
   borderRadius: "card",
-  p: "30px",
+  p: "clamp(20px, 3vw, 30px)",
   transition: ".25s",
   _hover: { transform: "translateY(-6px) rotate(-0.5deg)" },
   "&:nth-child(2):hover": { transform: "translateY(-6px) rotate(0.5deg)" },
 });
 
 export const cardTitle = css({
-  fontSize: "19px",
+  fontSize: "1.1875rem",
   lineHeight: "1.35",
   fontWeight: "black",
   mb: "14px",
@@ -40,7 +39,7 @@ export const bad = css({
   py: "14px",
   fontFamily: "mono",
   fontWeight: "bold",
-  fontSize: "19px",
+  fontSize: "1.1875rem",
   minHeight: "56px",
   boxShadow: "inset 0 0 0 1px var(--colors-line)",
   mb: "12px",
@@ -63,7 +62,7 @@ export const miss = css({
 
 export const punch = css({
   textAlign: "center",
-  fontSize: "clamp(22px, 3.2vw, 32px)",
+  fontSize: "clamp(1.375rem, 3.2vw, 2rem)",
   fontWeight: "black",
   mt: "44px",
   lineHeight: "1.35",

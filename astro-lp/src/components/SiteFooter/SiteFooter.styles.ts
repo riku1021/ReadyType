@@ -8,25 +8,27 @@ export const footer = css({
   pb: "28px",
   mt: "40px",
   borderTopRadius: "44px",
+  overflowX: "clip",
 });
 
 export const grid = css({
-  display: "grid",
-  gridTemplateColumns: "1.6fr 1fr 1fr",
-  gap: "40px",
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "clamp(28px, 5vw, 40px)",
   mb: "44px",
-  _bp900: { gridTemplateColumns: "1fr" },
+  "& > :first-child": { flex: "1.6 1 260px" },
+  "& > :not(:first-child)": { flex: "1 1 140px" },
 });
 
 export const blurb = css({
   mt: "14px",
-  fontSize: "14px",
+  fontSize: "0.875rem",
   lineHeight: "1.9",
 });
 
 export const columnTitle = css({
   color: "white",
-  fontSize: "14px",
+  fontSize: "0.875rem",
   mb: "12px",
   lineHeight: "1.35",
   fontWeight: "black",
@@ -34,7 +36,7 @@ export const columnTitle = css({
 
 export const footerLink = css({
   display: "block",
-  fontSize: "14px",
+  fontSize: "0.875rem",
   py: "4px",
   transition: ".2s",
   _hover: { color: "white", transform: "translateX(4px)" },
@@ -45,5 +47,5 @@ export const legal = css({
   borderTopStyle: "solid",
   borderTopColor: "rgba(255, 255, 255, 0.12)",
   pt: "22px",
-  fontSize: "12.5px",
+  fontSize: "0.7812rem",
 });

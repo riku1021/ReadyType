@@ -2,20 +2,18 @@ import { css, cva } from "styled-system/css";
 
 export const split = css({
   display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  gap: "56px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))",
+  gap: "clamp(32px, 5vw, 56px)",
   alignItems: "center",
-  _bp900: { gridTemplateColumns: "1fr" },
 });
 
 export const title = css({
   lineHeight: "1.35",
   fontWeight: "black",
   letterSpacing: "0.01em",
-  fontSize: "clamp(28px, 4.2vw, 42px)",
-  textAlign: "left",
+  fontSize: "clamp(1.75rem, 4.2vw, 2.625rem)",
+  textAlign: "start",
   mb: "14px",
-  _bp900: { textAlign: "center" },
 });
 
 export const copy = css({ color: "muted", mb: "18px" });
@@ -26,7 +24,7 @@ export const check = css({
   position: "relative",
   pl: "28px",
   fontWeight: "extrabold",
-  fontSize: "14.5px",
+  fontSize: "0.9062rem",
   mb: "6px",
   "&::before": {
     content: '"✓"',
@@ -38,7 +36,7 @@ export const check = css({
     borderRadius: "50%",
     bgGradient: "brand",
     color: "white",
-    fontSize: "11px",
+    fontSize: "0.6875rem",
     display: "grid",
     placeItems: "center",
   },
@@ -52,24 +50,25 @@ export const list = css({
 
 export const rule = css({
   display: "flex",
+  flexWrap: "wrap",
   alignItems: "center",
   gap: "12px",
   p: "14px 16px",
   borderRadius: "16px",
   bg: "canvas",
   fontWeight: "extrabold",
-  fontSize: "14px",
+  fontSize: "0.875rem",
   transition: ".25s",
   _hover: { transform: "translateX(6px)", bg: "soft" },
 });
 
-export const aside = css({ ml: "6px", fontWeight: "medium", color: "muted", fontSize: "12px" });
+export const aside = css({ ml: "6px", fontWeight: "medium", color: "muted", fontSize: "0.75rem" });
 
 export const hint = css({
   display: "block",
   fontWeight: "medium",
   color: "muted",
-  fontSize: "12px",
+  fontSize: "0.75rem",
 });
 
 export const tag = cva({
@@ -78,7 +77,7 @@ export const tag = cva({
     borderRadius: "pill",
     px: "12px",
     py: "3px",
-    fontSize: "11.5px",
+    fontSize: "0.7188rem",
     fontWeight: "black",
     color: "white",
   },

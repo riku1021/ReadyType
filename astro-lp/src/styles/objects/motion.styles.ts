@@ -12,6 +12,9 @@ export const reveal = css({
     "&[data-delay='1']": { transitionDelay: ".12s" },
     "&[data-delay='2']": { transitionDelay: ".24s" },
   },
+  _motionReduce: {
+    ".js &": { opacity: "1", transform: "none" },
+  },
 });
 
 export const tilt = css({

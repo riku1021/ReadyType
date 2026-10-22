@@ -3,11 +3,12 @@ import { css, cva } from "styled-system/css";
 export const logo = cva({
   base: {
     display: "flex",
+    flex: "none",
     alignItems: "center",
     gap: "10px",
     fontFamily: "latin",
     fontWeight: "extrabold",
-    fontSize: "21px",
+    fontSize: "1.3125rem",
     letterSpacing: "-0.02em",
   },
   variants: {

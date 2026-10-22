@@ -6,9 +6,9 @@ export const sideNav = css({
   top: "50%",
   transform: "translateY(-50%)",
   zIndex: "dots",
-  display: "grid",
+  display: "none",
   gap: "12px",
-  _bp1100: { display: "none" },
+  _wide: { display: "grid" },
 });
 
 export const sideLink = css({
@@ -34,7 +34,7 @@ export const sideLink = css({
     transform: "translateY(-50%) translateX(6px)",
     bg: "ink",
     color: "white",
-    fontSize: "12px",
+    fontSize: "0.75rem",
     fontWeight: "extrabold",
     px: "10px",
     py: "3px",

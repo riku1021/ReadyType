@@ -2,9 +2,8 @@ import { css } from "styled-system/css";
 
 export const grid = css({
   display: "grid",
-  gridTemplateColumns: "repeat(3, 1fr)",
-  gap: "22px",
-  _bp900: { gridTemplateColumns: "1fr" },
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 240px), 1fr))",
+  gap: "clamp(16px, 2.4vw, 22px)",
 });
 
 export const card = css({
@@ -18,7 +17,7 @@ export const card = css({
   placeItems: "center",
   color: "reviewText",
   fontWeight: "extrabold",
-  fontSize: "14px",
+  fontSize: "0.875rem",
   textAlign: "center",
   p: "24px",
   gap: "6px",
@@ -30,6 +29,6 @@ export const card = css({
     display: "block",
     letterSpacing: "0.2em",
     textGradient: "brand",
-    fontSize: "18px",
+    fontSize: "1.125rem",
   },
 });

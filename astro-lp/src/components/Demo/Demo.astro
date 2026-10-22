@@ -12,6 +12,7 @@ import {
   demoCaret,
   demoCaretCode,
   demoField,
+  demoScale,
   dot,
   dots,
   frame,
@@ -54,7 +55,8 @@ const steps = [
     </SectionIntro>
     <div class:list={[frame, reveal]} data-reveal>
       <div class={screen}>
-        <div class={demo} id="demo">
+        <div class={demo} id="demo" aria-hidden="true">
+          <div class={demoScale}>
           <div class={menu}>
             <b class={menuDot}></b>
             <span>Cursor</span><span>ファイル</span><span>編集</span>
@@ -87,6 +89,7 @@ const steps = [
           </div>
           <div class={toast} id="toast"></div>
           <div class={captionBar} id="cap">▶ 再生中</div>
+          </div>
         </div>
       </div>
     </div>

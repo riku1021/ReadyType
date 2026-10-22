@@ -10,7 +10,7 @@ export const appMark = cva({
     placeItems: "center",
     fontFamily: "latin",
     fontWeight: "extrabold",
-    fontSize: "11px",
+    fontSize: "0.6875rem",
     flex: "none",
   },
   variants: {

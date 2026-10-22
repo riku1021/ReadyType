@@ -2,13 +2,14 @@ import { css } from "styled-system/css";
 
 export const band = css({
   bgGradient: "brand",
-  borderRadius: "44px",
+  borderRadius: "clamp(28px, 4vw, 44px)",
   color: "white",
   textAlign: "center",
-  py: "76px",
-  px: "24px",
+  py: "clamp(48px, 8vw, 76px)",
+  px: "gutter",
   position: "relative",
   overflow: "hidden",
+  containerType: "inline-size",
   "&::before, &::after": {
     content: '""',
     position: "absolute",
@@ -34,11 +35,11 @@ export const key = css({
   placeItems: "center",
   fontFamily: "latin",
   fontWeight: "black",
-  fontSize: "28px",
+  fontSize: "1.75rem",
   boxShadow: "key",
   animation: "bob 5s ease-in-out infinite",
   zIndex: "1",
-  _bp900: { display: "none" },
+  _bandTight: { display: "none" },
 });
 
 export const keyPlace = [
@@ -59,13 +60,13 @@ export const kicker = css({
   borderRadius: "pill",
   fontWeight: "black",
   mb: "16px",
-  fontSize: "15px",
+  fontSize: "0.9375rem",
 });
 
 export const title = css({
   color: "white",
   textAlign: "center",
-  fontSize: "clamp(28px, 4.2vw, 42px)",
+  fontSize: "clamp(1.75rem, 4.2vw, 2.625rem)",
   lineHeight: "1.35",
   fontWeight: "black",
   letterSpacing: "0.01em",
@@ -80,7 +81,7 @@ export const otherOs = css({
   flexWrap: "wrap",
   gap: "8px 20px",
   mt: "18px",
-  fontSize: "14px",
+  fontSize: "0.875rem",
   fontWeight: "black",
 });
 

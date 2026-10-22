@@ -2,9 +2,8 @@ import { css, cva } from "styled-system/css";
 
 export const grid = css({
   display: "grid",
-  gridTemplateColumns: "repeat(3, 1fr)",
-  gap: "22px",
-  _bp900: { gridTemplateColumns: "1fr" },
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 270px), 1fr))",
+  gap: "clamp(16px, 2.4vw, 22px)",
 });
 
 export const card = css({
@@ -14,7 +13,7 @@ export const card = css({
   borderColor: "line",
   borderBottomWidth: "6px",
   borderRadius: "card",
-  p: "30px 26px",
+  p: "clamp(22px, 3vw, 30px) clamp(20px, 2.6vw, 26px)",
   boxShadow: "card",
   transition: ".2s",
   overflow: "hidden",
@@ -43,7 +42,7 @@ export const visual = css({
   gap: "8px",
   mb: "12px",
   fontWeight: "black",
-  fontSize: "14px",
+  fontSize: "0.875rem",
 });
 
 export const visualStack = css({
@@ -60,7 +59,7 @@ export const search = css({
   borderRadius: "12px",
   px: "10px",
   py: "6px",
-  fontSize: "12px",
+  fontSize: "0.75rem",
   fontWeight: "bold",
   color: "muted",
 });
@@ -74,7 +73,7 @@ export const appRow = css({
   px: "10px",
   py: "6px",
   fontWeight: "extrabold",
-  fontSize: "12.5px",
+  fontSize: "0.7812rem",
   transition: "transform .35s",
   "[data-feature]:hover &": {
     "&[data-shift='true']": { transform: "translateX(6px)" },
@@ -84,7 +83,7 @@ export const appRow = css({
 export const miniTag = cva({
   base: {
     fontStyle: "normal",
-    fontSize: "10.5px",
+    fontSize: "0.6562rem",
     fontWeight: "black",
     color: "white",
     px: "8px",
@@ -138,17 +137,17 @@ export const welcome = css({
   p: "8px",
   textAlign: "center",
   fontWeight: "black",
-  fontSize: "13px",
+  fontSize: "0.8125rem",
 });
 
 export const cardTitle = css({
-  fontSize: "18px",
+  fontSize: "1.125rem",
   lineHeight: "1.35",
   fontWeight: "black",
   mb: "6px",
 });
 
-export const cardCopy = css({ fontSize: "14.5px", color: "muted" });
+export const cardCopy = css({ fontSize: "0.9062rem", color: "muted" });
 
 export const privacy = css({
   position: "relative",
@@ -156,12 +155,12 @@ export const privacy = css({
   bg: "ink",
   color: "white",
   borderRadius: "36px",
-  p: "44px 40px",
   display: "flex",
+  flexWrap: "wrap",
   gap: "28px",
   alignItems: "center",
   mt: "28px",
-  _bp900: { flexDirection: "column", textAlign: "center", p: "36px 24px" },
+  p: "clamp(26px, 4vw, 44px) clamp(22px, 4vw, 40px)",
   "&::after": {
     content: '""',
     position: "absolute",
@@ -177,6 +176,8 @@ export const privacy = css({
   "& > *": { position: "relative", zIndex: "1" },
 });
 
+export const privacyBody = css({ flex: "1 1 260px" });
+
 export const privacyIcon = css({
   flex: "none",
   width: "72px",
@@ -185,14 +186,14 @@ export const privacyIcon = css({
   bgGradient: "brand",
   display: "grid",
   placeItems: "center",
-  fontSize: "30px",
+  fontSize: "1.875rem",
 });
 
 export const privacyTitle = css({
-  fontSize: "22px",
+  fontSize: "1.375rem",
   lineHeight: "1.35",
   fontWeight: "black",
   mb: "6px",
 });
 
-export const privacyCopy = css({ color: "mist", fontSize: "15px" });
+export const privacyCopy = css({ color: "mist", fontSize: "0.9375rem" });

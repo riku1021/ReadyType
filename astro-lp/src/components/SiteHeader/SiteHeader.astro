@@ -1,9 +1,9 @@
 ---
-import { navItems } from "../../content/landing";
+import { navItems, sideNavItems } from "../../content/landing";
 import { wrap } from "../../styles/objects/layout.styles";
 import Button from "../Button/Button.astro";
 import Logo from "../Logo/Logo.astro";
-import { header, nav, navLink, navList } from "./SiteHeader.styles";
+import { header, menuButton, mobileNav, nav, navLink, navList } from "./SiteHeader.styles";
 ---
 
 <header class={header} data-header>
@@ -15,5 +15,18 @@ import { header, nav, navLink, navList } from "./SiteHeader.styles";
       ))}
     </ul>
     <Button href="#download" size="nav" desktopDownload>ダウンロード</Button>
+    <button
+      class={menuButton}
+      id="menuBtn"
+      type="button"
+      aria-label="メニューを開く"
+      aria-expanded="false"
+      aria-controls="mnav"
+    ><i></i></button>
   </div>
+  <nav class={mobileNav} id="mnav" aria-label="メインメニュー">
+    {sideNavItems.map((item) => (
+      <a href={item.href}>{item.label}</a>
+    ))}
+  </nav>
 </header>

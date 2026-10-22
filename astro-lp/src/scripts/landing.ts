@@ -229,13 +229,40 @@ function bindDemo(): void {
     }
   };
 
-  play.addEventListener("click", () => {
-    paused = !paused;
-    play.textContent = paused ? "▶" : "⏸";
-    play.setAttribute("aria-label", paused ? "再生" : "一時停止");
-  });
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduced) {
+    chatText.textContent = "このコードの意味を教えて";
+    codeText.textContent = 'greet("World");';
+    code.dataset.active = "true";
+    ime.textContent = "A";
+    ime.dataset.ime = "en";
+    markStep(3, "③ コードエディタをクリック");
+    paused = true;
+    play.textContent = "▶";
+    play.setAttribute("aria-label", "再生");
+    let playing = false;
+    play.addEventListener("click", () => {
+      if (!playing) {
+        playing = true;
+        paused = false;
+        play.textContent = "⏸";
+        play.setAttribute("aria-label", "一時停止");
+        void loop();
+        return;
+      }
+      paused = !paused;
+      play.textContent = paused ? "▶" : "⏸";
+      play.setAttribute("aria-label", paused ? "再生" : "一時停止");
+    });
+  } else {
+    play.addEventListener("click", () => {
+      paused = !paused;
+      play.textContent = paused ? "▶" : "⏸";
+      play.setAttribute("aria-label", paused ? "再生" : "一時停止");
+    });
+  }
 
-  let started = false;
+  let started = reduced;
   new IntersectionObserver(
     (entries) => {
       const entry = entries[0];
@@ -250,10 +277,25 @@ function bindDemo(): void {
 function bindHow(): void {
   const section = document.getElementById("how");
   const track = asElement(section?.querySelector("[data-how-track]") ?? null);
-  if (!section || !track) return;
+  const stick = asElement(section?.querySelector("[data-how-stick]") ?? null);
+  if (!section || !track || !stick) return;
   const items = section.querySelectorAll<HTMLElement>("[data-how-step]");
 
+  const syncPin = (): void => {
+    const pinned = getComputedStyle(stick).position === "sticky";
+    if (pinned) {
+      delete section.dataset.nostick;
+      return;
+    }
+    section.dataset.nostick = "true";
+    section.dataset.step = "2";
+    items.forEach((item) => {
+      delete item.dataset.state;
+    });
+  };
+
   const update = (): void => {
+    if (section.dataset.nostick === "true") return;
     const bounds = track.getBoundingClientRect();
     const total = bounds.height - window.innerHeight;
     const progress = total > 0 ? Math.min(1, Math.max(0, -bounds.top / total)) : 0;
@@ -268,7 +310,11 @@ function bindHow(): void {
   };
 
   window.addEventListener("scroll", update, { passive: true });
-  window.addEventListener("resize", update);
+  window.addEventListener("resize", () => {
+    syncPin();
+    update();
+  });
+  syncPin();
   update();
 
   items.forEach((item, index) => {
@@ -278,6 +324,37 @@ function bindHow(): void {
       const top = window.scrollY + bounds.top;
       window.scrollTo({ top: top + total * ((index + 0.5) / 3), behavior: "smooth" });
     });
+    item.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      item.click();
+    });
+  });
+}
+
+function bindMenu(): void {
+  const button = document.getElementById("menuBtn");
+  const menu = document.getElementById("mnav");
+  if (!button || !menu) return;
+
+  const setOpen = (open: boolean): void => {
+    if (open) menu.dataset.open = "true";
+    else delete menu.dataset.open;
+    button.setAttribute("aria-expanded", open ? "true" : "false");
+    button.setAttribute("aria-label", open ? "メニューを閉じる" : "メニューを開く");
+  };
+
+  button.addEventListener("click", () => {
+    setOpen(menu.dataset.open !== "true");
+  });
+  menu.addEventListener("click", (event) => {
+    if (event.target instanceof HTMLAnchorElement) setOpen(false);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setOpen(false);
+  });
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 860) setOpen(false);
   });
 }
 
@@ -306,7 +383,14 @@ function bindSideNav(): void {
     });
     const downloadTop = download?.getBoundingClientRect().top;
     const hide = downloadTop !== undefined && downloadTop < window.innerHeight * 0.9;
-    if (cta) cta.dataset.show = window.scrollY > 650 && !hide ? "true" : "false";
+    const how = document.getElementById("how");
+    const howBounds = how?.getBoundingClientRect();
+    const inHow =
+      howBounds !== undefined &&
+      howBounds.top < window.innerHeight * 0.3 &&
+      howBounds.bottom > window.innerHeight * 0.7 &&
+      how?.dataset.nostick !== "true";
+    if (cta) cta.dataset.show = window.scrollY > 650 && !hide && !inHow ? "true" : "false";
   };
 
   window.addEventListener("scroll", update, { passive: true });
@@ -320,6 +404,7 @@ export function startLanding(): void {
   bindTilt();
   bindDemo();
   bindHow();
+  bindMenu();
   bindSideNav();
   bindDesktopDownload();
 }

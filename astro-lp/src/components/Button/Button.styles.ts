@@ -49,8 +49,8 @@ export const button = cva({
       },
     },
     size: {
-      md: { px: "32px", py: "16px", fontSize: "16px" },
-      nav: { px: "22px", py: "10px", fontSize: "14px" },
+      md: { px: "32px", py: "16px", fontSize: "1rem" },
+      nav: { px: "22px", py: "10px", fontSize: "0.875rem", _navCompact: { display: "none" } },
     },
   },
   defaultVariants: { variant: "main", size: "md" },

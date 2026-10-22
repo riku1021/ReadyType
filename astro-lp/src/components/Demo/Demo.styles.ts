@@ -8,6 +8,8 @@ export const frame = css({
   bgGradient: "brand",
   boxShadow: "video",
   position: "relative",
+  width: "100%",
+  containerType: "inline-size",
   transition: "transform .4s",
   _hover: { transform: "scale(1.015)" },
   "&::before": {
@@ -19,7 +21,6 @@ export const frame = css({
     borderStyle: "dashed",
     borderColor: "rgba(124, 92, 255, 0.35)",
     animation: "orbit 40s linear infinite reverse",
-    _bp900: { display: "none" },
   },
 });
 
@@ -29,6 +30,7 @@ export const screen = css({
   overflow: "hidden",
   aspectRatio: "16 / 9",
   bg: "ink",
+  _frameTight: { aspectRatio: "4 / 3" },
 });
 
 export const demo = css({
@@ -36,8 +38,14 @@ export const demo = css({
   inset: "0",
   containerType: "inline-size",
   bgGradient: "demo",
-  fontSize: "max(7px, 1.55cqw)",
+  fontSize: "1rem",
   color: "white",
+});
+
+export const demoScale = css({
+  position: "absolute",
+  inset: "0",
+  fontSize: "max(0.45rem, 1.55cqw)",
 });
 
 export const menu = css({
@@ -246,11 +254,10 @@ export const controls = css({
   gap: "22px",
   justifyContent: "center",
   alignItems: "flex-start",
-  flexWrap: "wrap",
+  flexWrap: "nowrap",
   maxWidth: "900px",
   mx: "auto",
   mt: "34px",
-  _bp700: { gap: "10px" },
 });
 
 export const play = css({
@@ -262,7 +269,7 @@ export const play = css({
   border: "0",
   bgGradient: "brand",
   color: "white",
-  fontSize: "16px",
+  fontSize: "1rem",
   cursor: "pointer",
   boxShadow: "glow",
 });
@@ -270,6 +277,7 @@ export const play = css({
 export const timeline = css({
   position: "relative",
   flex: "1",
+  minWidth: "0",
   display: "grid",
   gridTemplateColumns: "repeat(3, 1fr)",
   gap: "12px",
@@ -303,7 +311,7 @@ export const step = css({
   alignItems: "center",
   textAlign: "center",
   gap: "0",
-  opacity: "0.5",
+  opacity: "0.7",
   position: "relative",
   zIndex: "2",
   transition: "opacity .3s",
@@ -313,7 +321,7 @@ export const step = css({
 export const stepTime = css({
   fontFamily: "latin",
   fontWeight: "extrabold",
-  fontSize: "12px",
+  fontSize: "0.75rem",
   fontStyle: "normal",
   color: "muted",
   bg: "white",
@@ -339,7 +347,7 @@ export const stepBadge = css({
   placeItems: "center",
   fontFamily: "latin",
   fontWeight: "extrabold",
-  fontSize: "15px",
+  fontSize: "0.9375rem",
   mb: "10px",
   transition: ".4s",
   "[data-state='on'] &": {
@@ -356,7 +364,7 @@ export const stepBadge = css({
     fontSize: "0",
     "&::after": {
       content: '"✓"',
-      fontSize: "17px",
+      fontSize: "1.0625rem",
       color: "white",
     },
   },
@@ -364,15 +372,14 @@ export const stepBadge = css({
 
 export const stepLabel = css({
   fontWeight: "extrabold",
-  fontSize: "14px",
+  fontSize: "clamp(0.75rem, 1.6vw, 0.875rem)",
   lineHeight: "1.5",
-  _bp700: { fontSize: "12px" },
 });
 
 export const stepHint = css({
   display: "block",
   fontWeight: "semibold",
-  fontSize: "12px",
+  fontSize: "0.75rem",
   color: "muted",
 });
 
@@ -393,6 +400,6 @@ export const note = css({
   px: "18px",
   py: "8px",
   fontWeight: "extrabold",
-  fontSize: "14px",
+  fontSize: "0.875rem",
   boxShadow: "card",
 });

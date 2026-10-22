@@ -1,4 +1,5 @@
 ---
+import { skipLink } from "../styles/objects/layout.styles";
 import "../styles/index.css";
 
 interface Props {
@@ -33,6 +34,7 @@ const {
     </script>
   </head>
   <body>
+    <a class={skipLink} href="#problem">本文へスキップ</a>
     <slot />
     <script>
       import { startLanding } from "../scripts/landing";

@@ -5,12 +5,13 @@ export const how = css({
   color: "white",
   py: "0",
   position: "relative",
+  overflowX: "clip",
 });
 
 export const track = css({
   height: "340vh",
   position: "relative",
-  _bp900: { height: "300vh" },
+  _squat: { height: "auto" },
 });
 
 export const stick = css({
@@ -20,6 +21,9 @@ export const stick = css({
   display: "flex",
   alignItems: "center",
   overflow: "hidden",
+  containerType: "inline-size",
+  pt: "clamp(0px, calc(68px - (100svh - 560px) / 2), 68px)",
+  _squat: { position: "static", height: "auto", py: "48px" },
   "&::before": {
     content: '""',
     position: "absolute",
@@ -44,32 +48,33 @@ export const stick = css({
 
 export const grid = css({
   display: "grid",
-  gridTemplateColumns: "0.9fr 1.1fr",
-  gap: "48px",
+  gridTemplateColumns: "minmax(0, 0.9fr) minmax(0, 1.1fr)",
+  gap: "clamp(24px, 4vw, 48px)",
   alignItems: "center",
   width: "100%",
   position: "relative",
   zIndex: "1",
-  _bp900: { gridTemplateColumns: "1fr", gap: "6px" },
+  _howTight: { gridTemplateColumns: "minmax(0, 1fr)", gap: "clamp(4px, 1.2svh, 12px)" },
 });
 
 export const title = css({
   color: "white",
   textAlign: "left",
-  fontSize: "clamp(28px, 3.6vw, 46px)",
+  fontSize: "clamp(1.75rem, 3.6vw, 2.875rem)",
   lineHeight: "1.35",
   fontWeight: "black",
   letterSpacing: "0.01em",
   mb: "14px",
-  _bp900: { fontSize: "23px", mb: "8px" },
+  _howTight: { fontSize: "clamp(1.25rem, 5.4vw, 1.9rem)", mb: "clamp(6px, 1.6svh, 14px)" },
 });
 
 export const lead = css({
   textAlign: "left",
   m: "0 0 30px",
   color: "slate",
-  fontSize: "16px",
-  _bp900: { display: "none" },
+  fontSize: "1rem",
+  _howTight: { display: "none" },
+  _short: { display: "none" },
 });
 
 export const steps = css({
@@ -77,6 +82,7 @@ export const steps = css({
   display: "grid",
   gap: "12px",
   p: "0",
+  _howTight: { gap: "clamp(6px, 1.2svh, 12px)" },
 });
 
 export const step = css({
@@ -95,8 +101,8 @@ export const step = css({
   cursor: "pointer",
   transition: "background .4s, border-color .4s, opacity .4s",
   ".js &": {
-    opacity: "0.5",
-    "&[data-state='act']": { opacity: "0.78" },
+    opacity: "0.6",
+    "&[data-state='act']": { opacity: "0.85" },
     "&[data-state='cur']": {
       opacity: "1",
       bg: "rgba(78, 141, 255, 0.14)",
@@ -113,7 +119,13 @@ export const step = css({
     bgGradient: "brand",
   },
   "&[data-state='cur']::after": { width: "calc(var(--lp, 0) * 100%)" },
-  _bp900: { py: "10px", px: "14px", gap: "12px" },
+  _short: { py: "12px" },
+  _howTight: {
+    py: "clamp(8px, 1.6svh, 16px)",
+    px: "clamp(12px, 2.4vw, 18px)",
+    gap: "clamp(10px, 2vw, 16px)",
+  },
+  _squat: { ".js &": { opacity: "1" } },
 });
 
 export const ring = css({
@@ -126,9 +138,15 @@ export const ring = css({
   bg: "rgba(255, 255, 255, 0.08)",
   display: "grid",
   placeItems: "center",
-  fontSize: "24px",
+  fontSize: "1.5rem",
   overflow: "hidden",
   transition: "background .4s",
+  _howTight: {
+    width: "clamp(36px, 6svh, 54px)",
+    height: "clamp(36px, 6svh, 54px)",
+    fontSize: "clamp(1rem, 3svh, 1.5rem)",
+    borderRadius: "clamp(10px, 1.6svh, 16px)",
+  },
   "[data-state='cur'] &": { bgGradient: "brand" },
   ".js [data-state='act'] &": {
     "&::after": {
@@ -139,24 +157,23 @@ export const ring = css({
       display: "grid",
       placeItems: "center",
       fontWeight: "black",
-      fontSize: "22px",
+      fontSize: "1.375rem",
       color: "white",
     },
   },
-  _bp900: { width: "42px", height: "42px", fontSize: "19px", borderRadius: "12px" },
 });
 
 export const stepTitle = css({
-  fontSize: "22px",
+  fontSize: "1.375rem",
   lineHeight: "1.35",
   fontWeight: "black",
   mb: "2px",
-  _bp900: { fontSize: "16px" },
+  _howTight: { fontSize: "clamp(1rem, 2.6svh, 1.375rem)" },
 });
 
 export const stepText = css({
   color: "stepText",
-  fontSize: "15px",
+  fontSize: "0.9375rem",
   lineHeight: "1.7",
   ".js &": {
     maxHeight: "0",
@@ -165,7 +182,8 @@ export const stepText = css({
     transition: "max-height .5s, opacity .4s",
   },
   ".js [data-state='cur'] &": { maxHeight: "5em", opacity: "1" },
-  _bp900: { fontSize: "12.5px", lineHeight: "1.5" },
+  _squat: { ".js &": { maxHeight: "none", opacity: "1" } },
+  _howTight: { fontSize: "clamp(0.75rem, 1.8svh, 0.9375rem)", lineHeight: "1.5" },
 });
 
 export const stage = css({
@@ -173,7 +191,7 @@ export const stage = css({
   display: "flex",
   justifyContent: "center",
   py: "30px",
-  _bp900: { order: "-1", py: "6px", pb: "26px" },
+  _howTight: { order: "-1", pt: "0", pb: "clamp(10px, 2.4svh, 24px)" },
 });
 
 export const laptop = css({
@@ -185,7 +203,7 @@ export const laptop = css({
   transition: "transform 1s cubic-bezier(.2,.7,.2,1)",
   "[data-step='1'] &": { transform: "rotateX(6deg) rotateY(-6deg)" },
   "[data-step='2'] &": { transform: "rotateX(8deg) rotateY(14deg)" },
-  _bp900: { maxWidth: "300px" },
+  _howTight: { maxWidth: "min(100%, calc(28svh * 1.6), 520px)" },
 });
 
 export const lid = css({
@@ -207,8 +225,14 @@ export const display = css({
   overflow: "hidden",
   bgGradient: "screen",
   containerType: "inline-size",
-  fontSize: "max(6px, 2cqw)",
+  fontSize: "1rem",
   color: "white",
+});
+
+export const screenScale = css({
+  position: "absolute",
+  inset: "0",
+  fontSize: "max(0.45rem, 2cqw)",
 });
 
 export const base = css({
@@ -440,15 +464,14 @@ export const badge = css({
   display: "grid",
   placeItems: "center",
   textAlign: "center",
-  width: "84px",
-  height: "84px",
-  borderRadius: "24px",
+  width: "clamp(52px, 7vw, 84px)",
+  height: "clamp(52px, 7vw, 84px)",
+  borderRadius: "clamp(16px, 2vw, 24px)",
   fontWeight: "black",
   lineHeight: "1.1",
   color: "white",
   boxShadow: "0 20px 40px rgba(0, 0, 0, 0.4)",
   transition: ".7s",
-  _bp900: { width: "52px", height: "52px", borderRadius: "16px" },
 });
 
 export const badgeJa = css({
@@ -470,5 +493,9 @@ export const badgeEn = css({
   "[data-step='1'] &": { opacity: "0.7" },
 });
 
-export const badgeMark = css({ fontSize: "34px", display: "block", _bp900: { fontSize: "22px" } });
-export const badgeLabel = css({ fontSize: "11px", opacity: "0.9", _bp900: { display: "none" } });
+export const badgeMark = css({ fontSize: "clamp(1.4rem, 3vw, 2.1rem)", display: "block" });
+export const badgeLabel = css({
+  fontSize: "0.6875rem",
+  opacity: "0.9",
+  _howTight: { display: "none" },
+});

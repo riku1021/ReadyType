@@ -15,7 +15,7 @@ export const floatingCta = css({
   boxShadow: "cta",
   transition: "transform .45s cubic-bezier(.2,.7,.2,1)",
   whiteSpace: "nowrap",
+  maxWidth: "calc(100% - 32px)",
   "&[data-show='true']": { transform: "translate(-50%, 0)" },
   _hover: { filter: "brightness(1.08)" },
-  _bp900: { bottom: "14px" },
 });
