@@ -78,11 +78,15 @@ fi
 # externalBin 用 sidecar を先に用意（tauri_build の存在チェック対策を含む）。
 # cargo_args（Tauri 由来の --release 等）は渡さない。二重指定で cargo が失敗する。
 PREPARE="${SCRIPT_DIR}/prepare-tis-list-sidecar.sh"
+prepare_args=()
 if [[ "${profile}" == "release" ]]; then
-  bash "${PREPARE}" --release
-else
-  bash "${PREPARE}"
+  prepare_args+=(--release)
 fi
+# Tauri の `--target` と sidecar の triple を揃える（Intel 向けクロスコンパイル）。
+if [[ -n "${target_triple}" ]]; then
+  prepare_args+=(--target "${target_triple}")
+fi
+bash "${PREPARE}" ${prepare_args[@]+"${prepare_args[@]}"}
 
 # Always build first so we can sign before launch (cargo run would exec unsigned).
 cargo build "${cargo_args[@]+"${cargo_args[@]}"}" --bin "${BIN_NAME}"

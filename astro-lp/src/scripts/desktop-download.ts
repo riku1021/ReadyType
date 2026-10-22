@@ -1,10 +1,11 @@
 /**
  * LP のダウンロード先。
  * ファイル名は `.github/workflows/desktop-build.yml` が Release に載せる名前と揃える。
- * macOS は Apple Silicon の DMG のみ（Intel 用は CI が作らない）。
+ * macOS は Apple Silicon（mac）と Intel（macIntel）で DMG を分ける。
+ * ブラウザからは両者を安定して判別できないので、自動選択は Apple Silicon のまま。
  */
 
-export type DesktopOs = "mac" | "windows" | "linux";
+export type DesktopOs = "mac" | "macIntel" | "windows" | "linux";
 
 export const desktopReleasePageUrl = "https://github.com/riku1021/ReadyType/releases/latest";
 
@@ -12,12 +13,14 @@ const downloadBase = `${desktopReleasePageUrl}/download`;
 
 export const desktopInstallerFile: Record<DesktopOs, string> = {
   mac: "ReadyType-aarch64.dmg",
+  macIntel: "ReadyType-x64.dmg",
   windows: "ReadyType-x64-setup.exe",
   linux: "ReadyType-x64.AppImage",
 };
 
 const installerLabel: Record<DesktopOs, string> = {
   mac: "⬇ macOS（Apple Silicon）用をダウンロード",
+  macIntel: "⬇ macOS（Intel）用をダウンロード",
   windows: "⬇ Windows 用をダウンロード",
   linux: "⬇ Linux 用をダウンロード",
 };

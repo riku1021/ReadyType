@@ -8,6 +8,8 @@
 # プレースホルダを書き、実体は内容が変わったときだけ上書きする。
 #
 # 呼び出し元: macOS `dev-runner.sh`（dev / build 共通）。build.rs がプレースホルダを補う。
+# `--target <triple>` はクロスコンパイル用（CI の Intel Mac など）。
+# 省略時はホスト triple。出力は常に `target/sidecar/tis-list-enabled-$TRIPLE`。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,6 +18,7 @@ cd "${ROOT}"
 
 PROFILE="debug"
 CARGO_PROFILE_ARGS=()
+TARGET_TRIPLE=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --release)
@@ -23,8 +26,16 @@ while [[ $# -gt 0 ]]; do
       CARGO_PROFILE_ARGS=(--release)
       shift
       ;;
+    --target)
+      if [[ $# -lt 2 || -z "${2}" ]]; then
+        echo "usage: $0 [--release] [--target <triple>]" >&2
+        exit 2
+      fi
+      TARGET_TRIPLE="$2"
+      shift 2
+      ;;
     *)
-      echo "usage: $0 [--release]" >&2
+      echo "usage: $0 [--release] [--target <triple>]" >&2
       exit 2
       ;;
   esac
@@ -32,9 +43,13 @@ done
 
 # `rustc -Vv | awk … exit` は pipefail 下で SIGPIPE(141) になるので使わない。
 # Tauri docs も `rustc --print host-tuple`（Rust 1.84+）を推奨。
-TRIPLE="$(rustc --print host-tuple 2>/dev/null || true)"
-if [[ -z "${TRIPLE}" ]]; then
-  TRIPLE="$(rustc -Vv | sed -n 's/^host: //p')"
+if [[ -n "${TARGET_TRIPLE}" ]]; then
+  TRIPLE="${TARGET_TRIPLE}"
+else
+  TRIPLE="$(rustc --print host-tuple 2>/dev/null || true)"
+  if [[ -z "${TRIPLE}" ]]; then
+    TRIPLE="$(rustc -Vv | sed -n 's/^host: //p')"
+  fi
 fi
 if [[ -z "${TRIPLE}" ]]; then
   echo "error: failed to detect rustc host triple" >&2
@@ -52,9 +67,20 @@ if [[ ! -e "${DEST}" ]]; then
   chmod +x "${DEST}"
 fi
 
-cargo build --bin tis-list-enabled "${CARGO_PROFILE_ARGS[@]+"${CARGO_PROFILE_ARGS[@]}"}"
+CARGO_TARGET_ARGS=()
+if [[ -n "${TARGET_TRIPLE}" ]]; then
+  CARGO_TARGET_ARGS=(--target "${TRIPLE}")
+fi
+cargo build --bin tis-list-enabled \
+  "${CARGO_PROFILE_ARGS[@]+"${CARGO_PROFILE_ARGS[@]}"}" \
+  "${CARGO_TARGET_ARGS[@]+"${CARGO_TARGET_ARGS[@]}"}"
 
-SRC="${TARGET_DIR}/${PROFILE}/tis-list-enabled"
+# `--target` 付きの成果物は `target/<triple>/<profile>/` に出る。
+if [[ -n "${TARGET_TRIPLE}" ]]; then
+  SRC="${TARGET_DIR}/${TRIPLE}/${PROFILE}/tis-list-enabled"
+else
+  SRC="${TARGET_DIR}/${PROFILE}/tis-list-enabled"
+fi
 if [[ ! -x "${SRC}" ]]; then
   echo "error: expected helper not found: ${SRC}" >&2
   exit 1

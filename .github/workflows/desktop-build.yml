@@ -1,14 +1,15 @@
 # Desktop installers for macOS, Windows, and Linux.
 #
-# Tauri cannot cross-compile these bundles from macOS. Each job builds on a
-# native runner and uploads the run's Artifacts. On main, the publish job also
-# attaches three stable filenames to the GitHub Release `app-v<version>`
-# (version is tauri.conf.json). The landing page links to
-# `releases/latest/download/<filename>`.
+# Windows and Linux bundles are built on their own runners. Intel macOS is
+# cross-compiled on the Apple Silicon runner. Each job uploads Artifacts.
+# On main, the publish job also attaches the stable filenames below to the
+# GitHub Release `app-v<version>` (version is tauri.conf.json). The landing
+# page links to `releases/latest/download/<filename>`.
 #
 # Filenames must match `desktopInstallerFile` in
 # astro-lp/src/scripts/desktop-download.ts:
-#   ReadyType-aarch64.dmg, ReadyType-x64-setup.exe, ReadyType-x64.AppImage
+#   ReadyType-aarch64.dmg, ReadyType-x64.dmg,
+#   ReadyType-x64-setup.exe, ReadyType-x64.AppImage
 #
 # macOS CI is ad-hoc signed (no Developer ID). Gatekeeper can block that DMG
 # on other Macs until notarization is configured.
@@ -43,21 +44,31 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Host is Apple Silicon. No --target, so the macOS sidecar triple matches.
+          # Both Macs are built on the Apple Silicon runner.
+          # `--target` keeps the sidecar triple and the DMG arch in lockstep.
+          # https://v2.tauri.app/distribute/pipelines/github/
           # The public download is the DMG. Local `mise run build` still skips it.
           - platform: macos-latest
-            args: --bundles dmg
+            target: aarch64-apple-darwin
+            installer: ReadyType-aarch64.dmg
+          - platform: macos-latest
+            target: x86_64-apple-darwin
+            installer: ReadyType-x64.dmg
           # Ubuntu 22.04 keeps the glibc baseline low enough for older distros.
           # https://v2.tauri.app/distribute/appimage/
           # Linux and Windows use tauri.conf.json targets: all (deb, rpm, appimage / nsis, msi).
           - platform: ubuntu-22.04
+            installer: ReadyType-x64.AppImage
           - platform: windows-latest
+            installer: ReadyType-x64-setup.exe
 
     runs-on: ${{ matrix.platform }}
     timeout-minutes: 90
     env:
       TAURI_APP_PATH: ${{ github.workspace }}/tauri-desktop/rust-native
       TAURI_FRONTEND_PATH: ${{ github.workspace }}/tauri-desktop/react-ui
+      TAURI_TARGET: ${{ matrix.target }}
+      INSTALLER_NAME: ${{ matrix.installer }}
 
     steps:
       - uses: actions/checkout@v7
@@ -87,11 +98,15 @@ jobs:
           cache-dependency-path: tauri-desktop/react-ui/pnpm-lock.yaml
 
       # @1.98.1 matches rust-toolchain.toml. @stable would ignore that pin.
+      # Extra targets are only needed for the macOS cross builds.
       - uses: dtolnay/rust-toolchain@1.98.1
+        with:
+          targets: ${{ matrix.target }}
 
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: tauri-desktop/rust-native -> target
+          key: ${{ matrix.target || matrix.platform }}
 
       - name: Install frontend dependencies
         working-directory: tauri-desktop/react-ui
@@ -104,11 +119,8 @@ jobs:
         if: runner.os == 'macOS'
         run: echo 'APPLE_SIGNING_IDENTITY=-' >> "$GITHUB_ENV"
 
-      - name: Prepare macOS input-source sidecar
-        if: runner.os == 'macOS'
-        working-directory: tauri-desktop/rust-native
-        run: bash scripts/macos/prepare-tis-list-sidecar.sh --release
-
+      # macOS sidecar is prepared by scripts/macos/dev-runner.sh, which receives
+      # this --target. A separate prepare step would build tis-list-enabled twice.
       - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -116,7 +128,7 @@ jobs:
           projectPath: tauri-desktop/rust-native
           # Local CLI. The action splits this on spaces, so the path must not contain spaces.
           tauriScript: pnpm --dir ../react-ui exec tauri
-          args: ${{ matrix.args }}
+          args: ${{ matrix.target && format('--target {0} --bundles dmg', matrix.target) || '' }}
           uploadWorkflowArtifacts: true
 
       # Stable names for releases/latest/download. The .app directory is not a
@@ -127,18 +139,23 @@ jobs:
           set -eu
           shopt -s failglob
           mkdir -p release-assets
+          bundle_root="tauri-desktop/rust-native/target"
+          if [ -n "${TAURI_TARGET}" ]; then
+            bundle_root="${bundle_root}/${TAURI_TARGET}"
+          fi
+          bundle_root="${bundle_root}/release/bundle"
           case "${RUNNER_OS}" in
             macOS)
-              cp tauri-desktop/rust-native/target/release/bundle/dmg/ReadyType_*.dmg \
-                release-assets/ReadyType-aarch64.dmg
+              cp "${bundle_root}/dmg/ReadyType_"*.dmg \
+                "release-assets/${INSTALLER_NAME}"
               ;;
             Linux)
-              cp tauri-desktop/rust-native/target/release/bundle/appimage/ReadyType_*.AppImage \
-                release-assets/ReadyType-x64.AppImage
+              cp "${bundle_root}/appimage/ReadyType_"*.AppImage \
+                "release-assets/${INSTALLER_NAME}"
               ;;
             Windows)
-              cp tauri-desktop/rust-native/target/release/bundle/nsis/ReadyType_*-setup.exe \
-                release-assets/ReadyType-x64-setup.exe
+              cp "${bundle_root}/nsis/ReadyType_"*-setup.exe \
+                "release-assets/${INSTALLER_NAME}"
               ;;
             *)
               echo "Unsupported runner: ${RUNNER_OS}" >&2
@@ -148,7 +165,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: desktop-installer-${{ runner.os }}
+          name: desktop-installer-${{ matrix.installer }}
           path: release-assets/*
           if-no-files-found: error
 
@@ -181,6 +198,7 @@ jobs:
           デスクトップ版のインストーラです。
 
           - macOS（Apple Silicon）: ReadyType-aarch64.dmg
+          - macOS（Intel）: ReadyType-x64.dmg
           - Windows: ReadyType-x64-setup.exe
           - Linux: ReadyType-x64.AppImage
 
