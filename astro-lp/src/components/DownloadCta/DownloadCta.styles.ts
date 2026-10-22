@@ -22,7 +22,9 @@ export const band = css({
 });
 
 export const key = css({
-  position: "absolute",
+  // .band > * の position: relative より詳細度を上げる。
+  // example.html の .kc { position: absolute !important } と同じ役割。
+  "&&": { position: "absolute" },
   width: "68px",
   height: "68px",
   borderRadius: "20px",
