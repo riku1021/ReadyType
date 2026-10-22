@@ -1,9 +1,12 @@
 ---
+import Glyph from "@/components/Glyph/Glyph.astro";
 import SectionIntro from "@/components/SectionIntro/SectionIntro.astro";
 import { reviews } from "@/content/landing";
 import { section, wrap } from "@/styles/objects/layout.styles";
 import { reveal } from "@/styles/objects/motion.styles";
-import { card, grid } from "./Reviews.styles";
+import { card, grid, stars } from "./Reviews.styles";
+
+const rating = [0, 1, 2, 3, 4] as const;
 ---
 
 <section class={section} id="review">
@@ -11,7 +14,10 @@ import { card, grid } from "./Reviews.styles";
     <SectionIntro kicker="REVIEW" lead="ここにレビューの説明文を入れてください。">ご利用者の声</SectionIntro>
     <div class={grid}>
       {reviews.map((text) => (
-        <div class:list={[card, reveal]} data-reveal data-stagger>{text}</div>
+        <div class:list={[card, reveal]} data-reveal data-stagger>
+          <span class={stars}>{rating.map(() => <Glyph name="lucide:star" />)}</span>
+          {text}
+        </div>
       ))}
     </div>
   </div>

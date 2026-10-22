@@ -272,6 +272,17 @@ export const play = css({
   fontSize: "1rem",
   cursor: "pointer",
   boxShadow: "glow",
+  display: "grid",
+  placeItems: "center",
+});
+
+export const playIcon = css({
+  "[data-paused='true'] &": { display: "none" },
+});
+
+export const playIconPaused = css({
+  "button &": { display: "none" },
+  "button[data-paused='true'] &": { display: "inline-block" },
 });
 
 export const timeline = css({
@@ -360,14 +371,17 @@ export const stepBadge = css({
   "[data-state='done'] &": {
     bgGradient: "brand",
     borderColor: "white",
-    color: "transparent",
-    fontSize: "0",
-    "&::after": {
-      content: '"✓"',
-      fontSize: "1.0625rem",
-      color: "white",
-    },
+    color: "white",
   },
+});
+
+export const stepNum = css({
+  "[data-state='done'] &": { display: "none" },
+});
+
+export const stepCheck = css({
+  "[data-demo-step] &": { display: "none" },
+  "[data-demo-step][data-state='done'] &": { display: "inline-block" },
 });
 
 export const stepLabel = css({

@@ -148,19 +148,17 @@ export const ring = css({
     borderRadius: "clamp(10px, 1.6svh, 16px)",
   },
   "[data-state='cur'] &": { bgGradient: "brand" },
-  ".js [data-state='act'] &": {
-    "&::after": {
-      content: '"✓"',
-      position: "absolute",
-      inset: "0",
-      bgGradient: "success",
-      display: "grid",
-      placeItems: "center",
-      fontWeight: "black",
-      fontSize: "1.375rem",
-      color: "white",
-    },
-  },
+});
+
+export const ringDone = css({
+  display: "none",
+  position: "absolute",
+  inset: "0",
+  bgGradient: "success",
+  placeItems: "center",
+  color: "white",
+  fontSize: "1.375rem",
+  ".js [data-state='act'] &": { display: "grid" },
 });
 
 export const stepTitle = css({

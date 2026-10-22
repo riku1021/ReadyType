@@ -24,11 +24,11 @@ export const card = css({
   transition: ".25s",
   whiteSpace: "pre-line",
   _hover: { transform: "translateY(-6px)", borderColor: "brand" },
-  "&::before": {
-    content: '"★★★★★"',
-    display: "block",
-    letterSpacing: "0.2em",
-    textGradient: "brand",
-    fontSize: "1.125rem",
-  },
+});
+
+export const stars = css({
+  display: "flex",
+  gap: "0.2em",
+  color: "brand",
+  fontSize: "1.125rem",
 });

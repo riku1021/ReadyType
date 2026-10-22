@@ -1,4 +1,5 @@
 ---
+import Glyph from "@/components/Glyph/Glyph.astro";
 import { wrap } from "@/styles/objects/layout.styles";
 import { eyebrow, howGrad } from "@/styles/objects/type.styles";
 import {
@@ -30,6 +31,7 @@ import {
   menu,
   menuGrow,
   ring,
+  ringDone,
   scan,
   scanLabel,
   screenScale,
@@ -52,13 +54,17 @@ import {
 
 const flow = [
   {
-    icon: "🖱️",
+    icon: "lucide:mouse",
     title: "入力欄を選ぶ",
     text: "チャットでもエディタでも、いつも通りクリックするだけ。",
   },
-  { icon: "🔍", title: "種類を見分ける", text: "ReadyTypeが、どんな入力欄かを判定します。" },
   {
-    icon: "⇄",
+    icon: "lucide:search",
+    title: "種類を見分ける",
+    text: "ReadyTypeが、どんな入力欄かを判定します。",
+  },
+  {
+    icon: "lucide:arrow-left-right",
     title: "自動で切り替える",
     text: "最適な入力ソースに切り替わり、そのまま入力できます。",
   },
@@ -76,7 +82,7 @@ const flow = [
           <ol class={steps}>
             {flow.map((item, index) => (
               <li class={step} tabindex="0" data-how-step data-state={index === 0 ? "cur" : undefined}>
-                <span class={ring}>{item.icon}</span>
+                <span class={ring}><Glyph name={item.icon} /><span class={ringDone}><Glyph name="lucide:check" /></span></span>
                 <div>
                   <h3 class={stepTitle}>{item.title}</h3>
                   <p class={stepText}>{item.text}</p>
@@ -94,11 +100,11 @@ const flow = [
                 <div class={toast}>日本語に自動で切り替え</div>
                 <div class={workspace}>
                   <div class={column}>
-                    <div class={columnTitle}>💬 Chat</div>
+                    <div class={columnTitle}><Glyph name="lucide:message-circle" /> Chat</div>
                     <div class={bubble}>このコードについて説明してください。</div>
                     <div class={field}>
                       <span class={draft}>メッセージを送信…</span><span class={typed}>こんにちは</span><span class={caret}></span>
-                      <div class={scan}><em class={scanLabel}>🔍 チャット欄を検出</em></div>
+                      <div class={scan}><em class={scanLabel}><Glyph name="lucide:search" /> チャット欄を検出</em></div>
                     </div>
                   </div>
                   <div class:list={[column, columnCode]}>

@@ -26,20 +26,20 @@ export const check = css({
   fontWeight: "extrabold",
   fontSize: "0.9062rem",
   mb: "6px",
-  "&::before": {
-    content: '"✓"',
-    position: "absolute",
-    left: "0",
-    top: "3px",
-    width: "20px",
-    height: "20px",
-    borderRadius: "50%",
-    bgGradient: "brand",
-    color: "white",
-    fontSize: "0.6875rem",
-    display: "grid",
-    placeItems: "center",
-  },
+});
+
+export const checkBadge = css({
+  position: "absolute",
+  left: "0",
+  top: "3px",
+  width: "20px",
+  height: "20px",
+  borderRadius: "50%",
+  bgGradient: "brand",
+  color: "white",
+  fontSize: "0.75rem",
+  display: "grid",
+  placeItems: "center",
 });
 
 export const list = css({

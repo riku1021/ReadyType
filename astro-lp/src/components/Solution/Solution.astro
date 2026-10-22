@@ -1,5 +1,6 @@
 ---
 import Button from "@/components/Button/Button.astro";
+import Glyph from "@/components/Glyph/Glyph.astro";
 import SectionIntro from "@/components/SectionIntro/SectionIntro.astro";
 import { caret } from "@/styles/objects/caret.styles";
 import { section, wrap } from "@/styles/objects/layout.styles";
@@ -31,10 +32,18 @@ import {
 } from "./Solution.styles";
 
 const ideas = [
-  { icon: "🎯", title: "入力欄ごとにルール", copy: "同じアプリの中でも、場所ごとに言語を設定。" },
-  { icon: "⚡", title: "フォーカスで自動切替", copy: "クリックした瞬間に、最適な入力ソースへ。" },
   {
-    icon: "🔒",
+    icon: "lucide:target",
+    title: "入力欄ごとにルール",
+    copy: "同じアプリの中でも、場所ごとに言語を設定。",
+  },
+  {
+    icon: "lucide:zap",
+    title: "フォーカスで自動切替",
+    copy: "クリックした瞬間に、最適な入力ソースへ。",
+  },
+  {
+    icon: "lucide:lock",
     title: "入力内容は読み取らない",
     copy: "使うのは、入力欄を識別するための情報だけ。",
   },
@@ -50,51 +59,51 @@ const ideas = [
       <div class:list={[glanceCard({ tone: "bad" }), tilt]} data-tilt>
         <div class={glanceTag}>😮‍💨 これまで</div>
         <div class={glanceSurface({ tone: "bad" })}>
-          <div class={glanceLabel}>💬 チャット欄</div>
-          <div class={glanceField({ surface: "chat", tone: "bad" })}>konnichiwa<em class={cross}>✕</em></div>
+          <div class={glanceLabel}><Glyph name="lucide:message-circle" /> チャット欄</div>
+          <div class={glanceField({ surface: "chat", tone: "bad" })}>konnichiwa<em class={cross}><Glyph name="lucide:x" /></em></div>
           <div class={caption({ tone: "bad" })}>英語のまま。手動で切り替え…</div>
         </div>
         <div class={glanceSurface({ tone: "bad" })}>
           <div class={glanceLabel}>&lt;/&gt; コードエディタ</div>
-          <div class={glanceField({ surface: "code", tone: "bad" })}>こんst<em class={cross}>✕</em></div>
+          <div class={glanceField({ surface: "code", tone: "bad" })}>こんst<em class={cross}><Glyph name="lucide:x" /></em></div>
           <div class={caption({ tone: "bad" })}>今度は日本語のまま…</div>
         </div>
       </div>
-      <div class={mid} aria-hidden="true">→</div>
+      <div class={mid} aria-hidden="true"><Glyph name="lucide:arrow-right" /></div>
       <div class:list={[glanceCard({ tone: "good" }), tilt]} data-tilt>
-        <div class={glanceTag}>✨ ReadyTypeなら</div>
+        <div class={glanceTag}><Glyph name="lucide:sparkles" /> ReadyTypeなら</div>
         <div class={glanceSurface({ tone: "good" })}>
-          <div class={glanceLabel}>💬 チャット欄</div>
+          <div class={glanceLabel}><Glyph name="lucide:message-circle" /> チャット欄</div>
           <div class={glanceField({ surface: "chat", tone: "good" })}>
             こんにちは<span class={caret()}></span><em class={lang({ tone: "ja" })}>あ 日本語</em>
           </div>
-          <div class={caption({ tone: "good" })}>自動で日本語に ✓</div>
+          <div class={caption({ tone: "good" })}>自動で日本語に <Glyph name="lucide:check" /></div>
         </div>
         <div class={glanceSurface({ tone: "good" })}>
           <div class={glanceLabel}>&lt;/&gt; コードエディタ</div>
           <div class={glanceField({ surface: "code", tone: "good" })}>
             function greet() {"{"}<em class={lang({ tone: "en" })}>A 英語</em>
           </div>
-          <div class={caption({ tone: "good" })}>自動で英語に ✓</div>
+          <div class={caption({ tone: "good" })}>自動で英語に <Glyph name="lucide:check" /></div>
         </div>
       </div>
     </div></div>
     <div class={points}>
       {ideas.map((idea) => (
         <div class:list={[point, tilt, reveal]} data-reveal data-stagger data-tilt>
-          <i class={pointIcon}>{idea.icon}</i>
+          <i class={pointIcon}><Glyph name={idea.icon} /></i>
           <h3 class={pointTitle}>{idea.title}</h3>
           <p class={pointCopy}>{idea.copy}</p>
         </div>
       ))}
     </div>
     <div class:list={[boost, reveal]} data-reveal data-stagger>
-      <span class={boostIcon}>🚀</span>
+      <span class={boostIcon}><Glyph name="lucide:rocket" /></span>
       <div class={boostCopy}>
         <b class={boostTitle}>さらに、作業を効率化しよう！</b>
         <small class={boostSub}>切り替えの手間をなくして、考えること・つくることに集中。</small>
       </div>
-      <Button href="#video" variant="white">動いているところを見る ↓</Button>
+      <Button href="#video" variant="white">動いているところを見る <Glyph name="lucide:arrow-down" /></Button>
     </div>
   </div>
 </section>

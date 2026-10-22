@@ -7,22 +7,13 @@ interface Props {
   size?: "md" | "nav";
   /** クリックで、判定した OS のインストーラへ進む */
   desktopDownload?: boolean;
-  /** 判定後にボタン文言を OS 名へ差し替える */
-  desktopDownloadLabel?: boolean;
 }
 
-const {
-  href,
-  variant = "main",
-  size = "md",
-  desktopDownload = false,
-  desktopDownloadLabel = false,
-} = Astro.props;
+const { href, variant = "main", size = "md", desktopDownload = false } = Astro.props;
 ---
 
 <a
   href={href}
   class={button({ variant, size })}
   data-download={desktopDownload ? "primary" : undefined}
-  data-download-label={desktopDownloadLabel ? "" : undefined}
 ><slot /></a>

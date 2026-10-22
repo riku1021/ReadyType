@@ -1,4 +1,5 @@
 ---
+import Glyph from "@/components/Glyph/Glyph.astro";
 import SectionIntro from "@/components/SectionIntro/SectionIntro.astro";
 import { section, wrap } from "@/styles/objects/layout.styles";
 import { reveal } from "@/styles/objects/motion.styles";
@@ -27,13 +28,17 @@ import {
   panes,
   paneTitle,
   play,
+  playIcon,
+  playIconPaused,
   pointer,
   pointerRing,
   screen,
   step,
   stepBadge,
+  stepCheck,
   stepHint,
   stepLabel,
+  stepNum,
   stepTime,
   timeline,
   timelineFill,
@@ -42,9 +47,9 @@ import {
 } from "./Demo.styles";
 
 const steps = [
-  { n: "1", time: "0:01", title: "チャット欄をクリック", hint: "→ 日本語に切り替わる" },
-  { n: "2", time: "0:03", title: "そのまま日本語で入力", hint: "打ち直しなし" },
-  { n: "3", time: "0:05", title: "エディタをクリック", hint: "→ 英語に切り替わる" },
+  { n: "1", time: "0:01", title: "チャット欄をクリック", hint: "日本語に切り替わる", arrow: true },
+  { n: "2", time: "0:03", title: "そのまま日本語で入力", hint: "打ち直しなし", arrow: false },
+  { n: "3", time: "0:05", title: "エディタをクリック", hint: "英語に切り替わる", arrow: true },
 ] as const;
 ---
 
@@ -61,14 +66,14 @@ const steps = [
             <b class={menuDot}></b>
             <span>Cursor</span><span>ファイル</span><span>編集</span>
             <span class={menuSpacer}></span>
-            <span>⚡ ReadyType</span>
+            <span><Glyph name="lucide:zap" /> ReadyType</span>
             <span class={ime} id="ime" data-ime="en">A</span>
           </div>
           <div class={window}>
             <div class={dots} aria-hidden="true"><i class={dot}></i><i class={dot}></i><i class={dot}></i></div>
             <div class={panes}>
               <div class={pane} id="pChat">
-                <div class={paneTitle}>💬 Chat</div>
+                <div class={paneTitle}><Glyph name="lucide:message-circle" /> Chat</div>
                 <div class={bubble}>このコードについて説明してください。</div>
                 <div class={demoField} id="fChat"><span id="tChat"></span><span class={demoCaret}></span></div>
               </div>
@@ -88,27 +93,27 @@ const steps = [
             <s class={pointerRing}></s>
           </div>
           <div class={toast} id="toast"></div>
-          <div class={captionBar} id="cap">▶ 再生中</div>
+          <div class={captionBar} id="cap">再生中</div>
           </div>
         </div>
       </div>
     </div>
     <div class={controls}>
-      <button class={play} type="button" id="dplay" aria-label="一時停止">⏸</button>
+      <button class={play} type="button" id="dplay" aria-label="一時停止"><Glyph name="lucide:pause" class={playIcon} /><Glyph name="lucide:play" class={playIconPaused} /></button>
       <div class={timeline} id="tline">
         <div class={timelineFill}></div>
         {steps.map((item) => (
           <div class={step} data-demo-step={item.n}>
             <em class={stepTime}>{item.time}</em>
-            <b class={stepBadge}>{item.n}</b>
-            <span class={stepLabel}>{item.title}<small class={stepHint}>{item.hint}</small></span>
+            <b class={stepBadge}><span class={stepNum}>{item.n}</span><Glyph name="lucide:check" class={stepCheck} /></b>
+            <span class={stepLabel}>{item.title}<small class={stepHint}>{item.arrow ? <Glyph name="lucide:arrow-right" /> : null}{item.hint}</small></span>
           </div>
         ))}
       </div>
     </div>
     <div class={notes}>
-      <span class={note}>💬 チャット欄 → 日本語</span>
-      <span class={note}>⌨️ コードエディタ → 英語</span>
+      <span class={note}><Glyph name="lucide:message-circle" /> チャット欄 <Glyph name="lucide:arrow-right" /> 日本語</span>
+      <span class={note}><Glyph name="lucide:keyboard" /> コードエディタ <Glyph name="lucide:arrow-right" /> 英語</span>
     </div>
   </div>
 </section>

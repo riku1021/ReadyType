@@ -1,13 +1,14 @@
 ---
+import Glyph from "@/components/Glyph/Glyph.astro";
 import { chip, chipMark, marquee, row, track } from "./Marquee.styles";
 
 const chips = [
   { tone: "brand", mark: "あ", label: "フォーカスするだけで自動切り替え" },
   { tone: "accent", mark: "A", label: "アプリ単位ではなく入力欄単位" },
-  { tone: "gold", mark: "⚡", label: "高速に、確実に切り替え" },
-  { tone: "success", mark: "🔒", label: "入力内容は読み取らない" },
-  { tone: "brand", mark: "⌨️", label: "打ち直しは、もう不要。" },
-  { tone: "accent", mark: "🎯", label: "入力欄ごとにルール設定" },
+  { tone: "gold", icon: "lucide:zap", label: "高速に、確実に切り替え" },
+  { tone: "success", icon: "lucide:lock", label: "入力内容は読み取らない" },
+  { tone: "brand", icon: "lucide:keyboard", label: "打ち直しは、もう不要。" },
+  { tone: "accent", icon: "lucide:target", label: "入力欄ごとにルール設定" },
 ] as const;
 
 const loop = [0, 1] as const;
@@ -19,7 +20,9 @@ const loop = [0, 1] as const;
       {loop.map(() =>
         chips.map((item) => (
           <span class={chip}>
-            <i class={chipMark({ tone: item.tone })}>{item.mark}</i>
+            <i class={chipMark({ tone: item.tone })}>
+              {"icon" in item ? <Glyph name={item.icon} /> : item.mark}
+            </i>
             {item.label}
           </span>
         )),

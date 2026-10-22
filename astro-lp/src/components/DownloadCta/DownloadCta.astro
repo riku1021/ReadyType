@@ -1,5 +1,6 @@
 ---
 import Button from "@/components/Button/Button.astro";
+import Glyph from "@/components/Glyph/Glyph.astro";
 import {
   type DesktopOs,
   desktopInstallerUrl,
@@ -34,13 +35,14 @@ const keys = ["あ", "A", "⌘", "⇧"] as const;
       {keys.map((mark, index) => (
         <span class:list={[key, keyPlace[index]]}>{mark}</span>
       ))}
-      <span class={kicker}>🚀 さらに、作業を効率化しよう！</span>
+      <span class={kicker}><Glyph name="lucide:rocket" /> さらに、作業を効率化しよう！</span>
       <h2 class={title}>入力する前から、<br />準備完了に。</h2>
       <p class={copy}>
         入力する場所に、適切な言語を。<br />ReadyTypeで、作業に集中できる時間を取り戻しましょう。
       </p>
-      <Button href={desktopReleasePageUrl} variant="white" desktopDownload desktopDownloadLabel>
-        ⬇ ダウンロード
+      <Button href={desktopReleasePageUrl} variant="white" desktopDownload>
+        <Glyph name="lucide:download" />
+        <span data-download-text>ダウンロード</span>
       </Button>
       <nav class={otherOs} aria-label="OS ごとのダウンロード">
         {

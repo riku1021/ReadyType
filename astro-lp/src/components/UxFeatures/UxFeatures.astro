@@ -1,4 +1,5 @@
 ---
+import Glyph from "@/components/Glyph/Glyph.astro";
 import SectionIntro from "@/components/SectionIntro/SectionIntro.astro";
 import { apps } from "@/content/landing";
 import { appMark } from "@/styles/objects/appMark.styles";
@@ -40,7 +41,7 @@ const managed = [
     </SectionIntro>
     <div class={grid}>
       <div class:list={[card, tilt, reveal]} data-feature data-reveal data-stagger data-tilt>
-        <div class={visual} data-icon>
+        <div class={visual} data-wiggle>
           <kbd class={keycap({ size: "lg" })}>⌘</kbd>
           <kbd class={keycap({ size: "lg" })}>⇧</kbd>
           <kbd class={keycap({ size: "lg" })}>L</kbd>
@@ -53,7 +54,7 @@ const managed = [
       </div>
       <div class:list={[card, tilt, reveal]} data-feature data-reveal data-stagger data-tilt>
         <div class:list={[visual, visualStack]}>
-          <div class={search}>🔍 アプリを検索…</div>
+          <div class={search}><Glyph name="lucide:search" /> アプリを検索…</div>
           {managed.map((row) => {
             const app = apps.find((item) => item.tone === row.tone);
             return (
@@ -81,7 +82,7 @@ const managed = [
       </div>
     </div>
     <div class:list={[privacy, reveal]} data-reveal data-stagger>
-      <div class={privacyIcon}>🔒</div>
+      <div class={privacyIcon}><Glyph name="lucide:lock" /></div>
       <div class={privacyBody}>
         <h3 class={privacyTitle}>入力した文章の内容は、読み取りません。</h3>
         <p class={privacyCopy}>

@@ -19,10 +19,10 @@ export const desktopInstallerFile: Record<DesktopOs, string> = {
 };
 
 const installerLabel: Record<DesktopOs, string> = {
-  mac: "⬇ macOS（Apple Silicon）用をダウンロード",
-  macIntel: "⬇ macOS（Intel）用をダウンロード",
-  windows: "⬇ Windows 用をダウンロード",
-  linux: "⬇ Linux 用をダウンロード",
+  mac: "macOS（Apple Silicon）用をダウンロード",
+  macIntel: "macOS（Intel）用をダウンロード",
+  windows: "Windows 用をダウンロード",
+  linux: "Linux 用をダウンロード",
 };
 
 export interface DesktopOsSignals {
@@ -80,8 +80,7 @@ export function bindDesktopDownload(): void {
   const label = installerLabel[os];
   for (const anchor of document.querySelectorAll<HTMLAnchorElement>("[data-download='primary']")) {
     anchor.href = url;
-    if (anchor.hasAttribute("data-download-label")) {
-      anchor.textContent = label;
-    }
+    const text = anchor.querySelector("[data-download-text]");
+    if (text) text.textContent = label;
   }
 }

@@ -1,5 +1,6 @@
 ---
 import Button from "@/components/Button/Button.astro";
+import Glyph from "@/components/Glyph/Glyph.astro";
 import WindowChrome from "@/components/WindowChrome/WindowChrome.astro";
 import { windowFrame } from "@/components/WindowChrome/WindowChrome.styles";
 import { caret } from "@/styles/objects/caret.styles";
@@ -48,20 +49,20 @@ import {
         入力欄にフォーカスするだけで、日本語と英語を自動で切り替え。「あ、英語のままだった…」を、もう終わりにしませんか。
       </p>
       <div class={actions}>
-        <Button href="#download" desktopDownload>⬇ 今すぐダウンロード</Button>
+        <Button href="#download" desktopDownload><Glyph name="lucide:download" /> 今すぐダウンロード</Button>
         <Button href="#how" variant="sub">使い方を見る</Button>
       </div>
       <div class={pills}>
-        <span class={pill}>⚡ 高速・低遅延で切り替え</span>
-        <span class={pill}>🎯 入力欄ごとに設定</span>
-        <span class={pill}>🔒 入力内容は読み取らない</span>
+        <span class={pill}><Glyph name="lucide:zap" /> 高速・低遅延で切り替え</span>
+        <span class={pill}><Glyph name="lucide:target" /> 入力欄ごとに設定</span>
+        <span class={pill}><Glyph name="lucide:lock" /> 入力内容は読み取らない</span>
       </div>
     </div>
     <div class={stageBox} aria-hidden="true">
       <div class={wave} aria-hidden="true"></div>
-      <div class={floatCard({ place: "auto" })}><span class={floatIcon}>⚡</span>自動で切り替え</div>
-      <div class={floatCard({ place: "rules" })}><span class={floatIcon}>✓</span>入力欄ごとにルール</div>
-      <div class={floatCard({ place: "privacy" })}><span class={floatIcon}>🔒</span>入力内容は読み取らない</div>
+      <div class={floatCard({ place: "auto" })}><span class={floatIcon}><Glyph name="lucide:zap" /></span>自動で切り替え</div>
+      <div class={floatCard({ place: "rules" })}><span class={floatIcon}><Glyph name="lucide:check" /></span>入力欄ごとにルール</div>
+      <div class={floatCard({ place: "privacy" })}><span class={floatIcon}><Glyph name="lucide:lock" /></span>入力内容は読み取らない</div>
       <div class={floatCard({ place: "shortcut" })}>
         <kbd class={keycap({ size: "mini" })}>⌘</kbd>
         <kbd class={keycap({ size: "mini" })}>⇧</kbd>
@@ -72,7 +73,7 @@ import {
         <div class:list={[windowFrame, mock({ scene: "ja" })]}>
           <WindowChrome />
           <div class={mockBody}>
-            <div class={mockLabel}>💬 チャット欄</div>
+            <div class={mockLabel}><Glyph name="lucide:message-circle" /> チャット欄</div>
             <div class={field({ scene: "ja" })}>こんにちは<span class={caret()}></span></div>
           </div>
           <div class={chip({ tone: "ja" })}><span><b class={chipMark}>あ</b><small class={chipLabel}>日本語</small></span></div>

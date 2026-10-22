@@ -32,7 +32,7 @@ export const card = css({
     pointerEvents: "none",
   },
   "&:hover::after": { transform: "scale(2.4)", opacity: "0.12" },
-  "&:hover [data-icon]": { animation: "wig .6s" },
+  "&:hover [data-wiggle]": { animation: "wig .6s" },
 });
 
 export const visual = css({
@@ -55,6 +55,9 @@ export const visualStack = css({
 });
 
 export const search = css({
+  display: "flex",
+  alignItems: "center",
+  gap: "6px",
   bg: "white",
   borderRadius: "12px",
   px: "10px",

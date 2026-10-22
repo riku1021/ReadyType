@@ -238,26 +238,28 @@ function bindDemo(): void {
     ime.dataset.ime = "en";
     markStep(3, "③ コードエディタをクリック");
     paused = true;
-    play.textContent = "▶";
+    play.dataset.paused = "true";
     play.setAttribute("aria-label", "再生");
     let playing = false;
     play.addEventListener("click", () => {
       if (!playing) {
         playing = true;
         paused = false;
-        play.textContent = "⏸";
+        delete play.dataset.paused;
         play.setAttribute("aria-label", "一時停止");
         void loop();
         return;
       }
       paused = !paused;
-      play.textContent = paused ? "▶" : "⏸";
+      if (paused) play.dataset.paused = "true";
+      else delete play.dataset.paused;
       play.setAttribute("aria-label", paused ? "再生" : "一時停止");
     });
   } else {
     play.addEventListener("click", () => {
       paused = !paused;
-      play.textContent = paused ? "▶" : "⏸";
+      if (paused) play.dataset.paused = "true";
+      else delete play.dataset.paused;
       play.setAttribute("aria-label", paused ? "再生" : "一時停止");
     });
   }
