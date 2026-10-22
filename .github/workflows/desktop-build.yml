@@ -1,0 +1,111 @@
+# Desktop installers for macOS, Windows, and Linux.
+#
+# Tauri cannot cross-compile these bundles from macOS. Each job builds on a
+# native runner. Download the installers from the workflow run's Artifacts.
+# This workflow does not create a GitHub Release.
+#
+# Layout is sibling directories, so the CLI only finds them via
+# TAURI_APP_PATH / TAURI_FRONTEND_PATH (see .mise.toml).
+# https://v2.tauri.app/distribute/pipelines/github/
+
+name: desktop-build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/desktop-build.yml
+      - rust-toolchain.toml
+      - tauri-desktop/**
+
+concurrency:
+  group: desktop-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Host is Apple Silicon. No --target, so the macOS sidecar triple matches.
+          # targets: all would also build a DMG; mise run build skips that.
+          - platform: macos-latest
+            args: --bundles app
+          # Ubuntu 22.04 keeps the glibc baseline low enough for older distros.
+          # https://v2.tauri.app/distribute/appimage/
+          # Linux and Windows use tauri.conf.json targets: all (deb, rpm, appimage / nsis, msi).
+          - platform: ubuntu-22.04
+          - platform: windows-latest
+
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: 90
+    env:
+      TAURI_APP_PATH: ${{ github.workspace }}/tauri-desktop/rust-native
+      TAURI_FRONTEND_PATH: ${{ github.workspace }}/tauri-desktop/react-ui
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          # CI set from https://v2.tauri.app/distribute/pipelines/github/
+          # Local-dev extras (build-essential, curl, libssl-dev, libxdo-dev) are omitted:
+          # the ubuntu-22.04 image already has a compiler, curl, libssl-dev, and rpm.
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            xdg-utils
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.5.1
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+          cache-dependency-path: tauri-desktop/react-ui/pnpm-lock.yaml
+
+      # @1.98.1 matches rust-toolchain.toml. @stable would ignore that pin.
+      - uses: dtolnay/rust-toolchain@1.98.1
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: tauri-desktop/rust-native -> target
+
+      - name: Install frontend dependencies
+        working-directory: tauri-desktop/react-ui
+        run: pnpm install --frozen-lockfile
+
+      # CI has no Developer ID. Ad-hoc avoids a codesign failure on Apple Silicon.
+      # Local builds keep using the ReadyType Code Signing identity via mise.
+      # https://v2.tauri.app/distribute/sign/macos/
+      - name: Use ad-hoc macOS code signing
+        if: runner.os == 'macOS'
+        run: echo 'APPLE_SIGNING_IDENTITY=-' >> "$GITHUB_ENV"
+
+      - name: Prepare macOS input-source sidecar
+        if: runner.os == 'macOS'
+        working-directory: tauri-desktop/rust-native
+        run: bash scripts/macos/prepare-tis-list-sidecar.sh --release
+
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: tauri-desktop/rust-native
+          # Local CLI. The action splits this on spaces, so the path must not contain spaces.
+          tauriScript: pnpm --dir ../react-ui exec tauri
+          args: ${{ matrix.args }}
+          uploadWorkflowArtifacts: true
