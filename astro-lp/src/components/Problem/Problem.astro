@@ -12,9 +12,13 @@ import {
   miss,
   problem,
   punch,
+  punchChar,
+  punchLead,
   punchMark,
   typed,
 } from "./Problem.styles";
+
+const retryChars = [..."打ち直していませんか？"];
 ---
 
 <section class:list={[section, problem]} id="problem">
@@ -34,8 +38,9 @@ import {
         <p><span class={miss}>✕</span> 日本語のままで、変換候補が出てくる</p>
       </div>
     </div>
-    <p class:list={[punch, reveal]} data-reveal data-stagger>
-      毎回、入力ソースを切り替えて、<br /><b class={punchMark}><span class={highlight}>打ち直していませんか？</span></b>
+    <p class={punch}>
+      <span class:list={[punchLead, reveal]} data-reveal data-stagger>毎回、入力ソースを切り替えて、</span>
+      <b class={punchMark} data-reveal><span class={highlight}>{retryChars.map((char, index) => <span class={punchChar} style={`--char-index: ${index}`}>{char}</span>)}</span></b>
     </p>
   </div>
 </section>

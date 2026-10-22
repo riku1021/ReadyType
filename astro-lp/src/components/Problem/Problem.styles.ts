@@ -68,9 +68,38 @@ export const punch = css({
   lineHeight: "1.35",
 });
 
-export const punchMark = css({ color: "danger" });
+export const punchLead = css({ display: "block" });
+
+export const punchMark = css({
+  color: "danger",
+  fontSize: "1.75em",
+  ".js &": {
+    "--scale": "0.25",
+    "--char-opacity": "0",
+    "&[data-in='true']": {
+      "--scale": "1",
+      "--char-opacity": "1",
+    },
+  },
+  _motionReduce: {
+    ".js &": {
+      "--scale": "1",
+      "--char-opacity": "1",
+    },
+  },
+});
+
+export const punchChar = css({
+  display: "inline-block",
+  backgroundImage: "linear-gradient(transparent 62%, var(--colors-danger-soft) 62%)",
+  opacity: "var(--char-opacity, 1)",
+  transform: "scale(var(--scale, 1))",
+  transition:
+    "transform .5s cubic-bezier(0.77, 0, 0.175, 1), opacity 1.5s cubic-bezier(0.39, 0.575, 0.565, 1)",
+  transitionDelay: "calc(0.04s * var(--char-index))",
+  _motionReduce: { transition: "none" },
+});
 
 export const highlight = css({
-  backgroundImage: "linear-gradient(transparent 62%, var(--colors-danger-soft) 62%)",
   px: "6px",
 });
