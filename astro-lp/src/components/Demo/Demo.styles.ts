@@ -142,6 +142,7 @@ export const bubble = css({
 });
 
 export const demoField = css({
+  position: "relative",
   mt: "auto",
   borderWidth: "0.2em",
   borderStyle: "solid",
@@ -149,13 +150,54 @@ export const demoField = css({
   borderRadius: "1em",
   py: "0.9em",
   px: "1.1em",
-  minHeight: "3.3em",
+  lineHeight: "1.8",
+  minHeight: "4em",
   transition: ".3s",
   fontWeight: "bold",
   "[data-active='true'] &": {
     borderColor: "brandBright",
     boxShadow: "0 0 0 0.35em rgba(78, 141, 255, 0.25)",
   },
+});
+
+export const scan = css({
+  position: "absolute",
+  inset: "-0.7em",
+  borderWidth: "0.2em",
+  borderStyle: "dashed",
+  borderColor: "gold",
+  borderRadius: "1.2em",
+  opacity: "0",
+  transition: ".4s",
+  overflow: "hidden",
+  "[data-scan='true'] &": { opacity: "1" },
+  "&::after": {
+    content: '""',
+    position: "absolute",
+    left: "0",
+    right: "0",
+    height: "0.35em",
+    backgroundImage: "linear-gradient(90deg, transparent, var(--colors-gold), transparent)",
+    animation: "scan 1.4s ease-in-out infinite",
+  },
+});
+
+export const scanLabel = css({
+  position: "absolute",
+  left: "0.6em",
+  top: "0.2em",
+  bg: "gold",
+  color: "ink",
+  fontWeight: "black",
+  fontSize: "0.85em",
+  px: "0.7em",
+  py: "0.1em",
+  borderRadius: "pill",
+  fontStyle: "normal",
+});
+
+export const codeStage = css({
+  position: "relative",
 });
 
 export const code = css({
@@ -249,46 +291,11 @@ export const captionBar = css({
   whiteSpace: "nowrap",
 });
 
-export const controls = css({
-  display: "flex",
-  gap: "22px",
-  justifyContent: "center",
-  alignItems: "flex-start",
-  flexWrap: "nowrap",
+export const timeline = css({
+  position: "relative",
   maxWidth: "900px",
   mx: "auto",
   mt: "34px",
-});
-
-export const play = css({
-  width: "46px",
-  height: "46px",
-  mt: "16px",
-  flex: "none",
-  borderRadius: "50%",
-  border: "0",
-  bgGradient: "brand",
-  color: "white",
-  fontSize: "1rem",
-  cursor: "pointer",
-  boxShadow: "glow",
-  display: "grid",
-  placeItems: "center",
-});
-
-export const playIcon = css({
-  "[data-paused='true'] &": { display: "none" },
-});
-
-export const playIconPaused = css({
-  "button &": { display: "none" },
-  "button[data-paused='true'] &": { display: "inline-block" },
-});
-
-export const timeline = css({
-  position: "relative",
-  flex: "1",
-  minWidth: "0",
   display: "grid",
   gridTemplateColumns: "repeat(3, 1fr)",
   gap: "12px",
@@ -390,25 +397,4 @@ export const stepHint = css({
   fontWeight: "semibold",
   fontSize: "0.75rem",
   color: "muted",
-});
-
-export const notes = css({
-  display: "flex",
-  gap: "12px",
-  justifyContent: "center",
-  flexWrap: "wrap",
-  mt: "36px",
-});
-
-export const note = css({
-  bg: "white",
-  borderWidth: "1px",
-  borderStyle: "solid",
-  borderColor: "line",
-  borderRadius: "pill",
-  px: "18px",
-  py: "8px",
-  fontWeight: "extrabold",
-  fontSize: "0.875rem",
-  boxShadow: "card",
 });

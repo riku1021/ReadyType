@@ -8,7 +8,7 @@ import {
   bubble,
   captionBar,
   code,
-  controls,
+  codeStage,
   demo,
   demoCaret,
   demoCaretCode,
@@ -22,16 +22,13 @@ import {
   menu,
   menuDot,
   menuSpacer,
-  note,
-  notes,
   pane,
   panes,
   paneTitle,
-  play,
-  playIcon,
-  playIconPaused,
   pointer,
   pointerRing,
+  scan,
+  scanLabel,
   screen,
   step,
   stepBadge,
@@ -74,14 +71,20 @@ const steps = [
               <div class={pane} id="pChat">
                 <div class={paneTitle}><Glyph name="lucide:message-circle" /> Chat</div>
                 <div class={bubble}>このコードについて説明してください。</div>
-                <div class={demoField} id="fChat"><span id="tChat"></span><span class={demoCaret}></span></div>
+                <div class={demoField} id="fChat">
+                  <span id="tChat"></span><span class={demoCaret}></span>
+                  <div class={scan}><em class={scanLabel}><Glyph name="lucide:search" /> チャット欄を検出</em></div>
+                </div>
               </div>
               <div class={pane} id="pCode" data-surface="code" data-active="true">
                 <div class={paneTitle}>&lt;/&gt; main.ts</div>
-                <pre class={code}><span class={keyword}>function</span> greet(name: string) {"{"}
+                <div class={codeStage} id="fCode">
+                  <pre class={code}><span class={keyword}>function</span> greet(name: string) {"{"}
   <span class={keyword}>return</span> `Hello, ${"{"}name{"}"}!`;
 {"}"}
 <span id="tCode"></span><span class={demoCaretCode}></span></pre>
+                  <div class={scan}><em class={scanLabel}><Glyph name="lucide:search" /> コードエディタを検出</em></div>
+                </div>
               </div>
             </div>
           </div>
@@ -97,21 +100,14 @@ const steps = [
         </div>
       </div>
     </div>
-    <div class={controls}>
-      <button class={play} type="button" id="dplay" aria-label="一時停止"><Glyph name="lucide:pause" class={playIcon} /><Glyph name="lucide:play" class={playIconPaused} /></button>
-      <div class={timeline} id="tline">
-        <div class={timelineFill}></div>
-        {steps.map((item) => (
-          <div class={step} data-demo-step={item.n}>
-            <b class={stepBadge}><span class={stepNum}>{item.n}</span><Glyph name="lucide:check" class={stepCheck} /></b>
-            <span class={stepLabel}>{item.title}<small class={stepHint}>{item.arrow ? <Glyph name="lucide:arrow-right" /> : null}{item.hint}</small></span>
-          </div>
-        ))}
-      </div>
-    </div>
-    <div class={notes}>
-      <span class={note}><Glyph name="lucide:message-circle" /> チャット欄 <Glyph name="lucide:arrow-right" /> 日本語</span>
-      <span class={note}><Glyph name="lucide:keyboard" /> コードエディタ <Glyph name="lucide:arrow-right" /> 英語</span>
+    <div class={timeline} id="tline">
+      <div class={timelineFill}></div>
+      {steps.map((item) => (
+        <div class={step} data-demo-step={item.n}>
+          <b class={stepBadge}><span class={stepNum}>{item.n}</span><Glyph name="lucide:check" class={stepCheck} /></b>
+          <span class={stepLabel}>{item.title}<small class={stepHint}>{item.arrow ? <Glyph name="lucide:arrow-right" /> : null}{item.hint}</small></span>
+        </div>
+      ))}
     </div>
   </div>
 </section>

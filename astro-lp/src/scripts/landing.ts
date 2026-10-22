@@ -110,7 +110,8 @@ function bindDemo(): void {
   const codeText = document.getElementById("tCode");
   const chat = document.getElementById("pChat");
   const code = document.getElementById("pCode");
-  const play = document.getElementById("dplay");
+  const chatField = document.getElementById("fChat");
+  const codeField = document.getElementById("fCode");
   const demo = document.getElementById("demo");
   const timeline = document.getElementById("tline");
   if (
@@ -122,31 +123,18 @@ function bindDemo(): void {
     !codeText ||
     !chat ||
     !code ||
-    !play ||
+    !chatField ||
+    !codeField ||
     !demo ||
     !timeline
   ) {
     return;
   }
 
-  let paused = false;
-  let run = 0;
-  const wait = (ms: number): Promise<void> =>
+  const sleep = (ms: number): Promise<void> =>
     new Promise((resolve) => {
       window.setTimeout(resolve, ms);
     });
-
-  const sleep = async (ms: number): Promise<void> => {
-    let elapsed = 0;
-    while (elapsed < ms) {
-      if (paused) {
-        await wait(120);
-        continue;
-      }
-      await wait(40);
-      elapsed += 40;
-    }
-  };
 
   const type = async (element: HTMLElement, text: string, speed: number): Promise<void> => {
     for (const char of text) {
@@ -222,10 +210,11 @@ function bindDemo(): void {
   };
 
   const loop = async (): Promise<void> => {
-    const id = ++run;
-    while (id === run) {
+    while (true) {
       chatText.textContent = "";
       codeText.textContent = "";
+      delete chatField.dataset.scan;
+      delete codeField.dataset.scan;
       delete chat.dataset.active;
       code.dataset.active = "true";
       ime.textContent = "A";
@@ -233,13 +222,15 @@ function bindDemo(): void {
       move(88, 92);
       markStep(0, "エディタでコードを書いている途中…");
       await sleep(1300);
-      if (id !== run) return;
       markStep(1, "① チャット欄をクリック");
       move(24, 76);
       await sleep(1100);
       click();
       delete code.dataset.active;
       chat.dataset.active = "true";
+      chatField.dataset.scan = "true";
+      await sleep(1600);
+      delete chatField.dataset.scan;
       setIme("あ", "日本語に自動で切り替え");
       await sleep(900);
       markStep(2, "② そのまま日本語で入力");
@@ -251,6 +242,9 @@ function bindDemo(): void {
       click();
       delete chat.dataset.active;
       code.dataset.active = "true";
+      codeField.dataset.scan = "true";
+      await sleep(1600);
+      delete codeField.dataset.scan;
       setIme("A", "英語に自動で切り替え");
       await sleep(700);
       await type(codeText, 'greet("World");', 90);
@@ -266,31 +260,6 @@ function bindDemo(): void {
     ime.textContent = "A";
     ime.dataset.ime = "en";
     markStep(3, "③ コードエディタをクリック");
-    paused = true;
-    play.dataset.paused = "true";
-    play.setAttribute("aria-label", "再生");
-    let playing = false;
-    play.addEventListener("click", () => {
-      if (!playing) {
-        playing = true;
-        paused = false;
-        delete play.dataset.paused;
-        play.setAttribute("aria-label", "一時停止");
-        void loop();
-        return;
-      }
-      paused = !paused;
-      if (paused) play.dataset.paused = "true";
-      else delete play.dataset.paused;
-      play.setAttribute("aria-label", paused ? "再生" : "一時停止");
-    });
-  } else {
-    play.addEventListener("click", () => {
-      paused = !paused;
-      if (paused) play.dataset.paused = "true";
-      else delete play.dataset.paused;
-      play.setAttribute("aria-label", paused ? "再生" : "一時停止");
-    });
   }
 
   let started = reduced;
