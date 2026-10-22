@@ -489,8 +489,12 @@ export const badgeEn = css({
   bgGradient: "accentSoft",
   transform: "translateZ(80px) scale(0.8)",
   opacity: "0.35",
-  animation: "bob 5s ease-in-out infinite",
-  "[data-step='1'] &": { opacity: "0.7" },
+  animation: "bobY 5s ease-in-out infinite",
+  "[data-step='0'] &, [data-step='1'] &": {
+    opacity: "1",
+    transform: "translateZ(90px) scale(1.1)",
+    animation: "none",
+  },
 });
 
 export const badgeMark = css({ fontSize: "clamp(1.4rem, 3vw, 2.1rem)", display: "block" });

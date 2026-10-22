@@ -165,6 +165,7 @@ export const keyframes = defineKeyframes({
     "100%": { transform: "scale(0.85)", opacity: "0.4" },
   },
   bob: { "50%": { transform: "translateY(-10px)" } },
+  bobY: { "50%": { translate: "0 -10px" } },
   orbit: { to: { transform: "rotate(360deg)" } },
   shine: { to: { backgroundPosition: "200% 0" } },
   mqa: { to: { transform: "translateX(-50%)" } },
