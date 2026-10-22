@@ -1,0 +1,21 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { wrap } from "@/styles/objects/layout.styles";
+import { article, title } from "./LegalDocument.styles";
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title: pageTitle, description } = Astro.props;
+---
+
+<BaseLayout title={`${pageTitle} | ReadyType`} description={description} landing={false}>
+  <main id="content">
+    <article class:list={[wrap, article]}>
+      <h1 class={title}>{pageTitle}</h1>
+      <slot />
+    </article>
+  </main>
+</BaseLayout>

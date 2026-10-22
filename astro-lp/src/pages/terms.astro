@@ -1,0 +1,68 @@
+---
+import LegalDocument from "@/components/LegalDocument/LegalDocument.astro";
+import {
+  clauses,
+  paragraph,
+  published,
+  sectionHeading,
+  textLink,
+} from "@/components/LegalDocument/LegalDocument.styles";
+---
+
+<LegalDocument
+  title="利用規約"
+  description="ReadyType とこのウェブサイトの利用条件。"
+>
+  <p class={published}>2026年10月22日制定</p>
+  <h2 class={sectionHeading}>第1条（適用）</h2>
+  <p class={paragraph}>
+    この利用規約は、デスクトップアプリ ReadyType と、このウェブサイトを利用するときの条件です。ReadyType を提供する者を、運営者といいます。アカウント登録は要りません。利用するときは、この利用規約に従ってください。
+  </p>
+  <h2 class={sectionHeading}>第2条（提供する内容）</h2>
+  <p class={paragraph}>
+    ReadyType は、入力欄に合わせて日本語と英語の入力ソースを切り替えるデスクトップアプリです。すべての入力欄で切り替わることは保証しません。現在の対応は macOS です。
+  </p>
+  <p class={paragraph}>
+    このウェブサイトは、アプリの説明とダウンロードのために公開しています。ダウンロードファイルは GitHub のリリースから取得します。
+  </p>
+  <h2 class={sectionHeading}>第3条（料金）</h2>
+  <p class={paragraph}>現在、ReadyType は料金をいただかずに提供しています。</p>
+  <p class={paragraph}>
+    有料の提供を始めるとき、またはその料金を変えるときは、料金、支払の時期と方法、提供を始める時期を、申し込みの前にこのウェブサイトに掲載します。それまでに無料で使っている人は、有料の提供を自分から申し込むまで、料金の支払いは要りません。
+  </p>
+  <h2 class={sectionHeading}>第4条（必要な許可）</h2>
+  <p class={paragraph}>
+    macOS では、入力欄を識別して入力ソースを切り替えるために、システム設定の「プライバシーとセキュリティ › アクセシビリティ」の許可が必要です。許可がないと、切り替えは動きません。
+  </p>
+  <h2 class={sectionHeading}>第5条（知的財産）</h2>
+  <p class={paragraph}>
+    アプリ、このウェブサイトの文章、画像、プログラムの権利は、運営者にあります。利用者は、自分で使うためにアプリをインストールして利用できます。
+  </p>
+  <h2 class={sectionHeading}>第6条（禁止事項）</h2>
+  <p class={paragraph}>
+    利用者は、法令に反する利用をしてはなりません。インストーラを、自分が作ったものとして配布してはなりません。
+  </p>
+  <h2 class={sectionHeading}>第7条（変更、中断、終了）</h2>
+  <p class={paragraph}>
+    運営者は、機能の変更、提供の中断、提供の終了を、このウェブサイトに掲載して知らせます。
+  </p>
+  <h2 class={sectionHeading}>第8条（個人情報）</h2>
+  <p class={paragraph}>
+    情報の取り扱いは、<a class={textLink} href="/privacy">プライバシーポリシー</a>に定めます。
+  </p>
+  <h2 class={sectionHeading}>第9条（責任）</h2>
+  <ol class={clauses}>
+    <li class={paragraph}>
+      運営者の責めに帰すべき事由により利用者に損害が生じたときは、運営者はその損害を賠償します。
+    </li>
+    <li class={paragraph}>
+      故意もしくは重大な過失による損害、および生命または身体の損害については、賠償額の上限を設けません。
+    </li>
+  </ol>
+  <h2 class={sectionHeading}>第10条（規約の変更）</h2>
+  <p class={paragraph}>
+    この利用規約を変更するときは、変更後の内容と、変更が効力を生じる日を、効力が生じる前にこのウェブサイトに掲載します。料金を新たに定め、または変更するときは、第3条によります。
+  </p>
+  <h2 class={sectionHeading}>第11条（準拠法）</h2>
+  <p class={paragraph}>この利用規約は、日本法に従って解釈します。</p>
+</LegalDocument>

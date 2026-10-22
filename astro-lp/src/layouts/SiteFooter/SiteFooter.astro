@@ -2,7 +2,16 @@
 import Logo from "@/components/Logo/Logo.astro";
 import { footerProduct, footerSupport } from "@/content/landing";
 import { wrap } from "@/styles/objects/layout.styles";
-import { blurb, columnTitle, footer, footerLink, grid, legal } from "./SiteFooter.styles";
+import {
+  blurb,
+  columnTitle,
+  footer,
+  footerLink,
+  grid,
+  legal,
+  legalLink,
+  legalNav,
+} from "./SiteFooter.styles";
 ---
 
 <footer class={footer}>
@@ -27,6 +36,12 @@ import { blurb, columnTitle, footer, footerLink, grid, legal } from "./SiteFoote
         ))}
       </div>
     </div>
-    <div class={legal}>© 2026 ReadyType. All rights reserved.</div>
+    <div class={legal}>
+      <p>© 2026 ReadyType. All rights reserved.</p>
+      <nav class={legalNav} aria-label="法務">
+        <a class={legalLink} href="/privacy">プライバシーポリシー</a>
+        <a class={legalLink} href="/terms">利用規約</a>
+      </nav>
+    </div>
   </div>
 </footer>

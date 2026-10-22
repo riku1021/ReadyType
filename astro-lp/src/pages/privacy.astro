@@ -1,0 +1,37 @@
+---
+import LegalDocument from "@/components/LegalDocument/LegalDocument.astro";
+import {
+  paragraph,
+  published,
+  sectionHeading,
+  textLink,
+} from "@/components/LegalDocument/LegalDocument.styles";
+---
+
+<LegalDocument
+  title="プライバシーポリシー"
+  description="ReadyType が扱う情報と、扱わない情報について。"
+>
+  <p class={published}>2026年10月22日制定</p>
+  <p class={paragraph}>
+    このポリシーは、デスクトップアプリ ReadyType と、このウェブサイトでの情報の取り扱いを説明します。
+  </p>
+  <h2 class={sectionHeading}>入力した文章</h2>
+  <p class={paragraph}>入力した文章の内容は、読み取りません。保存もしません。</p>
+  <h2 class={sectionHeading}>端末内で使う情報</h2>
+  <p class={paragraph}>
+    入力ソースの切り替えには、入力欄を識別するための情報だけを使います。アプリや入力欄の種類が含まれます。設定は、お使いの端末内に保存します。
+  </p>
+  <h2 class={sectionHeading}>macOS のアクセシビリティ</h2>
+  <p class={paragraph}>
+    macOS では、入力欄を識別して入力ソースを切り替えるために、システム設定の「プライバシーとセキュリティ › アクセシビリティ」の許可を求めることがあります。
+  </p>
+  <h2 class={sectionHeading}>外部への送信</h2>
+  <p class={paragraph}>アプリは、入力内容や設定をサーバーへ送信しません。</p>
+  <p class={paragraph}>
+    このウェブサイトに、アクセス解析は入れていません。文字の表示のために Google Fonts を読み込みます。ダウンロードは GitHub のリリースにあるインストーラへ進みます。
+  </p>
+  <p class={paragraph}>
+    アプリとウェブサイトの利用条件は、<a class={textLink} href="/terms">利用規約</a>にあります。
+  </p>
+</LegalDocument>

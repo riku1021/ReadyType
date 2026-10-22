@@ -10,11 +10,14 @@ import SiteHeader from "./SiteHeader/SiteHeader.astro";
 interface Props {
   title?: string;
   description?: string;
+  /** トップの節ナビ・進捗・追従ダウンロードを出す */
+  landing?: boolean;
 }
 
 const {
   title = "ReadyType | 入力する場所に、適切な言語を。",
   description = "入力欄にフォーカスするだけで、日本語と英語の入力ソースを自動で切り替えるデスクトップアプリ。",
+  landing = true,
 } = Astro.props;
 ---
 
@@ -38,13 +41,13 @@ const {
     </script>
   </head>
   <body>
-    <a class={skipLink} href="#problem">本文へスキップ</a>
-    <ProgressBar />
+    <a class={skipLink} href={landing ? "#problem" : "#content"}>本文へスキップ</a>
+    {landing ? <ProgressBar /> : null}
     <SiteHeader />
     <slot />
     <SiteFooter />
-    <SideNav />
-    <FloatingCta />
+    {landing ? <SideNav /> : null}
+    {landing ? <FloatingCta /> : null}
     <script>
       import { startLanding } from "@/scripts/landing";
       startLanding();

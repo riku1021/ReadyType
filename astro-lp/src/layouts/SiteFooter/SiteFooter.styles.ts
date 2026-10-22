@@ -48,4 +48,19 @@ export const legal = css({
   borderTopColor: "rgba(255, 255, 255, 0.12)",
   pt: "22px",
   fontSize: "0.7812rem",
+  display: "flex",
+  flexWrap: "wrap",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: "8px 20px",
+});
+
+export const legalNav = css({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "8px 16px",
+});
+
+export const legalLink = css({
+  _hover: { color: "white" },
 });
