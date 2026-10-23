@@ -3,6 +3,8 @@ import { surfaceMain } from "@/styles/objects/surface";
 
 export const header = css(surfaceMain, {
   gridArea: "header",
+  // styles/bases/pageSlide.ts の pageSlideHeaderName と揃える
+  viewTransitionName: "page-slide-header",
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",

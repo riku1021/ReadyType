@@ -17,6 +17,7 @@ import {
   type RuleDto,
   useInputSourceState,
 } from "@/features/inputSource";
+import { pageSlide } from "@/features/navigation";
 
 import {
   type AppRuleGroup,
@@ -146,7 +147,7 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
         rules.filter((rule) => rule.appId === selected.appId).length === 1;
       await deleteRule(selected.defaultRule.id);
       if (onlyRuleForApp) {
-        void navigate({ to: "/apps" });
+        void navigate({ to: "/apps", viewTransition: pageSlide("back") });
       }
       return;
     }

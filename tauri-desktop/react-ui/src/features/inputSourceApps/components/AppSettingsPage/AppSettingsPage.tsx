@@ -13,6 +13,7 @@ import {
   inputSourceSourcesAtom,
   useInputSourceState,
 } from "@/features/inputSource";
+import { pageSlide } from "@/features/navigation";
 
 import {
   type AppRuleGroup,
@@ -145,7 +146,11 @@ export function AppSettingsPage() {
         rows={visibleRows}
         getRowId={(group) => group.appId}
         onRowSelect={(appId) => {
-          void navigate({ to: "/apps/$appId", params: { appId } });
+          void navigate({
+            to: "/apps/$appId",
+            params: { appId },
+            viewTransition: pageSlide("forward"),
+          });
         }}
         rowClassName={() => styles.row}
         emptyMessage={search.trim() !== "" ? t("apps.emptySearch") : t("apps.emptyList")}

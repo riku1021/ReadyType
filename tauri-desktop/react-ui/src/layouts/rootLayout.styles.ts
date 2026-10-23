@@ -22,6 +22,10 @@ export const mainContent = css({
   overflow: "auto",
   padding: "sm",
   boxSizing: "border-box",
+  // スライドのスナップショットを不透明にする。body と同じ面なので静止時の見た目は変わらない。
+  backgroundColor: "background.main",
+  // styles/bases/pageSlide.ts の pageSlideMainName と揃える
+  viewTransitionName: "page-slide-main",
 });
 
 /** メイン窓のページ共通。幅いっぱい＋水平中央。各ページでは指定しない。 */

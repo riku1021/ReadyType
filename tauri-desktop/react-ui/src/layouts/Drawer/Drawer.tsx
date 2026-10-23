@@ -10,7 +10,7 @@ import {
   inputSourceStateAtom,
   SwitcherControls,
 } from "@/features/inputSource";
-import { navLinks } from "@/features/navigation";
+import { navLinks, pageSlideBackTo } from "@/features/navigation";
 
 import * as styles from "./Drawer.styles";
 
@@ -37,7 +37,12 @@ export function Drawer() {
             const IconComponent = link.icon;
             const showMissingInputSourceBadge = link.to === "/apps" && appsHaveMissingInputSource;
             return (
-              <Link key={link.to} to={link.to} className={styles.navLink}>
+              <Link
+                key={link.to}
+                to={link.to}
+                viewTransition={pageSlideBackTo(link.to)}
+                className={styles.navLink}
+              >
                 <span className={styles.navLinkHighlight} data-part="highlight" aria-hidden />
                 <div className={styles.navLinkContent}>
                   <span className={styles.navIconBox}>

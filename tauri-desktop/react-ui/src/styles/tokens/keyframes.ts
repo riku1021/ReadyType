@@ -27,4 +27,24 @@ export const keyframes = {
     from: { opacity: "0", transform: "translateX(-0.75rem)" },
     to: { opacity: "1", transform: "translateX(0)" },
   },
+  /** ページスライド: 右から入る */
+  slidePageInFromRight: {
+    from: { transform: "translateX(100%)" },
+    to: { transform: "translateX(0)" },
+  },
+  /** ページスライド: 左へ出る */
+  slidePageOutToLeft: {
+    from: { transform: "translateX(0)" },
+    to: { transform: "translateX(-100%)" },
+  },
+  /** ページスライド: 左から入る */
+  slidePageInFromLeft: {
+    from: { transform: "translateX(-100%)" },
+    to: { transform: "translateX(0)" },
+  },
+  /** ページスライド: 右へ出る */
+  slidePageOutToRight: {
+    from: { transform: "translateX(0)" },
+    to: { transform: "translateX(100%)" },
+  },
 } as const;

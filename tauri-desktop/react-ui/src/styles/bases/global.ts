@@ -1,3 +1,5 @@
+import { pageSlideGlobalCss } from "./pageSlide";
+
 /**
  * html / body などの全体スタイル。
  * `css()` は使わない（styled-system は config から生成されるため）。
@@ -50,4 +52,5 @@ export const globalCss = {
   'html[data-window="quick-set"] #root': {
     backgroundColor: "transparent",
   },
+  ...pageSlideGlobalCss,
 };

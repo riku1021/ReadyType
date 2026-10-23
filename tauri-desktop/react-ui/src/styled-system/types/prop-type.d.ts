@@ -153,7 +153,7 @@ export interface UtilityValues {
 	transitionProperty: "common" | "colors" | "size" | "position" | "background";
 	transition: "all" | "common" | "size" | "position" | "background" | "colors" | "opacity" | "shadow" | "transform";
 	animation: Tokens["animations"];
-	animationName: "spin" | "ping" | "pulse" | "bounce" | "fadeInOverlay" | "fadeOutOverlay" | "fadeInContent" | "fadeOutContent" | "alertProgressBar" | "slideInFromRight" | "slideInFromLeft";
+	animationName: "spin" | "ping" | "pulse" | "bounce" | "fadeInOverlay" | "fadeOutOverlay" | "fadeInContent" | "fadeOutContent" | "alertProgressBar" | "slideInFromRight" | "slideInFromLeft" | "slidePageInFromRight" | "slidePageOutToLeft" | "slidePageInFromLeft" | "slidePageOutToRight";
 	animationTimingFunction: Tokens["easings"];
 	animationDuration: Tokens["durations"];
 	animationDelay: Tokens["durations"];

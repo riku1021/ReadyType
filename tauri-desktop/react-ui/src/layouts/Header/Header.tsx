@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { MdChevronLeft } from "react-icons/md";
 
 import { button, buttonIcon } from "@/components/Button";
-import { getNavLinkByPath } from "@/features/navigation";
+import { getNavLinkByPath, pageSlide } from "@/features/navigation";
 
 import * as styles from "./Header.styles";
 
@@ -32,6 +32,7 @@ export function Header() {
         {headerBack && backLabelKey ? (
           <Link
             to={headerBack.to}
+            viewTransition={pageSlide("back")}
             className={button({ variant: "neutral", layout: "icon" })}
             aria-label={t(backLabelKey)}
           >
