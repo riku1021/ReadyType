@@ -3,7 +3,7 @@ import type { ParseKeys } from "i18next";
 import { useTranslation } from "react-i18next";
 import { MdChevronLeft } from "react-icons/md";
 
-import { button } from "@/components/Button";
+import { button, buttonIcon } from "@/components/Button";
 import { getNavLinkByPath } from "@/features/navigation";
 
 import * as styles from "./Header.styles";
@@ -30,9 +30,12 @@ export function Header() {
     <header className={styles.header}>
       <div className={styles.titleRow}>
         {headerBack && backLabelKey ? (
-          <Link to={headerBack.to} className={button({ variant: "secondary" })}>
-            <MdChevronLeft className={styles.backButtonIcon} aria-hidden="true" />
-            {t(backLabelKey)}
+          <Link
+            to={headerBack.to}
+            className={button({ variant: "neutral", layout: "icon" })}
+            aria-label={t(backLabelKey)}
+          >
+            <MdChevronLeft className={buttonIcon} aria-hidden="true" />
           </Link>
         ) : null}
         <div className={styles.titleMain}>

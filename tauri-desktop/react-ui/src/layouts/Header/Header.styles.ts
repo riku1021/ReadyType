@@ -25,12 +25,6 @@ export const titleRow = css({
   minHeight: "1.875rem",
 });
 
-export const backButtonIcon = css({
-  width: "0.875rem",
-  height: "0.875rem",
-  flexShrink: 0,
-});
-
 export const titleMain = css({
   display: "flex",
   alignItems: "center",
