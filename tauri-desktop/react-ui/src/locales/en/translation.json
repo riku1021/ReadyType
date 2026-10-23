@@ -87,7 +87,7 @@
     "columnEnabled": "Enabled",
     "emptyList": "No app settings to show. Create rules from Quick Set or by adding an app.",
     "emptySearch": "No matching apps",
-    "detailAria": "App details",
+    "detailTitle": "App details",
     "notFound": "Settings for the specified app were not found.",
     "defaultInputLanguage": "Default input language",
     "defaultInputLanguageNone": "Do not set a default input language",

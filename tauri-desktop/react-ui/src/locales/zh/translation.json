@@ -87,7 +87,7 @@
     "columnEnabled": "启用",
     "emptyList": "没有可显示的应用设置。可通过 Quick Set 或添加应用来创建规则。",
     "emptySearch": "没有匹配的应用",
-    "detailAria": "应用详情",
+    "detailTitle": "应用详情",
     "notFound": "找不到指定应用的设置。",
     "defaultInputLanguage": "默认输入语言",
     "defaultInputLanguageNone": "不设置默认输入语言",

@@ -87,7 +87,7 @@
     "columnEnabled": "有効",
     "emptyList": "表示できるアプリ設定がありません。Quick Set やアプリ追加からルールを作成できます。",
     "emptySearch": "該当するアプリはありません",
-    "detailAria": "アプリ詳細",
+    "detailTitle": "アプリ詳細",
     "notFound": "指定されたアプリの設定が見つかりません。",
     "defaultInputLanguage": "デフォルトの入力言語",
     "defaultInputLanguageNone": "デフォルト入力言語を設定しない",

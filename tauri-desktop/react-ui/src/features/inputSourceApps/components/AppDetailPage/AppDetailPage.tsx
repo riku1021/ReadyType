@@ -227,7 +227,7 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
     : "";
 
   return (
-    <section className={styles.page} aria-label={t("apps.detailAria")}>
+    <section className={styles.page} aria-label={t("apps.detailTitle")}>
       <SettingsSection>
         <div className={styles.detailHeader}>
           <div className={styles.detailIdentity}>
