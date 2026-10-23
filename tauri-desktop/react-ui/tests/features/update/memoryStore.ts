@@ -7,8 +7,5 @@ export function memoryStore(initial: Record<string, string> = {}): UpdatePrefere
   return {
     data,
     getItem: (key) => data.get(key) ?? null,
-    setItem: (key, value) => {
-      data.set(key, value);
-    },
   };
 }

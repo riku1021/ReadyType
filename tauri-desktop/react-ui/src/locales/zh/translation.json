@@ -117,8 +117,7 @@
       "desktopOnly": "只能在桌面应用中检查更新",
       "checkFailed": "无法检查更新",
       "downloadFailed": "无法下载更新",
-      "installFailed": "无法安装更新",
-      "restartFailed": "更新已安装。请重新启动应用"
+      "installFailed": "无法安装更新"
     }
   },
 

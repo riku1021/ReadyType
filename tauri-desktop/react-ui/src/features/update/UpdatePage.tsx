@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { SettingItem } from "@/components/SettingItem";
 import { SettingsSection } from "@/components/SettingsSection";
-import type { UpdatePhase } from "./appUpdateController";
+import type { UpdatePhase } from "./types";
 import * as styles from "./UpdatePage.styles";
 import { parseLastCheckedAt } from "./updatePreferences";
 import { useAppUpdate } from "./useAppUpdate";
@@ -55,8 +55,6 @@ export function UpdatePage() {
           return t("update.errors.downloadFailed");
         case "installFailed":
           return t("update.errors.installFailed");
-        case "restartFailed":
-          return t("update.errors.restartFailed");
       }
     }
     return lastCheckedLabel;

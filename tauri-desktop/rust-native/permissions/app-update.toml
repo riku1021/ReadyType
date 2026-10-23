@@ -1,0 +1,10 @@
+[[permission]]
+identifier = "allow-app-update"
+description = "Allows automatic update schedule, check, and install commands"
+commands.allow = [
+  "ack_app_update_client",
+  "set_app_update_auto_check",
+  "set_app_update_auto_download",
+  "check_app_update_now",
+  "install_app_update",
+]

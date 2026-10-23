@@ -31,7 +31,7 @@ pub struct TrayMenuModel {
 }
 
 impl TrayMenuModel {
-    pub fn from_state(state: &SwitcherState, locale: &str) -> Self {
+    pub fn from_state(state: &SwitcherState, locale: &str, update_ready: bool) -> Self {
         let strings = tray_strings(locale);
         let snoozed = state.snoozed_until_unix_ms.is_some();
         let status = if snoozed {
@@ -48,32 +48,33 @@ impl TrayMenuModel {
         } else {
             strings.status_off.clone()
         };
-        Self {
-            status,
-            items: vec![
-                item(
-                    "toggle",
-                    if state.enabled {
-                        &strings.toggle_off
-                    } else {
-                        &strings.toggle_on
-                    },
-                    true,
-                ),
-                item("snooze-5", &strings.snooze_5m, state.enabled && !snoozed),
-                item("snooze-15", &strings.snooze_15m, state.enabled && !snoozed),
-                item("snooze-60", &strings.snooze_1h, state.enabled && !snoozed),
-                item(
-                    "snooze-indefinite",
-                    &strings.snooze_indefinite,
-                    state.enabled && !snoozed,
-                ),
-                item("resume", &strings.resume, snoozed),
-                item("show", &strings.open_app, true),
-                item("settings", &strings.open_settings, true),
-                item("quit", &strings.quit, true),
-            ],
+        let mut items = vec![
+            item(
+                "toggle",
+                if state.enabled {
+                    &strings.toggle_off
+                } else {
+                    &strings.toggle_on
+                },
+                true,
+            ),
+            item("snooze-5", &strings.snooze_5m, state.enabled && !snoozed),
+            item("snooze-15", &strings.snooze_15m, state.enabled && !snoozed),
+            item("snooze-60", &strings.snooze_1h, state.enabled && !snoozed),
+            item(
+                "snooze-indefinite",
+                &strings.snooze_indefinite,
+                state.enabled && !snoozed,
+            ),
+            item("resume", &strings.resume, snoozed),
+            item("show", &strings.open_app, true),
+            item("settings", &strings.open_settings, true),
+        ];
+        if update_ready {
+            items.push(item("install-update", &strings.install_update, true));
         }
+        items.push(item("quit", &strings.quit, true));
+        Self { status, items }
     }
 }
 
@@ -92,7 +93,7 @@ fn resolve_ui_locale(app: &AppHandle) -> String {
 }
 
 pub fn install(app: &AppHandle, state: &SwitcherState, locale: &str) -> tauri::Result<()> {
-    let menu = build_menu(app, state, locale)?;
+    let menu = build_menu(app, state, locale, false)?;
     let mut builder = TrayIconBuilder::with_id(TRAY_ID)
         .menu(&menu)
         .tooltip("ReadyType")
@@ -127,8 +128,13 @@ pub fn update(app: &AppHandle, state: &SwitcherState, locale: &str) -> tauri::Re
         SwitcherSettings::resolve_ui_locale(locale)
     };
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
-        tray.set_menu(Some(build_menu(app, state, &locale)?))?;
-        tray.set_tooltip(Some(TrayMenuModel::from_state(state, &locale).status))?;
+        let update_ready = app
+            .try_state::<Arc<crate::infrastructure::desktop::app_update::AppUpdateRuntime>>()
+            .is_some_and(|runtime| runtime.tray_install_ready());
+        tray.set_menu(Some(build_menu(app, state, &locale, update_ready)?))?;
+        tray.set_tooltip(Some(
+            TrayMenuModel::from_state(state, &locale, update_ready).status,
+        ))?;
     }
     Ok(())
 }
@@ -137,8 +143,9 @@ fn build_menu(
     app: &AppHandle,
     state: &SwitcherState,
     locale: &str,
+    update_ready: bool,
 ) -> tauri::Result<Menu<tauri::Wry>> {
-    let model = TrayMenuModel::from_state(state, locale);
+    let model = TrayMenuModel::from_state(state, locale, update_ready);
     let status = MenuItem::with_id(app, "status", &model.status, false, None::<&str>)?;
     let items = model
         .items
@@ -148,24 +155,34 @@ fn build_menu(
     let separator_one = PredefinedMenuItem::separator(app)?;
     let separator_two = PredefinedMenuItem::separator(app)?;
     let separator_three = PredefinedMenuItem::separator(app)?;
-    Menu::with_items(
-        app,
-        &[
-            &status as &dyn IsMenuItem<_>,
-            &separator_one,
-            &items[0],
-            &items[1],
-            &items[2],
-            &items[3],
-            &items[4],
-            &items[5],
-            &separator_two,
-            &items[6],
-            &items[7],
-            &separator_three,
-            &items[8],
-        ],
-    )
+    let by_id = |id: &str| {
+        items
+            .iter()
+            .find(|item| item.id().as_ref() == id)
+            .unwrap_or_else(|| panic!("tray item {id}"))
+    };
+    let mut menu_items: Vec<&dyn IsMenuItem<_>> = vec![
+        &status,
+        &separator_one,
+        by_id("toggle"),
+        by_id("snooze-5"),
+        by_id("snooze-15"),
+        by_id("snooze-60"),
+        by_id("snooze-indefinite"),
+        by_id("resume"),
+        &separator_two,
+        by_id("show"),
+        by_id("settings"),
+        &separator_three,
+    ];
+    if let Some(install) = items
+        .iter()
+        .find(|item| item.id().as_ref() == "install-update")
+    {
+        menu_items.push(install);
+    }
+    menu_items.push(by_id("quit"));
+    Menu::with_items(app, &menu_items)
 }
 
 fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
@@ -180,6 +197,17 @@ fn handle_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
     }
     if id == "settings" {
         main_window::show_main_window(app, Some("/settings"));
+        return;
+    }
+    if id == "install-update" {
+        if let Some(runtime) =
+            app.try_state::<Arc<crate::infrastructure::desktop::app_update::AppUpdateRuntime>>()
+        {
+            let runtime = Arc::clone(runtime.inner());
+            tauri::async_runtime::spawn(async move {
+                runtime.install().await;
+            });
+        }
         return;
     }
     let controller = app.state::<Arc<SwitcherController>>();

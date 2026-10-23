@@ -1,6 +1,7 @@
 //! Tauri command handlers (thin adapters over use cases).
 
 pub mod app_presentations;
+pub mod app_update;
 pub mod autostart;
 pub mod greet;
 pub mod input_source_switcher;

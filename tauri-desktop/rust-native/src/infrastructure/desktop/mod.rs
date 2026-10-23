@@ -1,3 +1,4 @@
+pub mod app_update;
 pub mod autostart;
 pub mod lab_switch_window;
 pub mod main_window;

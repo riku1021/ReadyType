@@ -14,6 +14,7 @@
     "resume": "今すぐ再開",
     "open_app": "ReadyTypeを開く",
     "open_settings": "設定を開く",
+    "install_update": "再起動してインストール",
     "quit": "終了"
   },
   "en": {
@@ -31,6 +32,7 @@
     "resume": "Resume now",
     "open_app": "Open ReadyType",
     "open_settings": "Open Settings",
+    "install_update": "Restart to Install",
     "quit": "Quit"
   },
   "zh": {
@@ -48,6 +50,7 @@
     "resume": "立即恢复",
     "open_app": "打开 ReadyType",
     "open_settings": "打开设置",
+    "install_update": "重新启动并安装",
     "quit": "退出"
   }
 }

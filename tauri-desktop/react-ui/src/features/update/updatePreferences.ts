@@ -4,33 +4,50 @@ export const UPDATE_LAST_CHECKED_KEY = "readytype.update.lastCheckedAt";
 
 export type UpdatePreferenceStore = {
   getItem: (key: string) => string | null;
-  setItem: (key: string, value: string) => void;
 };
 
-export type UpdatePreferences = {
-  autoCheck: boolean;
-  autoDownload: boolean;
-  lastCheckedAt: string | null;
+export type LegacyUpdatePreferences = {
+  autoCheck: boolean | null;
+  autoDownload: boolean | null;
+  lastCheckedAtUnixMs: number | null;
 };
 
-function readFlag(store: UpdatePreferenceStore, key: string, fallback: boolean): boolean {
-  const raw = store.getItem(key);
+function flagOrNull(raw: string | null): boolean | null {
   if (raw === "true") {
     return true;
   }
   if (raw === "false") {
     return false;
   }
-  return fallback;
+  return null;
 }
 
-export function readUpdatePreferences(store: UpdatePreferenceStore): UpdatePreferences {
+/** 旧画面が localStorage に書いた設定。Rust が保存するまで渡す。 */
+export function readLegacyUpdatePreferences(
+  store: UpdatePreferenceStore
+): LegacyUpdatePreferences | null {
+  const autoCheck = store.getItem(UPDATE_AUTO_CHECK_KEY);
+  const autoDownload = store.getItem(UPDATE_AUTO_DOWNLOAD_KEY);
   const lastCheckedAt = store.getItem(UPDATE_LAST_CHECKED_KEY);
+  if (autoCheck === null && autoDownload === null && lastCheckedAt === null) {
+    return null;
+  }
   return {
-    autoCheck: readFlag(store, UPDATE_AUTO_CHECK_KEY, true),
-    autoDownload: readFlag(store, UPDATE_AUTO_DOWNLOAD_KEY, true),
-    lastCheckedAt: lastCheckedAt && lastCheckedAt.length > 0 ? lastCheckedAt : null,
+    autoCheck: flagOrNull(autoCheck),
+    autoDownload: flagOrNull(autoDownload),
+    lastCheckedAtUnixMs: parseLastCheckedAt(lastCheckedAt)?.getTime() ?? null,
   };
+}
+
+const LEGACY_KEYS = [UPDATE_AUTO_CHECK_KEY, UPDATE_AUTO_DOWNLOAD_KEY, UPDATE_LAST_CHECKED_KEY];
+
+export function clearLegacyUpdatePreferences(): void {
+  if (typeof localStorage === "undefined" || typeof localStorage.removeItem !== "function") {
+    return;
+  }
+  for (const key of LEGACY_KEYS) {
+    localStorage.removeItem(key);
+  }
 }
 
 export function parseLastCheckedAt(value: string | null): Date | null {

@@ -59,7 +59,6 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             // AE は消費され得るので setup 先頭で一度だけキャッシュ（DidFinishLaunching 相当）。
@@ -77,6 +76,14 @@ pub fn run() {
                 eprintln!("settings: {warning}");
             }
             let settings = load_outcome.settings().clone();
+            let update_runtime = infrastructure::desktop::app_update::AppUpdateRuntime::load(
+                app.handle().clone(),
+                infrastructure::persistence::AppUpdateScheduleStore::new(
+                    config_directory.join("app-update.json"),
+                ),
+            );
+            app.manage(Arc::clone(&update_runtime));
+            update_runtime.spawn();
             let quick_set_shortcut = settings.quick_set_shortcut.clone();
             let ui_locale_preference = settings.ui_locale.clone();
             let resolved_ui_locale =
@@ -349,6 +356,11 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             presentation::commands::app_presentations::get_app_presentations,
+            presentation::commands::app_update::ack_app_update_client,
+            presentation::commands::app_update::check_app_update_now,
+            presentation::commands::app_update::install_app_update,
+            presentation::commands::app_update::set_app_update_auto_check,
+            presentation::commands::app_update::set_app_update_auto_download,
             presentation::commands::autostart::get_autostart_enabled,
             presentation::commands::autostart::set_autostart_enabled,
             presentation::commands::autostart::should_show_main_window_on_launch,

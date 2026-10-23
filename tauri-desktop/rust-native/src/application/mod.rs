@@ -1,6 +1,7 @@
 //! Application layer: use cases and outbound ports.
 //! Depends on domain only.
 
+pub mod app_update;
 pub mod current_source_cache;
 pub mod input_source_switcher;
 pub mod ports;

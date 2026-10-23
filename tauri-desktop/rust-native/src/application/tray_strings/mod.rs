@@ -31,6 +31,7 @@ pub struct TrayStrings {
     pub resume: String,
     pub open_app: String,
     pub open_settings: String,
+    pub install_update: String,
     pub quit: String,
 }
 

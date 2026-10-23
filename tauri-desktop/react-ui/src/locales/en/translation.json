@@ -117,8 +117,7 @@
       "desktopOnly": "Update checks run only in the desktop app",
       "checkFailed": "Could not check for updates",
       "downloadFailed": "Could not download the update",
-      "installFailed": "Could not install the update",
-      "restartFailed": "The update is installed. Restart the app to finish"
+      "installFailed": "Could not install the update"
     }
   },
 
