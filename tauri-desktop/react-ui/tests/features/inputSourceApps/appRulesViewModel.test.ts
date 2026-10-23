@@ -177,7 +177,7 @@ describe("filterAppListRows", () => {
     expect(filterAppListRows(rows, "cur")).toEqual([rows[0]]);
   });
 
-  it("matches bundle id", () => {
-    expect(filterAppListRows(rows, "apple.Terminal")).toEqual([rows[1]]);
+  it("does not match bundle id when the display name differs", () => {
+    expect(filterAppListRows(rows, "apple.Terminal")).toEqual([]);
   });
 });

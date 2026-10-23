@@ -116,18 +116,13 @@ export function groupRulesByApp(rules: readonly RuleDto[], t: TFunction): AppRul
 
 export { resolvedInputSourceId } from "@/features/inputSource";
 
-/** 表示名・bundle id の部分一致（大文字小文字無視）。空ならそのまま返す。 */
-export function filterAppListRows<T extends { appId: string; label: string }>(
-  rows: T[],
-  search: string
-): T[] {
+/** 表示名の部分一致（大文字小文字無視）。空ならそのまま返す。 */
+export function filterAppListRows<T extends { label: string }>(rows: T[], search: string): T[] {
   const keyword = search.trim().toLowerCase();
   if (keyword === "") {
     return rows;
   }
-  return rows.filter(
-    (row) => row.label.toLowerCase().includes(keyword) || row.appId.toLowerCase().includes(keyword)
-  );
+  return rows.filter((row) => row.label.toLowerCase().includes(keyword));
 }
 
 export function ruleTargetFromInputSourceId(
