@@ -154,6 +154,7 @@ export function AppSettingsPage() {
         }}
         rowClassName={() => styles.row}
         emptyMessage={search.trim() !== "" ? t("apps.emptySearch") : t("apps.emptyList")}
+        hideHeader
       />
     </div>
   );

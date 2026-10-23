@@ -283,6 +283,7 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
         getRowId={(item) => item.rule.id}
         rowClassName={() => styles.row}
         emptyMessage={t("apps.emptyContextualRules")}
+        hideHeader
       />
 
       <AlertDialog
