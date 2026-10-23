@@ -19,6 +19,13 @@ export const detailHeader = css({
   paddingBlock: "sm",
 });
 
+export const detailHeaderActions = css({
+  display: "flex",
+  alignItems: "center",
+  gap: "xs",
+  flexShrink: "0",
+});
+
 /** カード内のサブセクション（デフォルト入力言語など） */
 export const cardSection = css({
   display: "flex",

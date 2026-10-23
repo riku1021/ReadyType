@@ -34,12 +34,17 @@ type AppDetailPageProps = {
   appId: string;
 };
 
-function RuleActionsMenu({ title, onDelete }: { title: string; onDelete: () => void }) {
-  const { t } = useTranslation();
+function ActionsMenu({
+  menuLabel,
+  deleteLabel,
+  onDelete,
+}: {
+  menuLabel: string;
+  deleteLabel: string;
+  onDelete: () => void;
+}) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
-  const deleteLabel = t("apps.deleteRule");
-  const menuLabel = t("apps.ruleMenuAria", { title });
 
   return (
     <>
@@ -99,6 +104,8 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
     };
   }, [presentations, selectedBase]);
   const [pendingDelete, setPendingDelete] = useState<RuleDisplay | null>(null);
+  const [pendingDeleteApp, setPendingDeleteApp] = useState(false);
+  const [leavingAfterAppDelete, setLeavingAfterAppDelete] = useState(false);
   const [deletedTitle, setDeletedTitle] = useState<string | null>(null);
 
   const languagePreferences = state?.languagePreferences ?? {};
@@ -209,15 +216,32 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
       cellClassName: styles.tdActions,
       stopPropagation: true,
       cell: (item) => (
-        <RuleActionsMenu title={item.title} onDelete={() => setPendingDelete(item)} />
+        <ActionsMenu
+          menuLabel={t("apps.ruleMenuAria", { title: item.title })}
+          deleteLabel={t("apps.deleteRule")}
+          onDelete={() => setPendingDelete(item)}
+        />
       ),
     },
   ];
 
+  const deleteAppSettings = async () => {
+    const ids = rules.filter((rule) => rule.appId === appId).map((rule) => rule.id);
+    setLeavingAfterAppDelete(true);
+    try {
+      for (const id of ids) {
+        await deleteRule(id);
+      }
+      await navigate({ to: "/apps", viewTransition: pageSlide("back") });
+    } catch {
+      setLeavingAfterAppDelete(false);
+    }
+  };
+
   if (!selected) {
     return (
       <div className={styles.page}>
-        <p className={styles.empty}>{t("apps.notFound")}</p>
+        {leavingAfterAppDelete ? null : <p className={styles.empty}>{t("apps.notFound")}</p>}
       </div>
     );
   }
@@ -241,13 +265,20 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
               <p className={styles.detailPath}>{selected.appId}</p>
             </div>
           </div>
-          <Toggle
-            checked={selected.enabled}
-            aria-label={t("common.enableAppAria", { label: selected.label })}
-            onChange={(enabled) => {
-              void setAppEnabled(selected, enabled);
-            }}
-          />
+          <div className={styles.detailHeaderActions}>
+            <Toggle
+              checked={selected.enabled}
+              aria-label={t("common.enableAppAria", { label: selected.label })}
+              onChange={(enabled) => {
+                void setAppEnabled(selected, enabled);
+              }}
+            />
+            <ActionsMenu
+              menuLabel={t("apps.appMenuAria", { label: selected.label })}
+              deleteLabel={t("apps.deleteApp")}
+              onDelete={() => setPendingDeleteApp(true)}
+            />
+          </div>
         </div>
         <div className={styles.cardSection}>
           <div className={styles.defaultLanguageRow}>
@@ -300,6 +331,16 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
           void deleteRule(pendingDelete.rule.id).then(() => {
             setDeletedTitle(title);
           });
+        }}
+      />
+      <AlertDialog
+        isOpen={pendingDeleteApp}
+        onClose={() => setPendingDeleteApp(false)}
+        title={t("apps.deleteAppConfirmTitle")}
+        text={t("apps.deleteAppConfirmText", { label: selected.label })}
+        confirmButtonText={t("apps.deleteAppConfirmButton")}
+        onConfirm={() => {
+          void deleteAppSettings();
         }}
       />
       <SuccessDialog
