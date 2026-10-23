@@ -7,6 +7,7 @@ import { IoBackspaceOutline } from "react-icons/io5";
 import { MdKeyboardReturn, MdOutlineReplay, MdSpaceBar } from "react-icons/md";
 
 import { Button } from "@/components/Button";
+import { FormModal } from "@/components/FormModal";
 import { getHostOs } from "@/platform";
 import { loadQuickSetShortcut, setQuickSetShortcut } from "./quickSetShortcutApi";
 import * as styles from "./ShortcutRecorder.styles";
@@ -109,8 +110,11 @@ export function ShortcutRecorder() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        setRecording(false);
-        setDraft(emptyShortcutChord());
+        event.stopPropagation();
+        if (!pending) {
+          setRecording(false);
+          setDraft(emptyShortcutChord());
+        }
         return;
       }
       event.preventDefault();
@@ -121,7 +125,7 @@ export function ShortcutRecorder() {
     return () => {
       window.removeEventListener("keydown", onKeyDown, true);
     };
-  }, [recording]);
+  }, [pending, recording]);
 
   const chipLabel = formatShortcutChord(committed, hostOs) || t("settings.shortcutUnset");
   const canApply = isShortcutChordComplete(draft) && !pending;
@@ -150,6 +154,9 @@ export function ShortcutRecorder() {
   };
 
   const cancelRecording = () => {
+    if (pending) {
+      return;
+    }
     setRecording(false);
     setDraft(emptyShortcutChord());
   };
@@ -194,33 +201,17 @@ export function ShortcutRecorder() {
         </div>
       </div>
 
-      {errorMessage != null ? (
+      {errorMessage != null && !recording ? (
         <p className={styles.errorMessage} role="alert">
           {errorMessage}
         </p>
       ) : null}
 
-      {recording ? (
-        <div className={styles.recordingSection}>
-          <fieldset className={styles.recorderPanel}>
-            <legend className={styles.visuallyHidden}>{t("settings.recordShortcut")}</legend>
-            <div className={styles.modifierRow} aria-live="polite">
-              <div className={styles.modifierGroup}>
-                {modifierSlots.map((slot) => (
-                  <ModifierSlotView key={slot.flag} slot={slot} active={draft[slot.flag]} />
-                ))}
-              </div>
-              <span className={styles.keySlot} aria-hidden="true">
-                {draft.key != null ? (
-                  <PrimaryKeyView keyLabel={draft.key} />
-                ) : (
-                  <span className={styles.keyDiamond}>
-                    <span className={styles.keyDiamondInner}>?</span>
-                  </span>
-                )}
-              </span>
-            </div>
-          </fieldset>
+      <FormModal
+        isOpen={recording}
+        onClose={cancelRecording}
+        title={t("settings.recordShortcut")}
+        footer={
           <div className={styles.actions}>
             <Button variant="primary" disabled={!canApply} onClick={applyRecording}>
               {t("settings.shortcutApply")}
@@ -229,8 +220,32 @@ export function ShortcutRecorder() {
               {t("settings.shortcutCancel")}
             </Button>
           </div>
+        }
+      >
+        {errorMessage != null ? (
+          <p className={styles.modalError} role="alert">
+            {errorMessage}
+          </p>
+        ) : null}
+        <div className={styles.modifierRow}>
+          <div className={styles.recorderPlate} aria-live="polite">
+            <div className={styles.modifierGroup}>
+              {modifierSlots.map((slot) => (
+                <ModifierSlotView key={slot.flag} slot={slot} active={draft[slot.flag]} />
+              ))}
+            </div>
+            <span className={styles.keySlot} aria-hidden="true">
+              {draft.key != null ? (
+                <PrimaryKeyView keyLabel={draft.key} />
+              ) : (
+                <span className={styles.keyDiamond}>
+                  <span className={styles.keyDiamondInner}>?</span>
+                </span>
+              )}
+            </span>
+          </div>
         </div>
-      ) : null}
+      </FormModal>
     </div>
   );
 }

@@ -13,6 +13,12 @@ export const errorMessage = css({
   color: "status.error.main",
 });
 
+export const modalError = css({
+  marginBlockEnd: "sm",
+  fontSize: "sm",
+  color: "status.error.main",
+});
+
 export const row = css({
   display: "flex",
   alignItems: "center",
@@ -93,50 +99,31 @@ export const iconButton = css({
   },
 });
 
-export const recordingSection = css({
-  display: "flex",
-  flexDirection: "column",
-  gap: "sm",
-  marginInline: "sm",
-  marginBlockEnd: "sm",
-  minInlineSize: "0",
-});
-
-export const recorderPanel = css({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  gap: "sm",
-  marginInline: "0",
-  marginBlock: "0",
-  paddingBlock: "md",
-  paddingInline: "sm",
-  borderRadius: "12px",
-  borderWidth: "0",
-  minInlineSize: "0",
-  backgroundColor: "background.hover",
-  boxShadow: "inset 0 0 0 1px {colors.border.primary}",
-});
-
-export const visuallyHidden = css({
-  position: "absolute",
-  width: "1px",
-  height: "1px",
-  padding: "0",
-  margin: "-1px",
-  overflow: "hidden",
-  clip: "rect(0, 0, 0, 0)",
-  whiteSpace: "nowrap",
-  borderWidth: "0",
-});
-
 export const modifierRow = css({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
+  width: "100%",
+});
+
+/** 記録中の修飾キーと本体キーを載せる一つの面 */
+export const recorderPlate = css({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "100%",
+  minInlineSize: "0",
+  flexWrap: "wrap",
   // 修飾キー群と本体キーのあいだをアイコン1つ分空ける
   gap: "3rem",
-  flexWrap: "wrap",
+  boxSizing: "border-box",
+  paddingInline: "lg",
+  paddingBlock: "sm",
+  borderRadius: "16px",
+  borderWidth: "1px",
+  borderStyle: "solid",
+  borderColor: "border.primary",
+  backgroundColor: "background.hover",
 });
 
 export const modifierGroup = css({
