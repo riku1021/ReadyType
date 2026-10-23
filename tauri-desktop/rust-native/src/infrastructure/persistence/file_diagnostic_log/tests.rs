@@ -1,5 +1,10 @@
 use super::*;
-use crate::application::input_source_switcher::SwitchDecision;
+use crate::{
+    application::{input_source_switcher::SwitchDecision, ports::diagnostic_log::QuickSetLogEntry},
+    domain::input_source::{
+        AxAttribute, AxElementSnapshot, FocusSnapshot, Platform, PlatformAppId,
+    },
+};
 
 fn sample_entry(detail: &str) -> SwitchLogEntry {
     SwitchLogEntry {
@@ -48,6 +53,34 @@ fn writes_jsonl_switch_records_with_flag_snapshot() {
     assert!(body.contains("\"flags\""));
     assert!(body.contains("\"ablation\""));
     assert!(body.contains("\"proto\""));
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn writes_quick_set_launch_and_element_tree() {
+    let app = PlatformAppId::new(Platform::MacOs, "com.example.Editor", 42).expect("app");
+    let focused = AxElementSnapshot::new()
+        .with(AxAttribute::Role, "AXTextField")
+        .with(AxAttribute::Identifier, "composer");
+    let parent = AxElementSnapshot::new().with(AxAttribute::Role, "AXWindow");
+    let snapshot = FocusSnapshot::new(app, 7, vec![focused, parent]);
+    let entry =
+        QuickSetLogEntry::capture(1_000, "CommandOrControl+Shift+L", "ready", Some(&snapshot));
+
+    let dir = temp_dir("quick-set");
+    let sink = FileDiagnosticLogSink::open(dir.clone()).expect("open");
+    sink.append_quick_set(&entry);
+
+    let body = fs::read_to_string(sink.path()).expect("read");
+    assert!(body.contains("\"kind\":\"quickSet\""));
+    assert!(body.contains("\"shortcut\":\"CommandOrControl+Shift+L\""));
+    assert!(body.contains("\"outcome\":\"ready\""));
+    assert!(body.contains("\"appId\":\"com.example.Editor\""));
+    assert!(body.contains("\"depth\":0"));
+    assert!(body.contains("\"identifier\":\"composer\""));
+    assert!(body.contains("\"depth\":1"));
+    assert!(body.contains("\"role\":\"AXWindow\""));
 
     let _ = fs::remove_dir_all(&dir);
 }

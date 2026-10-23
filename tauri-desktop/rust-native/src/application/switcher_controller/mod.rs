@@ -180,6 +180,19 @@ impl SwitcherController {
         self.ui_locale.load()
     }
 
+    /// Composition root から follow-up reselect の診断 sink を配線する。
+    pub fn bind_followup_reselect_log<F>(&self, bind: F)
+    where
+        F: FnOnce(Arc<dyn Fn(u64, i32, Option<InputSourceId>) + Send + Sync>),
+    {
+        let switcher = Arc::clone(&self.switcher);
+        bind(Arc::new(move |delay_ms, status, current| {
+            if let Ok(mut switcher) = switcher.lock() {
+                switcher.note_followup_reselect(delay_ms, status, current.as_ref());
+            }
+        }));
+    }
+
     /// Composition root から診断ファイル等の sink を配線する。
     pub fn set_diagnostic_log_sink(&self, sink: Option<SharedDiagnosticLogSink>) {
         if let Ok(mut switcher) = self.switcher.lock() {
@@ -538,24 +551,46 @@ impl SwitcherController {
 
     /// Capture current focus into a Quick Set session (call before showing the popover window).
     pub fn prepare_quick_set_session(self: &Arc<Self>) -> Result<QuickSetSession, ControllerError> {
-        let snapshot = self
-            .lock_last_snapshot()?
-            .clone()
-            .ok_or_else(|| ControllerError::InvalidRequest("no focused input field".to_owned()))?;
+        let snapshot = self.lock_last_snapshot()?.clone();
+        let result = self.build_quick_set_session(snapshot.as_ref());
+        let outcome = match &result {
+            Ok(_) => "ready".to_owned(),
+            Err(ControllerError::InvalidRequest(message)) => message.clone(),
+            Err(error) => error.to_string(),
+        };
+        self.record_quick_set_launch(&outcome, snapshot.as_ref());
+        result
+    }
+
+    fn build_quick_set_session(
+        self: &Arc<Self>,
+        snapshot: Option<&FocusSnapshot>,
+    ) -> Result<QuickSetSession, ControllerError> {
+        let Some(snapshot) = snapshot else {
+            return Err(ControllerError::InvalidRequest(
+                "no focused input field".to_owned(),
+            ));
+        };
         if snapshot.elements().is_empty() {
             return Err(ControllerError::InvalidRequest(
                 "no focused input field".to_owned(),
             ));
         }
         // ReadyType 前面時に他アプリの古い last_snapshot で Quick Set しない。
-        if let Some(frontmost) = self.lock_monitor()?.frontmost_app() {
-            if frontmost.app_id() != snapshot.app().app_id() {
-                return Err(ControllerError::InvalidRequest(format!(
-                    "focus snapshot is for {} but frontmost is {}; focus a field in the frontmost app first",
-                    snapshot.app().app_id(),
-                    frontmost.app_id()
-                )));
-            }
+        let mismatch = {
+            let monitor = self.lock_monitor()?;
+            monitor.frontmost_app().and_then(|frontmost| {
+                (frontmost.app_id() != snapshot.app().app_id()).then(|| {
+                    format!(
+                        "focus snapshot is for {} but frontmost is {}; focus a field in the frontmost app first",
+                        snapshot.app().app_id(),
+                        frontmost.app_id()
+                    )
+                })
+            })
+        };
+        if let Some(message) = mismatch {
+            return Err(ControllerError::InvalidRequest(message));
         }
         let rules = self.rules()?;
         let settings = self.settings()?;
@@ -563,9 +598,20 @@ impl SwitcherController {
         let sources = self.list_input_sources(true)?;
         let app_display_name = self.app_display_names.resolve(snapshot.app().app_id());
         let session =
-            build_quick_set_session(&snapshot, &rules, &settings, &sources, app_display_name);
+            build_quick_set_session(snapshot, &rules, &settings, &sources, app_display_name);
         *self.lock_quick_set_session()? = Some(session.clone());
         Ok(session)
+    }
+
+    fn record_quick_set_launch(&self, outcome: &str, snapshot: Option<&FocusSnapshot>) {
+        let shortcut = self
+            .settings()
+            .map(|settings| settings.quick_set_shortcut)
+            .unwrap_or_default();
+        let Ok(switcher) = self.lock_switcher() else {
+            return;
+        };
+        switcher.note_quick_set_launch(&shortcut, outcome, snapshot);
     }
 
     pub fn quick_set_session(&self) -> Result<Option<QuickSetSession>, ControllerError> {

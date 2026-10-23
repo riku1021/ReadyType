@@ -164,6 +164,12 @@ pub fn run() {
                     tis_change_monitor,
                 },
             )?;
+            #[cfg(target_os = "macos")]
+            {
+                controller.bind_followup_reselect_log(|sink| {
+                    infrastructure::platform::macos::set_followup_reselect_log_sink(Some(sink));
+                });
+            }
             match infrastructure::persistence::FileDiagnosticLogSink::open_default() {
                 Ok(sink) => {
                     eprintln!(

@@ -8,7 +8,7 @@ use crate::{
     application::{
         ports::{
             clock::Clock,
-            diagnostic_log::{DiagnosticLogSink, SharedDiagnosticLogSink},
+            diagnostic_log::{DiagnosticLogSink, QuickSetLogEntry, SharedDiagnosticLogSink},
             input_source::{AvailableInputSource, GatewayError, InputSourceGateway},
             settings_repository::{LoadOutcome, SettingsError, SettingsRepository},
             switcher_events::SwitcherEventPublisher,
@@ -578,15 +578,101 @@ fn switched_log_includes_post_select_verification() {
 }
 
 #[test]
-fn switch_logs_are_forwarded_to_diagnostic_sink() {
-    struct RecordingSink(Mutex<Vec<String>>);
-    impl DiagnosticLogSink for RecordingSink {
-        fn append_switch_log(&self, entry: &SwitchLogEntry) {
-            self.0.lock().expect("sink lock").push(entry.reason.clone());
-        }
-    }
+fn rejected_focus_is_written_to_the_diagnostic_log() {
     let mut fixture = Fixture::active();
-    let sink = Arc::new(RecordingSink(Mutex::new(Vec::new())));
+    let sink = recording_sink();
+    fixture
+        .switcher
+        .set_diagnostic_log_sink(Some(Arc::clone(&sink) as SharedDiagnosticLogSink));
+
+    fixture
+        .switcher
+        .handle_focus(snapshot(42, 1))
+        .expect("switch");
+    fixture
+        .switcher
+        .handle_focus(snapshot(42, 1))
+        .expect("duplicate focus");
+
+    let reasons = sink.0.lock().expect("sink lock");
+    assert!(reasons
+        .iter()
+        .any(|reason| reason.contains("already handled")));
+}
+
+#[test]
+fn quick_set_launch_tree_is_written_to_the_diagnostic_log() {
+    let mut fixture = Fixture::active();
+    let sink = Arc::new(QuickSetRecordingSink(Mutex::new(Vec::new())));
+    fixture
+        .switcher
+        .set_diagnostic_log_sink(Some(Arc::clone(&sink) as SharedDiagnosticLogSink));
+    let snapshot = field_snapshot(42, 3, "composer");
+
+    fixture
+        .switcher
+        .note_quick_set_launch("CommandOrControl+Shift+L", "ready", Some(&snapshot));
+
+    let lines = sink.0.lock().expect("sink lock");
+    assert_eq!(lines.len(), 1);
+    assert!(lines[0].contains("CommandOrControl+Shift+L"));
+    assert!(lines[0].contains("ready"));
+    assert!(lines[0].contains("AXTextField"));
+    assert!(lines[0].contains("composer"));
+}
+
+struct QuickSetRecordingSink(Mutex<Vec<String>>);
+
+impl DiagnosticLogSink for QuickSetRecordingSink {
+    fn append_switch_log(&self, _entry: &SwitchLogEntry) {}
+
+    fn append_quick_set(&self, entry: &QuickSetLogEntry) {
+        let roles = entry
+            .elements
+            .iter()
+            .map(|element| format!("{}:{}", element.role, element.identifier))
+            .collect::<Vec<_>>()
+            .join("/");
+        self.0
+            .lock()
+            .expect("sink lock")
+            .push(format!("{} {} {roles}", entry.shortcut, entry.outcome));
+    }
+}
+
+#[test]
+fn followup_reselect_is_written_to_the_diagnostic_log() {
+    let mut fixture = Fixture::active();
+    let sink = recording_sink();
+    fixture
+        .switcher
+        .set_diagnostic_log_sink(Some(Arc::clone(&sink) as SharedDiagnosticLogSink));
+    let id = InputSourceId::parse("en").expect("id");
+
+    fixture.switcher.note_followup_reselect(40, 0, Some(&id));
+
+    let reasons = sink.0.lock().expect("sink lock");
+    assert!(reasons
+        .iter()
+        .any(|reason| reason.contains("followup reselect")));
+}
+
+fn recording_sink() -> Arc<RecordingSink> {
+    Arc::new(RecordingSink(Mutex::new(Vec::new())))
+}
+
+struct RecordingSink(Mutex<Vec<String>>);
+
+impl DiagnosticLogSink for RecordingSink {
+    fn append_switch_log(&self, entry: &SwitchLogEntry) {
+        self.0.lock().expect("sink lock").push(entry.reason.clone());
+    }
+}
+
+#[test]
+fn switch_logs_are_forwarded_to_diagnostic_sink() {
+    let mut fixture = Fixture::active();
+    let sink = recording_sink();
     fixture
         .switcher
         .set_diagnostic_log_sink(Some(Arc::clone(&sink) as SharedDiagnosticLogSink));

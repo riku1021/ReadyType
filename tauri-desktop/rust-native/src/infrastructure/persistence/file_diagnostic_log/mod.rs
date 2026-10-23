@@ -25,8 +25,10 @@ use std::{
 use serde::Serialize;
 
 use crate::application::{
-    input_source_switcher::SwitchDecision, ports::diagnostic_log::DiagnosticLogSink,
-    switch_ablation, switch_proto, switcher_state::SwitchLogEntry,
+    input_source_switcher::SwitchDecision,
+    ports::diagnostic_log::{DiagnosticLogSink, QuickSetElementLog, QuickSetLogEntry},
+    switch_ablation, switch_proto,
+    switcher_state::SwitchLogEntry,
 };
 
 const SCHEMA_VERSION: u32 = 2;
@@ -94,6 +96,17 @@ impl FileDiagnosticLogSink {
 impl DiagnosticLogSink for FileDiagnosticLogSink {
     fn append_switch_log(&self, entry: &SwitchLogEntry) {
         let record = SwitchLogFileRecord::from_entry(entry);
+        let Ok(line) = serde_json::to_string(&record) else {
+            return;
+        };
+        let Ok(mut state) = self.state.lock() else {
+            return;
+        };
+        let _ = state.append_line(&line);
+    }
+
+    fn append_quick_set(&self, entry: &QuickSetLogEntry) {
+        let record = QuickSetFileRecord::from_entry(entry);
         let Ok(line) = serde_json::to_string(&record) else {
             return;
         };
@@ -209,6 +222,86 @@ struct SwitchLogFileRecord<'a> {
     current_micros: u64,
     select_micros: u64,
     flags: FlagSnapshot,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct QuickSetFileRecord<'a> {
+    v: u32,
+    kind: &'static str,
+    timestamp_unix_ms: u64,
+    shortcut: &'a str,
+    outcome: &'a str,
+    app_id: &'a str,
+    pid: i32,
+    generation: u64,
+    elements: Vec<QuickSetElementRecord<'a>>,
+    flags: FlagSnapshot,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct QuickSetElementRecord<'a> {
+    depth: u32,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    role: &'a str,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    subrole: &'a str,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    role_description: &'a str,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    title: &'a str,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    description: &'a str,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    identifier: &'a str,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    dom_identifier: &'a str,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    dom_class_list: &'a str,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    help: &'a str,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    placeholder: &'a str,
+}
+
+impl<'a> QuickSetFileRecord<'a> {
+    fn from_entry(entry: &'a QuickSetLogEntry) -> Self {
+        Self {
+            v: SCHEMA_VERSION,
+            kind: "quickSet",
+            timestamp_unix_ms: entry.timestamp_unix_ms,
+            shortcut: entry.shortcut.as_str(),
+            outcome: entry.outcome.as_str(),
+            app_id: entry.app_id.as_str(),
+            pid: entry.pid,
+            generation: entry.generation,
+            elements: entry
+                .elements
+                .iter()
+                .map(QuickSetElementRecord::from)
+                .collect(),
+            flags: FlagSnapshot::capture(),
+        }
+    }
+}
+
+impl<'a> From<&'a QuickSetElementLog> for QuickSetElementRecord<'a> {
+    fn from(element: &'a QuickSetElementLog) -> Self {
+        Self {
+            depth: element.depth,
+            role: element.role.as_str(),
+            subrole: element.subrole.as_str(),
+            role_description: element.role_description.as_str(),
+            title: element.title.as_str(),
+            description: element.description.as_str(),
+            identifier: element.identifier.as_str(),
+            dom_identifier: element.dom_identifier.as_str(),
+            dom_class_list: element.dom_class_list.as_str(),
+            help: element.help.as_str(),
+            placeholder: element.placeholder.as_str(),
+        }
+    }
 }
 
 impl<'a> SwitchLogFileRecord<'a> {

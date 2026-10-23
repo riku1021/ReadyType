@@ -13,7 +13,7 @@ use super::{
     current_source_cache::CurrentInputSourceCache,
     ports::{
         clock::Clock,
-        diagnostic_log::SharedDiagnosticLogSink,
+        diagnostic_log::{QuickSetLogEntry, SharedDiagnosticLogSink},
         input_source::{GatewayError, InputSourceGateway},
         settings_repository::{SettingsError, SettingsRepository},
         switcher_events::SwitcherEventPublisher,
@@ -262,6 +262,24 @@ where
         self.diagnostic_log = sink;
     }
 
+    /// Quick Set ショートカット起動と、そのとき使った AX ツリーを診断ファイルへ書く。
+    pub fn note_quick_set_launch(
+        &self,
+        shortcut: &str,
+        outcome: &str,
+        snapshot: Option<&FocusSnapshot>,
+    ) {
+        let Some(sink) = &self.diagnostic_log else {
+            return;
+        };
+        sink.append_quick_set(&QuickSetLogEntry::capture(
+            self.clock.now_unix_ms(),
+            shortcut,
+            outcome,
+            snapshot,
+        ));
+    }
+
     pub fn gateway_handle(&self) -> Arc<Mutex<G>> {
         Arc::clone(&self.gateway)
     }
@@ -445,6 +463,21 @@ where
     ) -> Result<PreparedFocus, ApplicationError> {
         let started = Instant::now();
         if !self.accepts(&snapshot) {
+            self.push_log(
+                &snapshot,
+                "",
+                SwitchDecision::Ignored,
+                "",
+                "",
+                false,
+                false,
+                self.reject_reason(&snapshot),
+                started,
+                LogTiming {
+                    prepare_micros: micros_since(started),
+                    ..LogTiming::default()
+                },
+            );
             return Ok(PreparedFocus::Done(SwitchDecision::Ignored));
         }
         self.handled_generation = Some(snapshot.generation());
@@ -691,6 +724,28 @@ where
         }
     }
 
+    /// follow-up reselect の結果を診断ログへ残す。
+    pub fn note_followup_reselect(
+        &mut self,
+        delay_ms: u64,
+        status: i32,
+        current: Option<&InputSourceId>,
+    ) {
+        let current = current
+            .map(|id| {
+                if is_ime_latin_mode(id.as_str()) {
+                    format!("{} [imeLatin]", id.as_str())
+                } else {
+                    id.as_str().to_owned()
+                }
+            })
+            .unwrap_or_else(|| "—".to_owned());
+        self.push_control_log(
+            format!("tis: followup reselect +{delay_ms}ms status={status} current={current}"),
+            String::new(),
+        );
+    }
+
     /// gateway 呼び出し自体が失敗したとき（current/list 失敗など）。
     pub fn record_switch_pipeline_error(
         &mut self,
@@ -824,6 +879,35 @@ where
             && self.handled_generation != Some(snapshot.generation())
     }
 
+    fn reject_reason(&self, snapshot: &FocusSnapshot) -> String {
+        let Some(active_app) = &self.active_app else {
+            return "no active app (waiting for activation)".to_owned();
+        };
+        if active_app.platform() != snapshot.app().platform()
+            || active_app.app_id() != snapshot.app().app_id()
+            || active_app.pid() != snapshot.app().pid()
+        {
+            return format!(
+                "active app mismatch: active={} pid={} snapshot={} pid={}",
+                active_app.app_id(),
+                active_app.pid(),
+                snapshot.app().app_id(),
+                snapshot.app().pid()
+            );
+        }
+        if snapshot.generation() < self.active_generation {
+            return format!(
+                "stale generation: snapshot={} active={}",
+                snapshot.generation(),
+                self.active_generation
+            );
+        }
+        if self.handled_generation == Some(snapshot.generation()) {
+            return format!("generation {} already handled", snapshot.generation());
+        }
+        "focus rejected".to_owned()
+    }
+
     fn resolve_target<'a>(&'a self, target: &'a RuleTarget) -> Option<&'a InputSourceId> {
         match target {
             RuleTarget::PreferredLanguage(tag) => self.settings.preferred(tag),
@@ -871,6 +955,38 @@ where
         } else {
             format!("{base} ({})", tags.join(" "))
         }
+    }
+
+    fn push_control_log(&mut self, reason: String, detail: String) {
+        let (app_id, pid) = self
+            .state
+            .current_app
+            .as_ref()
+            .map(|app| (app.app_id().to_owned(), app.pid()))
+            .unwrap_or_else(|| (String::new(), 0));
+        self.state.logs.insert(
+            0,
+            SwitchLogEntry {
+                timestamp_unix_ms: self.clock.now_unix_ms(),
+                app_id,
+                pid,
+                generation: self.handled_generation.unwrap_or(0),
+                rule_id: String::new(),
+                decision: SwitchDecision::Ignored,
+                from: String::new(),
+                to: String::new(),
+                success: true,
+                attempted: false,
+                reason,
+                detail,
+                processing_micros: 0,
+                prepare_micros: 0,
+                current_micros: 0,
+                select_micros: 0,
+            },
+        );
+        self.state.logs.truncate(MAX_LOGS);
+        self.persist_latest_log();
     }
 
     fn persist_latest_log(&self) {
