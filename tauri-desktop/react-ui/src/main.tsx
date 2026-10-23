@@ -29,6 +29,8 @@ const windowKind: WindowKind = quickSet ? "quick-set" : "main";
 // quick-set は `/`→`/apps` redirect を踏まず、最初から `/quick-set/` で起動する
 const router = createRouter({
   routeTree,
+  // 本文は window ではなく main がスクロールする。遷移のたびにその容器を先頭へ戻す。
+  scrollToTopSelectors: ["#main-scroll"],
   ...(quickSet ? { history: createMemoryHistory({ initialEntries: ["/quick-set/"] }) } : {}),
 });
 

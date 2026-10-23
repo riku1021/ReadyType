@@ -12,7 +12,7 @@ export function RootLayout({ children }: RootLayoutProps) {
     <div className={rootLayout}>
       <Header />
       <Drawer />
-      <main className={mainContent}>
+      <main id="main-scroll" className={mainContent}>
         <div className={contentColumn}>{children}</div>
       </main>
     </div>
