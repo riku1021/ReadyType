@@ -127,8 +127,10 @@ jobs:
         run: echo 'APPLE_SIGNING_IDENTITY=-' >> "$GITHUB_ENV"
 
       # Updater bundles are signed only when the private key secret is present.
-      # Local `mise run build` does not pass updater-artifacts.json, so it does
-      # not need the key. https://v2.tauri.app/plugin/updater/
+      # Local `mise run build` does not pass this config, so it does not need the key.
+      # `pnpm --dir ../react-ui exec` runs the CLI with cwd = react-ui, so the
+      # config path is relative to react-ui, not rust-native.
+      # https://v2.tauri.app/plugin/updater/
       - name: Select updater signing args
         shell: bash
         env:
@@ -137,7 +139,7 @@ jobs:
           set -eu
           args=""
           if [ -n "${TAURI_SIGNING_PRIVATE_KEY}" ]; then
-            args="--config updater-artifacts.json"
+            args="--config ../rust-native/updater-artifacts.json"
           else
             echo "TAURI_SIGNING_PRIVATE_KEY is unset. Installers will be built without updater artifacts."
           fi
