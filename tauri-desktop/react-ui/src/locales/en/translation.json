@@ -8,7 +8,8 @@
     "lab": "Lab",
     "mainNavigationAria": "Main navigation",
     "appsMissingInputSourceAria": "A registered input source is missing from the OS",
-    "backToList": "Back to list"
+    "backToList": "Back to list",
+    "backToGeneral": "Back to General"
   },
   "os": {
     "permissionPane": {
@@ -47,6 +48,10 @@
     "theme": "Theme",
     "displayLanguage": "Display language",
     "languageSystem": "System",
+    "languageColumn": "Language",
+    "languageSearchPlaceholder": "Search languages...",
+    "languageSearchAria": "Search display languages",
+    "languageEmptySearch": "No matching languages",
     "sectionShortcuts": "Shortcuts",
     "recordShortcut": "Record shortcut",
     "shortcutUnset": "Not set",

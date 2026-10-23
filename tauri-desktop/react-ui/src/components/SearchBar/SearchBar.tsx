@@ -14,6 +14,8 @@ type SearchBarProps = {
   "aria-label": string;
   /** 省略時は `common.searchClearAria` */
   clearAriaLabel?: string;
+  /** 親の横幅いっぱいに広げる */
+  fullWidth?: boolean;
   className?: string;
 };
 
@@ -23,6 +25,7 @@ export function SearchBar({
   placeholder,
   "aria-label": ariaLabel,
   clearAriaLabel,
+  fullWidth = false,
   className,
 }: SearchBarProps) {
   const { t } = useTranslation();
@@ -36,7 +39,7 @@ export function SearchBar({
   };
 
   return (
-    <div className={cx(styles.root, className)}>
+    <div className={cx(styles.root({ fullWidth }), className)}>
       <input
         ref={inputRef}
         className={styles.input}

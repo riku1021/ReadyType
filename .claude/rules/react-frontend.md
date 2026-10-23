@@ -324,11 +324,11 @@ export function MyComponent() {
 **設定の表示言語切替:**
 
 ```tsx
-import { getLanguageOptionLabel, languageFromOptionLabel, languageOptionLabels } from "./languageLabels";
+import { getLanguageOptionLabel } from "./languageLabels";
 
-// options は languageOptionLabels(t)（system は翻訳、各言語は registry.nativeName）
-// 保存は preference（"system" | registry packs）を setUiLocale → invoke("set_ui_locale")
-// 反映は settings.resolvedUiLocale で i18n.changeLanguage
+// 一般設定の行は現在の表示名（system は翻訳、各言語は registry.nativeName）を出して
+// /general/language へ遷移する。一覧の選択は preference（"system" | registry packs）を
+// setUiLocale → invoke("set_ui_locale")。反映は settings.resolvedUiLocale で i18n.changeLanguage
 ```
 
 ### ネイティブ（トレイ）との同期

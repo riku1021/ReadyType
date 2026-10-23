@@ -8,7 +8,8 @@
     "lab": "開発確認",
     "mainNavigationAria": "メインナビゲーション",
     "appsMissingInputSourceAria": "登録した入力ソースが OS にありません",
-    "backToList": "一覧に戻る"
+    "backToList": "一覧に戻る",
+    "backToGeneral": "一般に戻る"
   },
   "os": {
     "permissionPane": {
@@ -47,6 +48,10 @@
     "theme": "テーマ",
     "displayLanguage": "表示言語",
     "languageSystem": "システム",
+    "languageColumn": "言語",
+    "languageSearchPlaceholder": "言語を検索...",
+    "languageSearchAria": "表示言語を検索",
+    "languageEmptySearch": "該当する言語はありません",
     "sectionShortcuts": "ショートカット",
     "recordShortcut": "ショートカットを記録",
     "shortcutUnset": "未設定",

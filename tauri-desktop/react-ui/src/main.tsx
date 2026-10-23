@@ -4,6 +4,7 @@ import "@/locales/i18n";
 import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/react-router";
 import { type ReactNode, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import type { IconType } from "react-icons";
 import { useInputSourceBootstrap, useInputSourceSources } from "@/features/inputSource";
 import { useAppUpdateBootstrap } from "@/features/update";
 import { useRevealMainWindow } from "@/hooks/useRevealMainWindow";
@@ -41,6 +42,8 @@ declare module "@tanstack/react-router" {
 
   interface StaticDataRouteOption {
     title?: string;
+    /** 指定時はナビのアイコンより優先する */
+    headerIcon?: IconType;
     headerBack?: {
       to: string;
       label: string;

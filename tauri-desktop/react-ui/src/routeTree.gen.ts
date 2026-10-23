@@ -20,6 +20,7 @@ import { Route as QuickSetIndexRouteImport } from './routes/quick-set/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as UpdateIndexRouteImport } from './routes/update/index'
 import { Route as AppsAppIdIndexRouteImport } from './routes/apps/$appId/index'
+import { Route as GeneralLanguageIndexRouteImport } from './routes/general/language/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -76,6 +77,11 @@ const AppsAppIdIndexRoute = AppsAppIdIndexRouteImport.update({
   path: '/apps/$appId/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GeneralLanguageIndexRoute = GeneralLanguageIndexRouteImport.update({
+  id: '/general/language/',
+  path: '/general/language/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof SettingsIndexRoute
   '/update/': typeof UpdateIndexRoute
   '/apps/$appId/': typeof AppsAppIdIndexRoute
+  '/general/language/': typeof GeneralLanguageIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsIndexRoute
   '/update': typeof UpdateIndexRoute
   '/apps/$appId': typeof AppsAppIdIndexRoute
+  '/general/language': typeof GeneralLanguageIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/settings/': typeof SettingsIndexRoute
   '/update/': typeof UpdateIndexRoute
   '/apps/$appId/': typeof AppsAppIdIndexRoute
+  '/general/language/': typeof GeneralLanguageIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/update/'
     | '/apps/$appId/'
+    | '/general/language/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/update'
     | '/apps/$appId'
+    | '/general/language'
   id:
     | '__root__'
     | '/'
@@ -157,6 +168,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/update/'
     | '/apps/$appId/'
+    | '/general/language/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -171,6 +183,7 @@ export interface RootRouteChildren {
   SettingsIndexRoute: typeof SettingsIndexRoute
   UpdateIndexRoute: typeof UpdateIndexRoute
   AppsAppIdIndexRoute: typeof AppsAppIdIndexRoute
+  GeneralLanguageIndexRoute: typeof GeneralLanguageIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -252,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppsAppIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/general/language/': {
+      id: '/general/language/'
+      path: '/general/language'
+      fullPath: '/general/language/'
+      preLoaderRoute: typeof GeneralLanguageIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -267,6 +287,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsIndexRoute: SettingsIndexRoute,
   UpdateIndexRoute: UpdateIndexRoute,
   AppsAppIdIndexRoute: AppsAppIdIndexRoute,
+  GeneralLanguageIndexRoute: GeneralLanguageIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

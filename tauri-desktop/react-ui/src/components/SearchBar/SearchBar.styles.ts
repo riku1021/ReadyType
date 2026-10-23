@@ -1,12 +1,22 @@
-import { css } from "@/styled-system/css";
+import { css, cva } from "@/styled-system/css";
 
-export const root = css({
-  position: "relative",
-  display: "flex",
-  alignItems: "center",
-  minWidth: "0",
-  maxWidth: "22rem",
-  width: "16rem",
+export const root = cva({
+  base: {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    minWidth: "0",
+    maxWidth: "22rem",
+    width: "16rem",
+  },
+  variants: {
+    fullWidth: {
+      true: {
+        width: "100%",
+        maxWidth: "none",
+      },
+    },
+  },
 });
 
 export const input = css({

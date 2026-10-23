@@ -10,19 +10,20 @@ import * as styles from "./Header.styles";
 
 export function Header() {
   const { t } = useTranslation();
-  const { title, headerBack, pathname } = useRouterState({
+  const { title, headerBack, headerIcon, pathname } = useRouterState({
     select: (state) => {
       const matches = [...state.matches].reverse();
       return {
         title: matches.find((item) => item.staticData.title)?.staticData.title,
         headerBack: matches.find((item) => item.staticData.headerBack)?.staticData.headerBack,
+        headerIcon: matches.find((item) => item.staticData.headerIcon)?.staticData.headerIcon,
         pathname: state.location.pathname,
       };
     },
   });
 
   const navLink = getNavLinkByPath(pathname);
-  const TitleIcon = navLink?.icon;
+  const TitleIcon = headerIcon ?? navLink?.icon;
   const titleKey = title as ParseKeys<"translation"> | undefined;
   const backLabelKey = headerBack?.label as ParseKeys<"translation"> | undefined;
 

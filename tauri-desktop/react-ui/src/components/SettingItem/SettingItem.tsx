@@ -20,6 +20,8 @@ type SettingItemBase = {
 type NavigationSettingItem = SettingItemBase & {
   type: "navigation";
   onClick?: () => void;
+  /** 現在値。あるときだけシェブロンの左に出す */
+  value?: string;
 };
 
 /** 外部ブラウザ等で開くリンク */
@@ -68,9 +70,19 @@ export type SettingItemProps =
 function renderTrailing(props: SettingItemProps) {
   switch (props.type) {
     case "navigation":
+      if (!props.value) {
+        return (
+          <span className={styles.chevron} aria-hidden>
+            <IoChevronForward />
+          </span>
+        );
+      }
       return (
-        <span className={styles.chevron} aria-hidden>
-          <IoChevronForward />
+        <span className={styles.trailing}>
+          <span className={styles.value}>{props.value}</span>
+          <span className={styles.chevron} aria-hidden>
+            <IoChevronForward />
+          </span>
         </span>
       );
     case "externalLink":

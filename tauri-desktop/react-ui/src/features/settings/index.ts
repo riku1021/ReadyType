@@ -1,3 +1,4 @@
+export { DisplayLanguagePage } from "./DisplayLanguagePage";
 export { SettingsPage } from "./SettingsPage";
 export {
   acceleratorToChord,

@@ -8,7 +8,8 @@
     "lab": "开发确认",
     "mainNavigationAria": "主导航",
     "appsMissingInputSourceAria": "已注册的输入源在系统中不存在",
-    "backToList": "返回列表"
+    "backToList": "返回列表",
+    "backToGeneral": "返回通用"
   },
   "os": {
     "permissionPane": {
@@ -47,6 +48,10 @@
     "theme": "主题",
     "displayLanguage": "显示语言",
     "languageSystem": "系统",
+    "languageColumn": "语言",
+    "languageSearchPlaceholder": "搜索语言...",
+    "languageSearchAria": "搜索显示语言",
+    "languageEmptySearch": "没有匹配的语言",
     "sectionShortcuts": "快捷键",
     "recordShortcut": "录制快捷键",
     "shortcutUnset": "未设置",

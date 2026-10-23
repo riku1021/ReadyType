@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useAtom } from "jotai";
@@ -10,28 +11,25 @@ import { AlertDialog } from "@/components/Dialog";
 import { SettingItem } from "@/components/SettingItem";
 import { SettingsSection } from "@/components/SettingsSection";
 import { useInputSourceState } from "@/features/inputSource";
+import { pageSlide } from "@/features/navigation";
 import { isUiLocalePreference, type UiLocalePreference } from "@/locales/i18n";
 
-import {
-  getLanguageOptionLabel,
-  languageFromOptionLabel,
-  languageOptionLabels,
-} from "./languageLabels";
+import { getLanguageOptionLabel } from "./languageLabels";
 import * as styles from "./SettingsPage.styles";
 import { ShortcutRecorder } from "./ShortcutRecorder";
 import { getThemeLabel, THEME_OPTIONS, themeFromTranslatedLabel } from "./themeLabels";
 
-type SettingsPendingKey = "enabled" | "autostart" | "uiLocale";
+type SettingsPendingKey = "enabled" | "autostart";
 
 type SettingsPendingMap = Partial<Record<SettingsPendingKey, true>>;
 
 export function SettingsPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [theme, setTheme] = useAtom(themeAtom);
   const {
     state,
     setEnabled,
-    setUiLocale,
     autostartEnabled,
     refreshAutostartEnabled,
     setAutostartEnabled,
@@ -93,7 +91,6 @@ export function SettingsPage() {
   };
 
   const themeOptions = THEME_OPTIONS.map((key) => t(key));
-  const languageOptions = languageOptionLabels(t);
   const preferenceRaw = state?.uiLocale ?? "";
   const currentPreference: UiLocalePreference = isUiLocalePreference(preferenceRaw)
     ? preferenceRaw
@@ -145,16 +142,13 @@ export function SettingsPage() {
         <SettingItem
           icon={MdLanguage}
           title={t("settings.displayLanguage")}
-          type="selection"
+          type="navigation"
           value={getLanguageOptionLabel(currentPreference, t)}
-          options={languageOptions}
-          disabled={isPending("uiLocale")}
-          onSelectionChanged={(label) => {
-            const nextLocale = languageFromOptionLabel(label, t);
-            if (!nextLocale || nextLocale === currentPreference) {
-              return;
-            }
-            runPending("uiLocale", () => setUiLocale(nextLocale));
+          onClick={() => {
+            void navigate({
+              to: "/general/language",
+              viewTransition: pageSlide("forward"),
+            });
           }}
         />
       </SettingsSection>
