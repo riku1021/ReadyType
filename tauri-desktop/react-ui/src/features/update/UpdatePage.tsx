@@ -1,13 +1,12 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { SettingItem } from "@/components/SettingItem";
 import { SettingsSection } from "@/components/SettingsSection";
-
+import type { UpdatePhase } from "./appUpdateController";
 import * as styles from "./UpdatePage.styles";
-
-// TODO(update): UI のみ。自動確認／自動ダウンロードの永続化、最終確認時刻の保存、
-// 実 updater（チェック・ダウンロード・適用）との連携は未実装。
+import { parseLastCheckedAt } from "./updatePreferences";
+import { useAppUpdate } from "./useAppUpdate";
 
 function formatLastChecked(date: Date, locale: string): string {
   return new Intl.DateTimeFormat(locale, {
@@ -21,31 +20,60 @@ function formatLastChecked(date: Date, locale: string): string {
   }).format(date);
 }
 
+function isBusy(phase: UpdatePhase): boolean {
+  return phase.kind === "checking" || phase.kind === "downloading" || phase.kind === "installing";
+}
+
 export function UpdatePage() {
   const { t, i18n } = useTranslation();
-  // TODO(update): 設定・最終確認はローカル state のみ（再起動で消える）
-  const [autoCheck, setAutoCheck] = useState(true);
-  const [autoDownload, setAutoDownload] = useState(true);
-  const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
-  const [checking, setChecking] = useState(false);
+  const { preferences, phase, installReady, setAutoCheck, setAutoDownload, checkNow, install } =
+    useAppUpdate();
 
   const lastCheckedLabel = useMemo(() => {
+    const checkedAt = parseLastCheckedAt(preferences.lastCheckedAt);
     const datetime =
-      lastCheckedAt != null ? formatLastChecked(lastCheckedAt, i18n.language) : t("common.emDash");
+      checkedAt != null ? formatLastChecked(checkedAt, i18n.language) : t("common.emDash");
     return t("update.lastChecked", { datetime });
-  }, [i18n.language, lastCheckedAt, t]);
+  }, [i18n.language, preferences.lastCheckedAt, t]);
 
-  const handleCheckNow = useCallback(() => {
-    if (checking) {
-      return;
+  const description = useMemo(() => {
+    if (
+      phase.kind === "available" ||
+      phase.kind === "downloading" ||
+      phase.kind === "downloaded" ||
+      phase.kind === "installing"
+    ) {
+      return t("update.available", { version: phase.version });
     }
-    setChecking(true);
-    // TODO(update): updater 呼び出しに差し替え。現状は最終確認時刻の見た目更新のみ
-    window.setTimeout(() => {
-      setLastCheckedAt(new Date());
-      setChecking(false);
-    }, 400);
-  }, [checking]);
+    if (phase.kind === "error") {
+      switch (phase.messageKey) {
+        case "desktopOnly":
+          return t("update.errors.desktopOnly");
+        case "checkFailed":
+          return t("update.errors.checkFailed");
+        case "downloadFailed":
+          return t("update.errors.downloadFailed");
+        case "installFailed":
+          return t("update.errors.installFailed");
+        case "restartFailed":
+          return t("update.errors.restartFailed");
+      }
+    }
+    return lastCheckedLabel;
+  }, [lastCheckedLabel, phase, t]);
+
+  const buttonLabel = (() => {
+    switch (phase.kind) {
+      case "checking":
+        return t("update.checking");
+      case "downloading":
+        return t("update.downloading");
+      case "installing":
+        return t("update.installing");
+      default:
+        return installReady ? t("update.installButton") : t("update.checkButton");
+    }
+  })();
 
   return (
     <div className={styles.page}>
@@ -53,13 +81,13 @@ export function UpdatePage() {
         <SettingItem
           type="toggle"
           title={t("update.autoCheck")}
-          toggleValue={autoCheck}
+          toggleValue={preferences.autoCheck}
           onToggleChanged={setAutoCheck}
         />
         <SettingItem
           type="toggle"
           title={t("update.autoDownload")}
-          toggleValue={autoDownload}
+          toggleValue={preferences.autoDownload}
           onToggleChanged={setAutoDownload}
         />
       </SettingsSection>
@@ -68,10 +96,16 @@ export function UpdatePage() {
         <SettingItem
           type="button"
           title={t("update.checkNow")}
-          description={lastCheckedLabel}
-          buttonLabel={checking ? t("update.checking") : t("update.checkButton")}
-          disabled={checking}
-          onClick={handleCheckNow}
+          description={description}
+          buttonLabel={buttonLabel}
+          disabled={isBusy(phase)}
+          onClick={() => {
+            if (installReady) {
+              void install();
+              return;
+            }
+            void checkNow();
+          }}
         />
       </SettingsSection>
     </div>

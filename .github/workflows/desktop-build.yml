@@ -11,6 +11,13 @@
 #   ReadyType-aarch64.dmg, ReadyType-x64.dmg,
 #   ReadyType-x64-setup.exe, ReadyType-x64.AppImage
 #
+# In-app updates also need the GitHub Actions secret
+# `TAURI_SIGNING_PRIVATE_KEY` (contents of the minisign private key, no
+# password). When it is set, each build signs updater artifacts and the
+# publish job writes `latest.json` for
+# `releases/latest/download/latest.json`. Without the secret, installers
+# still publish and updater artifacts are skipped.
+#
 # macOS CI is ad-hoc signed (no Developer ID). Gatekeeper can block that DMG
 # on other Macs until notarization is configured.
 #
@@ -119,16 +126,40 @@ jobs:
         if: runner.os == 'macOS'
         run: echo 'APPLE_SIGNING_IDENTITY=-' >> "$GITHUB_ENV"
 
+      # Updater bundles are signed only when the private key secret is present.
+      # Local `mise run build` does not pass updater-artifacts.json, so it does
+      # not need the key. https://v2.tauri.app/plugin/updater/
+      - name: Select updater signing args
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          set -eu
+          args=""
+          if [ -n "${TAURI_SIGNING_PRIVATE_KEY}" ]; then
+            args="--config updater-artifacts.json"
+          else
+            echo "TAURI_SIGNING_PRIVATE_KEY is unset. Installers will be built without updater artifacts."
+          fi
+          if [ -n "${TAURI_TARGET}" ]; then
+            if [ -n "${args}" ]; then
+              args="${args} "
+            fi
+            args="${args}--target ${TAURI_TARGET} --bundles dmg"
+          fi
+          echo "TAURI_BUILD_ARGS=${args}" >> "$GITHUB_ENV"
+
       # macOS sidecar is prepared by scripts/macos/dev-runner.sh, which receives
       # this --target. A separate prepare step would build tis-list-enabled twice.
       - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         with:
           projectPath: tauri-desktop/rust-native
           # Local CLI. The action splits this on spaces, so the path must not contain spaces.
           tauriScript: pnpm --dir ../react-ui exec tauri
-          args: ${{ matrix.target && format('--target {0} --bundles dmg', matrix.target) || '' }}
+          args: ${{ env.TAURI_BUILD_ARGS }}
           uploadWorkflowArtifacts: true
 
       # Stable names for releases/latest/download. The .app directory is not a
@@ -144,18 +175,50 @@ jobs:
             bundle_root="${bundle_root}/${TAURI_TARGET}"
           fi
           bundle_root="${bundle_root}/release/bundle"
+          # macOS の更新本体は DMG とは別の .app.tar.gz。Linux / Windows は
+          # 直前にコピーしたインストーラそのものに署名が付くので .sig だけ足す。
+          # 署名はファイル内容に対するもので、配布名へのリネームでは無効にならない。
+          # https://v2.tauri.app/plugin/updater/
+          copy_updater() {
+            local dir="$1"
+            local glob="$2"
+            local dest="$3"
+            local include_bundle="$4"
+            local matches=()
+            shopt -s nullglob
+            matches=( "${dir}"/${glob} )
+            shopt -u nullglob
+            if [ "${#matches[@]}" -eq 0 ]; then
+              return 0
+            fi
+            if [ "${#matches[@]}" -ne 1 ]; then
+              echo "Expected one updater artifact matching ${dir}/${glob}" >&2
+              exit 1
+            fi
+            if [ ! -f "${matches[0]}.sig" ]; then
+              return 0
+            fi
+            if [ "${include_bundle}" = "bundle" ]; then
+              cp "${matches[0]}" "release-assets/${dest}"
+            fi
+            cp "${matches[0]}.sig" "release-assets/${dest}.sig"
+          }
+
           case "${RUNNER_OS}" in
             macOS)
               cp "${bundle_root}/dmg/ReadyType_"*.dmg \
                 "release-assets/${INSTALLER_NAME}"
+              copy_updater "${bundle_root}/macos" "*.app.tar.gz" "${INSTALLER_NAME%.dmg}.app.tar.gz" bundle
               ;;
             Linux)
               cp "${bundle_root}/appimage/ReadyType_"*.AppImage \
                 "release-assets/${INSTALLER_NAME}"
+              copy_updater "${bundle_root}/appimage" "*.AppImage" "${INSTALLER_NAME}" sig
               ;;
             Windows)
               cp "${bundle_root}/nsis/ReadyType_"*-setup.exe \
                 "release-assets/${INSTALLER_NAME}"
+              copy_updater "${bundle_root}/nsis" "*-setup.exe" "${INSTALLER_NAME}" sig
               ;;
             *)
               echo "Unsupported runner: ${RUNNER_OS}" >&2
@@ -205,13 +268,28 @@ jobs:
           macOS の CI ビルドは ad-hoc 署名です。
           EOF
           )"
+          python3 scripts/release/write-updater-manifest.py \
+            --version "${version}" \
+            --assets-dir release-assets \
+            --output release-assets/latest.json \
+            --download-base "https://github.com/${GITHUB_REPOSITORY}/releases/latest/download"
+          shopt -s nullglob
+          binaries=(release-assets/ReadyType-*)
+          shopt -u nullglob
+          if [ "${#binaries[@]}" -eq 0 ]; then
+            echo "No release assets" >&2
+            exit 1
+          fi
           if ! git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null; then
             git tag "${tag}" "${GITHUB_SHA}"
             git push origin "refs/tags/${tag}"
           fi
           if gh release view "${tag}" >/dev/null 2>&1; then
-            gh release upload "${tag}" release-assets/* --clobber
+            gh release upload "${tag}" "${binaries[@]}" --clobber
             gh release edit "${tag}" --latest --title "${title}" --notes "${notes}"
           else
-            gh release create "${tag}" release-assets/* --latest --title "${title}" --notes "${notes}"
+            gh release create "${tag}" "${binaries[@]}" --latest --title "${title}" --notes "${notes}"
+          fi
+          if [ -f release-assets/latest.json ]; then
+            gh release upload "${tag}" release-assets/latest.json --clobber
           fi

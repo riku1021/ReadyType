@@ -43,5 +43,14 @@
     "macOS": {
       "minimumSystemVersion": "13.0"
     }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEExMjMzRUJCRTkwQjUzMTYKUldRV1V3dnB1ejRqb2RWUVozRkxCckhFZVJpMHFHREVyOE5Oc0ZMcE9OdUxHcWYzNWp3SnVNTTMK",
+      "endpoints": [
+        "https://github.com/riku1021/ReadyType/releases/latest/download/latest.json"
+      ],
+      "requireSignedVersion": true
+    }
   }
 }

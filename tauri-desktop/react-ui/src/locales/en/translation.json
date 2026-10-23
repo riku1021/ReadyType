@@ -108,7 +108,18 @@
     "checkNow": "Check for Updates Now",
     "lastChecked": "Last checked: {{datetime}}",
     "checkButton": "Check for Updates...",
-    "checking": "Checking..."
+    "checking": "Checking...",
+    "downloading": "Downloading...",
+    "installing": "Installing...",
+    "installButton": "Restart to Install",
+    "available": "Version {{version}} is available",
+    "errors": {
+      "desktopOnly": "Update checks run only in the desktop app",
+      "checkFailed": "Could not check for updates",
+      "downloadFailed": "Could not download the update",
+      "installFailed": "Could not install the update",
+      "restartFailed": "The update is installed. Restart the app to finish"
+    }
   },
 
   "lab": {

@@ -17,6 +17,8 @@
     "global-shortcut:allow-unregister",
     "allow-sync-window-chrome-theme",
     "allow-input-source-switcher",
-    "allow-quit-app"
+    "allow-quit-app",
+    "updater:default",
+    "process:allow-restart"
   ]
 }

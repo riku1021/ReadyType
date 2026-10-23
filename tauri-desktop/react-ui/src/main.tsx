@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter, RouterProvider } from "@tanstack/rea
 import { type ReactNode, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { useInputSourceBootstrap, useInputSourceSources } from "@/features/inputSource";
+import { useAppUpdateBootstrap } from "@/features/update";
 import { useRevealMainWindow } from "@/hooks/useRevealMainWindow";
 import { useThemeManager } from "@/hooks/useThemeManager";
 import {
@@ -55,6 +56,7 @@ function MainApp() {
   useRevealMainWindow();
   useInputSourceBootstrap();
   useInputSourceSources();
+  useAppUpdateBootstrap();
   return <RouterProvider router={router} />;
 }
 

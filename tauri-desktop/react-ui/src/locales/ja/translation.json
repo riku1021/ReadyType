@@ -108,7 +108,18 @@
     "checkNow": "今すぐアップデートを確認",
     "lastChecked": "最終確認: {{datetime}}",
     "checkButton": "アップデートを確認...",
-    "checking": "確認中..."
+    "checking": "確認中...",
+    "downloading": "ダウンロード中...",
+    "installing": "インストール中...",
+    "installButton": "再起動してインストール",
+    "available": "{{version}} が利用できます",
+    "errors": {
+      "desktopOnly": "アップデートの確認はデスクトップアプリでのみ行えます",
+      "checkFailed": "アップデートを確認できませんでした",
+      "downloadFailed": "アップデートをダウンロードできませんでした",
+      "installFailed": "アップデートをインストールできませんでした",
+      "restartFailed": "アップデートはインストール済みです。アプリを再起動してください"
+    }
   },
 
   "lab": {

@@ -59,6 +59,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             // AE は消費され得るので setup 先頭で一度だけキャッシュ（DidFinishLaunching 相当）。
             #[cfg(target_os = "macos")]
