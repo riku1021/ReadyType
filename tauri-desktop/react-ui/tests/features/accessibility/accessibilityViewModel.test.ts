@@ -15,7 +15,7 @@ describe("toAccessibilityViewModel", () => {
       t
     );
     expect(view.kind).toBe("loading");
-    expect(view.cardTone).toBe("default");
+    expect(view.noticeTone).toBe("info");
     expect(view.showOpenSettings).toBe(false);
     expect(view.requestBeforeOpenSettings).toBe(false);
     expect(view.showPrivacy).toBe(false);
@@ -32,7 +32,7 @@ describe("toAccessibilityViewModel", () => {
       t
     );
     expect(view.kind).toBe("granted");
-    expect(view.cardTone).toBe("default");
+    expect(view.noticeTone).toBe("info");
     expect(view.showGrantedBadge).toBe(true);
     expect(view.showRequiredStatus).toBe(false);
     expect(view.showOpenSettings).toBe(true);
@@ -52,7 +52,7 @@ describe("toAccessibilityViewModel", () => {
       t
     );
     expect(view.kind).toBe("denied");
-    expect(view.cardTone).toBe("alert");
+    expect(view.noticeTone).toBe("error");
     expect(view.showRequiredStatus).toBe(true);
     expect(view.showGrantedBadge).toBe(false);
     expect(view.showOpenSettings).toBe(true);
@@ -72,7 +72,7 @@ describe("toAccessibilityViewModel", () => {
       t
     );
     expect(view.kind).toBe("unsupported");
-    expect(view.cardTone).toBe("default");
+    expect(view.noticeTone).toBe("info");
     expect(view.showOpenSettings).toBe(false);
     expect(view.detailMessage).toBe("accessibility.descriptionUnsupported");
   });
@@ -87,6 +87,7 @@ describe("toAccessibilityViewModel", () => {
       t
     );
     expect(view.kind).toBe("error");
+    expect(view.noticeTone).toBe("error");
     expect(view.detailMessage).toBe("boom");
     expect(view.showOpenSettings).toBe(false);
   });

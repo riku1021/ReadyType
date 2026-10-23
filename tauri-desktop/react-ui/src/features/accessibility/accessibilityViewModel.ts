@@ -5,13 +5,13 @@ import { focusPermissionPaneLabel } from "@/platform";
 
 export type AccessibilityStatusKind = "loading" | "granted" | "denied" | "unsupported" | "error";
 
-export type AccessibilityCardTone = "default" | "alert";
+export type AccessibilityNoticeTone = "info" | "error";
 
 export type AccessibilityViewModel = {
   kind: AccessibilityStatusKind;
   /** System Settings 上の権限ペイン名（見出し用） */
   permissionPane: string;
-  cardTone: AccessibilityCardTone;
+  noticeTone: AccessibilityNoticeTone;
   showGrantedBadge: boolean;
   showRequiredStatus: boolean;
   showOpenSettings: boolean;
@@ -79,7 +79,7 @@ export function toAccessibilityViewModel(
   return {
     kind,
     permissionPane,
-    cardTone: isDenied ? "alert" : "default",
+    noticeTone: isDenied || kind === "error" ? "error" : "info",
     showGrantedBadge: isGranted,
     showRequiredStatus: isDenied,
     showOpenSettings: isGranted || isDenied,
