@@ -48,7 +48,6 @@
     "theme": "Theme",
     "displayLanguage": "Display language",
     "languageSystem": "System",
-    "languageColumn": "Language",
     "languageSearchPlaceholder": "Search languages...",
     "languageSearchAria": "Search display languages",
     "languageEmptySearch": "No matching languages",

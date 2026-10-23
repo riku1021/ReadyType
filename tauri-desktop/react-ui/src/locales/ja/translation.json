@@ -48,7 +48,6 @@
     "theme": "テーマ",
     "displayLanguage": "表示言語",
     "languageSystem": "システム",
-    "languageColumn": "言語",
     "languageSearchPlaceholder": "言語を検索...",
     "languageSearchAria": "表示言語を検索",
     "languageEmptySearch": "該当する言語はありません",

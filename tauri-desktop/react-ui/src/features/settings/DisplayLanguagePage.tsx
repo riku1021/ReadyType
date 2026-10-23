@@ -43,9 +43,7 @@ export function DisplayLanguagePage() {
   const columns: DataTableColumn<LanguageListRow>[] = [
     {
       id: "language",
-      header: t("settings.languageColumn"),
       width: "100%",
-      headerClassName: styles.th,
       cellClassName: (_row, selected) => styles.td({ selected }),
       cell: (row) => <span className={styles.name}>{row.label}</span>,
     },
@@ -75,6 +73,7 @@ export function DisplayLanguagePage() {
         }}
         rowClassName={() => styles.row}
         emptyMessage={t("settings.languageEmptySearch")}
+        hideHeader
       />
       {error ? <p>{error}</p> : null}
       {pending ? <p>{t("common.saving")}</p> : null}

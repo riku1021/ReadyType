@@ -37,6 +37,8 @@ type DataTableSharedProps<T> = {
   footer?: ReactNode;
   /** パネル殻への追加 className */
   className?: string;
+  /** 列見出しの行を出さない */
+  hideHeader?: boolean;
 };
 
 /** フラット行（企業一覧など）。groups とは排他 */

@@ -19,6 +19,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
     emptyMessage,
     footer,
     className,
+    hideHeader = false,
   } = props;
 
   const isGrouped = "groups" in props && props.groups !== undefined;
@@ -38,7 +39,10 @@ export function DataTable<T>(props: DataTableProps<T>) {
     return (
       <tr
         key={rowId}
-        className={rowClassName?.(row, selected)}
+        className={cx(
+          onRowSelect ? styles.interactiveRow : undefined,
+          rowClassName?.(row, selected)
+        )}
         aria-selected={selected}
         tabIndex={0}
         onClick={() => onRowSelect?.(rowId)}
@@ -58,7 +62,11 @@ export function DataTable<T>(props: DataTableProps<T>) {
             ? { onClick: stopRowSelect, onKeyDown: stopRowSelect }
             : {};
           return (
-            <td key={column.id} className={cellClassName} {...handlers}>
+            <td
+              key={column.id}
+              className={cx(onRowSelect ? styles.interactiveCell : undefined, cellClassName)}
+              {...handlers}
+            >
               {column.cell(row)}
             </td>
           );
@@ -73,25 +81,27 @@ export function DataTable<T>(props: DataTableProps<T>) {
         <p className={styles.empty}>{emptyMessage}</p>
       ) : (
         <>
-          <div className={styles.tableHeader}>
-            <table className={styles.table}>
-              {colgroup}
-              <thead>
-                <tr>
-                  {columns.map((column) => (
-                    <th
-                      key={column.id}
-                      scope="col"
-                      className={column.headerClassName}
-                      aria-label={column.headerAriaLabel}
-                    >
-                      {column.header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-            </table>
-          </div>
+          {hideHeader ? null : (
+            <div className={styles.tableHeader}>
+              <table className={styles.table}>
+                {colgroup}
+                <thead>
+                  <tr>
+                    {columns.map((column) => (
+                      <th
+                        key={column.id}
+                        scope="col"
+                        className={column.headerClassName}
+                        aria-label={column.headerAriaLabel}
+                      >
+                        {column.header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+              </table>
+            </div>
+          )}
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               {colgroup}

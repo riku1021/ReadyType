@@ -44,3 +44,15 @@ export const empty = css({
   fontSize: "sm",
   color: "text.sub",
 });
+
+/** 行選択できる表。ホバー色は SettingItem に揃える */
+export const interactiveRow = "group";
+
+export const interactiveCell = css({
+  transitionProperty: "background-color",
+  transitionDuration: "150ms",
+  transitionTimingFunction: "ease",
+  _groupHover: {
+    backgroundColor: "background.hover",
+  },
+});
