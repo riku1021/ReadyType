@@ -23,7 +23,6 @@ import {
   resetDefaultRules as resetDefaultRulesApi,
   resumeInputSourceSwitcher,
   setAutostartEnabled as setAutostartEnabledApi,
-  setDebugLogging as setDebugLoggingApi,
   setInputSourceSwitcherEnabled,
   setSnooze as setSnoozeApi,
   setUiLocale as setUiLocaleApi,
@@ -50,7 +49,6 @@ export type InputSourceViewState = SwitcherStateDto & {
   permission: AccessibilityPermission | null;
   languagePreferences: LanguageInputPreferences;
   inputSourceDisplayNames: Record<string, string>;
-  debugLogging: boolean;
   uiLocale: string | null;
   rules: RuleDto[];
   initError: string | null;
@@ -318,16 +316,6 @@ export function useInputSourceState() {
     return switcher;
   }, [refreshRules, setFeature]);
 
-  const setDebugLogging = useCallback(
-    async (enabled: boolean) => {
-      const switcher = await setDebugLoggingApi(enabled);
-      applySwitcher(setFeature, switcher);
-      await refreshSettings();
-      return switcher;
-    },
-    [refreshSettings, setFeature]
-  );
-
   const setUiLocale = useCallback(
     async (locale: string) => {
       const settings = await setUiLocaleApi(locale);
@@ -376,7 +364,6 @@ export function useInputSourceState() {
         permission: feature.permission,
         languagePreferences,
         inputSourceDisplayNames,
-        debugLogging: feature.settings?.debugLogging ?? false,
         uiLocale: feature.settings?.uiLocale ?? null,
         rules: feature.rules,
         initError: feature.initError,
@@ -397,7 +384,6 @@ export function useInputSourceState() {
           permission: feature.permission,
           languagePreferences,
           inputSourceDisplayNames,
-          debugLogging: feature.settings?.debugLogging ?? false,
           uiLocale: feature.settings?.uiLocale ?? null,
           rules: feature.rules,
           initError: feature.initError,
@@ -419,7 +405,6 @@ export function useInputSourceState() {
     deleteRule,
     reorderRules,
     resetDefaultRules,
-    setDebugLogging,
     setUiLocale,
     completeOnboarding,
     fetchInputSources,

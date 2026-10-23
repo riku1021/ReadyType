@@ -194,7 +194,6 @@ struct SettingsDto {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     preferred_japanese: Option<String>,
     rules: Vec<RuleDto>,
-    debug_logging: bool,
     snoozed_until_unix_ms: Option<u64>,
     #[serde(default = "default_ui_locale")]
     ui_locale: String,
@@ -299,7 +298,6 @@ impl From<&SwitcherSettings> for SettingsDto {
             preferred_english: None,
             preferred_japanese: None,
             rules: settings.rules.iter().map(RuleDto::from).collect(),
-            debug_logging: settings.debug_logging,
             snoozed_until_unix_ms: settings.snoozed_until_unix_ms,
             ui_locale: settings.ui_locale.clone(),
             quick_set_shortcut: settings.quick_set_shortcut.clone(),
@@ -328,7 +326,6 @@ impl TryFrom<SettingsDto> for SwitcherSettings {
                 .into_iter()
                 .map(FocusRule::try_from)
                 .collect::<Result<Vec<_>, _>>()?,
-            debug_logging: dto.debug_logging,
             snoozed_until_unix_ms: dto.snoozed_until_unix_ms,
             ui_locale: SwitcherSettings::normalize_ui_locale(&dto.ui_locale),
             quick_set_shortcut,

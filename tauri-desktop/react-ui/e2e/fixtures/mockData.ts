@@ -17,7 +17,6 @@ export const mockSettings = {
     en: "com.apple.keylayout.ABC",
     ja: "com.apple.inputmethod.Kotoeri.RomajiTyping",
   },
-  debugLogging: false,
   uiLocale: "system",
   resolvedUiLocale: "ja",
   quickSetShortcut: "CommandOrControl+Shift+L",

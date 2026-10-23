@@ -103,7 +103,6 @@ fn schema_v1_legacy_json_decodes_into_language_preferences() {
             .map(|id| id.as_str()),
         Some("japanese.id")
     );
-    assert!(outcome.settings().debug_logging);
     assert_eq!(outcome.settings().snoozed_until_unix_ms, Some(1234));
 }
 
@@ -247,7 +246,7 @@ fn save_rotates_last_known_good_bak() {
     let repo = repository(&directory);
 
     let mut first = SwitcherSettings::defaults();
-    first.debug_logging = true;
+    first.enabled = false;
     repo.save(&first).expect("first save");
     assert!(!bak.exists(), "no prior main → no bak yet");
 
@@ -255,9 +254,9 @@ fn save_rotates_last_known_good_bak() {
     repo.save(&second).expect("second save");
     assert!(bak.exists());
     let bak_text = fs::read_to_string(&bak).expect("read bak");
-    assert!(bak_text.contains("\"debugLogging\": true"));
+    assert!(bak_text.contains("\"enabled\": false"));
     let main_text = fs::read_to_string(&path).expect("read main");
-    assert!(main_text.contains("\"debugLogging\": false"));
+    assert!(main_text.contains("\"enabled\": true"));
 }
 
 #[test]

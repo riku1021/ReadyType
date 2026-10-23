@@ -578,23 +578,6 @@ fn switched_log_includes_post_select_verification() {
 }
 
 #[test]
-fn followup_reselect_log_only_when_debug_logging() {
-    let mut fixture = Fixture::active();
-    let id = InputSourceId::parse("en").expect("id");
-    fixture.switcher.note_followup_reselect(40, 0, Some(&id));
-    assert!(fixture.switcher.state().logs.is_empty());
-
-    fixture.switcher.set_debug_logging(true).expect("debug on");
-    fixture.switcher.note_followup_reselect(40, 0, Some(&id));
-    assert!(fixture
-        .switcher
-        .state()
-        .logs
-        .iter()
-        .any(|log| log.reason.contains("followup reselect")));
-}
-
-#[test]
 fn switch_logs_are_forwarded_to_diagnostic_sink() {
     struct RecordingSink(Mutex<Vec<String>>);
     impl DiagnosticLogSink for RecordingSink {

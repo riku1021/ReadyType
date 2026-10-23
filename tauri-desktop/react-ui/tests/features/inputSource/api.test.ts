@@ -19,7 +19,6 @@ import {
   resetDefaultRules,
   resumeInputSourceSwitcher,
   setAutostartEnabled,
-  setDebugLogging,
   setInputSourceSwitcherEnabled,
   setSnooze,
   shouldApplyFetchedRules,
@@ -88,7 +87,6 @@ describe("input source IPC", () => {
       if (command === "get_input_source_settings") {
         return {
           languagePreferences: { en: "en", ja: "ja" },
-          debugLogging: false,
           uiLocale: "ja",
           resolvedUiLocale: "ja",
           quickSetShortcut: "CommandOrControl+Shift+L",
@@ -127,7 +125,6 @@ describe("input source IPC", () => {
     await getAccessibilityPermission();
     await requestAccessibilityPermission();
     await openAccessibilitySettings();
-    await setDebugLogging(true);
     await getAutostartEnabled();
     await setAutostartEnabled(true);
     await getAppPresentations(["com.apple.Terminal"]);
@@ -150,7 +147,6 @@ describe("input source IPC", () => {
       "get_accessibility_permission",
       "request_accessibility_permission",
       "open_accessibility_settings",
-      "set_debug_logging",
       "get_autostart_enabled",
       "set_autostart_enabled",
       "get_app_presentations",

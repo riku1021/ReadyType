@@ -39,7 +39,6 @@
     "loadingTextDefault": "Please wait"
   },
   "settings": {
-    "debugLogging": "Debug logging",
     "sectionStartup": "Startup",
     "autoSwitch": "Auto switch",
     "autoSwitchDescription": "Automatically switch the input source based on focus.",

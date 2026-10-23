@@ -39,7 +39,6 @@
     "loadingTextDefault": "しばらくお待ちください"
   },
   "settings": {
-    "debugLogging": "デバッグログ",
     "sectionStartup": "起動",
     "autoSwitch": "自動切替",
     "autoSwitchDescription": "フォーカスに応じて入力ソースを自動で切り替えます。",

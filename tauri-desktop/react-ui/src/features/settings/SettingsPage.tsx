@@ -21,7 +21,7 @@ import * as styles from "./SettingsPage.styles";
 import { ShortcutRecorder } from "./ShortcutRecorder";
 import { getThemeLabel, THEME_OPTIONS, themeFromTranslatedLabel } from "./themeLabels";
 
-type SettingsPendingKey = "enabled" | "autostart" | "uiLocale" | "debugLogging";
+type SettingsPendingKey = "enabled" | "autostart" | "uiLocale";
 
 type SettingsPendingMap = Partial<Record<SettingsPendingKey, true>>;
 
@@ -31,7 +31,6 @@ export function SettingsPage() {
   const {
     state,
     setEnabled,
-    setDebugLogging,
     setUiLocale,
     autostartEnabled,
     refreshAutostartEnabled,
@@ -165,16 +164,6 @@ export function SettingsPage() {
       </SettingsSection>
 
       <SettingsSection title={t("settings.sectionOther")}>
-        <SettingItem
-          icon={MdBugReport}
-          title={t("settings.debugLogging")}
-          type="toggle"
-          toggleValue={state?.debugLogging ?? false}
-          disabled={isPending("debugLogging")}
-          onToggleChanged={(enabled) => {
-            runPending("debugLogging", () => setDebugLogging(enabled));
-          }}
-        />
         <SettingItem
           icon={MdBugReport}
           title={t("settings.resetToDefaults")}

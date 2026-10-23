@@ -262,17 +262,6 @@ pub fn open_accessibility_settings(
 }
 
 #[tauri::command]
-pub fn set_debug_logging(
-    enabled: bool,
-    controller: State<'_, Arc<SwitcherController>>,
-) -> Result<StateDto, IpcError> {
-    controller
-        .set_debug_logging(enabled)
-        .map(|state| StateDto::from(&state))
-        .map_err(IpcError::from)
-}
-
-#[tauri::command]
 pub fn set_ui_locale(
     locale: String,
     app: AppHandle,

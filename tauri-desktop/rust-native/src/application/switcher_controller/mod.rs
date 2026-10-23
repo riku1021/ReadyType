@@ -180,19 +180,6 @@ impl SwitcherController {
         self.ui_locale.load()
     }
 
-    /// Composition root から follow-up reselect の診断 sink を配線する。
-    pub fn bind_followup_reselect_log<F>(&self, bind: F)
-    where
-        F: FnOnce(Arc<dyn Fn(u64, i32, Option<InputSourceId>) + Send + Sync>),
-    {
-        let switcher = Arc::clone(&self.switcher);
-        bind(Arc::new(move |delay_ms, status, current| {
-            if let Ok(mut switcher) = switcher.lock() {
-                switcher.note_followup_reselect(delay_ms, status, current.as_ref());
-            }
-        }));
-    }
-
     /// Composition root から診断ファイル等の sink を配線する。
     pub fn set_diagnostic_log_sink(&self, sink: Option<SharedDiagnosticLogSink>) {
         if let Ok(mut switcher) = self.switcher.lock() {
@@ -491,13 +478,6 @@ impl SwitcherController {
         self.lock_monitor()?.set_debug_capture(enabled)?;
         self.debug_capture.store(enabled, Ordering::Release);
         self.state()
-    }
-
-    pub fn set_debug_logging(&self, enabled: bool) -> Result<SwitcherState, ControllerError> {
-        self.mutate_switcher(|switcher| {
-            switcher.set_debug_logging(enabled)?;
-            Ok(switcher.state().clone())
-        })
     }
 
     pub fn set_ui_locale(&self, locale: &str) -> Result<SwitcherState, ControllerError> {

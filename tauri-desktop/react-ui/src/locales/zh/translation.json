@@ -39,7 +39,6 @@
     "loadingTextDefault": "请稍候"
   },
   "settings": {
-    "debugLogging": "调试日志",
     "sectionStartup": "启动",
     "autoSwitch": "自动切换",
     "autoSwitchDescription": "根据焦点自动切换输入源。",

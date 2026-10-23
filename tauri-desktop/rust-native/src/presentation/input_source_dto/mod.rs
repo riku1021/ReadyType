@@ -347,7 +347,6 @@ impl From<&RuleTarget> for RuleTargetDto {
 #[serde(rename_all = "camelCase")]
 pub struct SettingsDto {
     pub language_preferences: std::collections::BTreeMap<String, Option<String>>,
-    pub debug_logging: bool,
     /// Preference: `system` | packs from shared i18n registry.
     pub ui_locale: String,
     /// Resolved display language from shared i18n registry.
@@ -376,7 +375,6 @@ impl From<&SwitcherSettings> for SettingsDto {
             .collect();
         Self {
             language_preferences,
-            debug_logging: settings.debug_logging,
             ui_locale: settings.ui_locale.clone(),
             resolved_ui_locale: SwitcherSettings::resolve_ui_locale(&settings.ui_locale),
             quick_set_shortcut: settings.quick_set_shortcut.clone(),

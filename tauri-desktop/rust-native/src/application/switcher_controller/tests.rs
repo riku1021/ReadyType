@@ -294,10 +294,7 @@ fn rules_can_be_deleted_reordered_and_reset() {
 #[test]
 fn debug_options_and_duplicate_rules_are_validated() {
     let controller = controller(Arc::new(MonitorData::default()));
-    controller.set_debug_logging(true).expect("debug logging");
     controller.set_debug_capture(true).expect("capture");
-    let settings = controller.settings().expect("settings");
-    assert!(settings.debug_logging);
     assert!(controller.is_debug_capture_enabled());
 
     controller

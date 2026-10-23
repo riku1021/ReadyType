@@ -83,7 +83,6 @@ export interface RuleDto {
 
 export interface InputSourceSettingsDto {
   languagePreferences: LanguageInputPreferences;
-  debugLogging: boolean;
   /** Preference: system | packs from locales/registry.json (FE) / tray.json (Rust) */
   uiLocale: string;
   /** Resolved display language pack code */

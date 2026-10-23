@@ -164,12 +164,6 @@ pub fn run() {
                     tis_change_monitor,
                 },
             )?;
-            #[cfg(target_os = "macos")]
-            {
-                controller.bind_followup_reselect_log(|sink| {
-                    infrastructure::platform::macos::set_followup_reselect_log_sink(Some(sink));
-                });
-            }
             match infrastructure::persistence::FileDiagnosticLogSink::open_default() {
                 Ok(sink) => {
                     eprintln!(
@@ -382,7 +376,6 @@ pub fn run() {
             presentation::commands::input_source_switcher::get_accessibility_permission,
             presentation::commands::input_source_switcher::request_accessibility_permission,
             presentation::commands::input_source_switcher::open_accessibility_settings,
-            presentation::commands::input_source_switcher::set_debug_logging,
             presentation::commands::input_source_switcher::set_ui_locale,
             presentation::commands::input_source_switcher::complete_onboarding,
             presentation::commands::input_source_switcher::ensure_lab_switch_rules,

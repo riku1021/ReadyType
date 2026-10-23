@@ -21,7 +21,6 @@ pub struct SwitcherSettings {
     /// Empty map = not yet seeded from OS (see `seed_language_preferences_from_sources`).
     pub language_preferences: BTreeMap<LanguageTag, Option<InputSourceId>>,
     pub rules: Vec<FocusRule>,
-    pub debug_logging: bool,
     pub snoozed_until_unix_ms: Option<u64>,
     /// UI language preference (`system` | tray.json pack code).
     pub ui_locale: String,
@@ -41,7 +40,6 @@ impl SwitcherSettings {
             language_preferences: BTreeMap::new(),
             // 製品プリセットは置かない。既存ユーザーの保存済みルールはロードで維持される。
             rules: Vec::new(),
-            debug_logging: false,
             snoozed_until_unix_ms: None,
             ui_locale: DEFAULT_UI_LOCALE_PREFERENCE.to_owned(),
             quick_set_shortcut: DEFAULT_QUICK_SET_SHORTCUT.to_owned(),

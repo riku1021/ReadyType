@@ -60,7 +60,6 @@ export async function installTauriMocks(page: Page): Promise<void> {
         case "delete_rule":
         case "reorder_rules":
         case "reset_default_rules":
-        case "set_debug_logging":
           return { ...data.switcher };
         case "get_accessibility_permission":
         case "request_accessibility_permission":

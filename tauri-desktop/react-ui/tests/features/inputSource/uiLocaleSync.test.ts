@@ -8,7 +8,6 @@ import {
 
 const baseSettings = (): InputSourceSettingsDto => ({
   languagePreferences: {},
-  debugLogging: false,
   uiLocale: "system",
   resolvedUiLocale: "ja",
   quickSetShortcut: "CommandOrControl+Shift+L",

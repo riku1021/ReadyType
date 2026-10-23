@@ -26,7 +26,7 @@ pub use focus_monitor::MacOsFocusMonitor;
 pub use icon_style::{
     shared as macos_icon_style_source, start_monitor as start_icon_style_monitor,
 };
-pub use tis::{inspect_input_source_flags, set_followup_reselect_log_sink, SystemTisBackend};
+pub use tis::{inspect_input_source_flags, SystemTisBackend};
 pub use window_chrome::{set_window_background_main, set_window_background_transparent};
 
 use crate::application::ports::platform::PlatformGateway;

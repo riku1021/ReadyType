@@ -41,8 +41,6 @@ export const getAccessibilityPermission = () =>
 export const requestAccessibilityPermission = () =>
   invoke<AccessibilityPermission>("request_accessibility_permission");
 export const openAccessibilitySettings = () => invoke<void>("open_accessibility_settings");
-export const setDebugLogging = (enabled: boolean) =>
-  invoke<SwitcherStateDto>("set_debug_logging", { enabled });
 export const setUiLocale = (locale: string) =>
   invoke<InputSourceSettingsDto>("set_ui_locale", { locale });
 export const completeOnboarding = () => invoke<InputSourceSettingsDto>("complete_onboarding");

@@ -3,10 +3,7 @@ use std::{
     ffi::c_void,
     mem::MaybeUninit,
     ptr::NonNull,
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc, Mutex, OnceLock,
-    },
+    sync::atomic::{AtomicU64, Ordering},
 };
 
 use objc2::MainThreadMarker;
@@ -19,20 +16,6 @@ use crate::{
         macos::input_source_display_name,
     },
 };
-
-/// follow-up reselect 結果の診断コールバック（composition から配線）。
-pub type FollowUpReselectLogSink = Arc<dyn Fn(u64, i32, Option<InputSourceId>) + Send + Sync>;
-
-fn followup_log_sink() -> &'static Mutex<Option<FollowUpReselectLogSink>> {
-    static SINK: OnceLock<Mutex<Option<FollowUpReselectLogSink>>> = OnceLock::new();
-    SINK.get_or_init(|| Mutex::new(None))
-}
-
-pub fn set_followup_reselect_log_sink(sink: Option<FollowUpReselectLogSink>) {
-    if let Ok(mut guard) = followup_log_sink().lock() {
-        *guard = sink;
-    }
-}
 
 type CFIndex = isize;
 type DispatchTime = u64;
@@ -446,13 +429,7 @@ fn schedule_followup_reselects(handle: OwnedTisInputSource) {
                 return;
             }
             // SAFETY: handle keeps the TISInputSource alive across the delayed callback.
-            let status = unsafe { TISSelectInputSource(handle.as_ptr()) };
-            let current = current_on_main().ok();
-            if let Ok(guard) = followup_log_sink().lock() {
-                if let Some(sink) = guard.as_ref() {
-                    sink(delay_ms, status, current);
-                }
-            }
+            unsafe { TISSelectInputSource(handle.as_ptr()) };
         });
     }
 }
