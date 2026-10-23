@@ -21,7 +21,18 @@ pub const QUICK_SET_EVENT: &str = "readytype://quick-set";
 const WINDOW_WIDTH: f64 = 320.0;
 /// ヘッダー／ルール名／選択肢ちょうど2行／編集＋削除フッターが収まる高さ
 const WINDOW_HEIGHT: f64 = 448.0;
+/// 削除行（SettingItem: padding 16px×2 + icon 24px）とその上の区切り 1px。
+/// 「このルールを削除」が無いときはこの分だけ窓を縮める。
+const DELETE_RULE_ROW_HEIGHT: f64 = 57.0;
 const GAP: f64 = 8.0;
+
+fn quick_set_window_height(shows_delete_rule: bool) -> f64 {
+    if shows_delete_rule {
+        WINDOW_HEIGHT
+    } else {
+        WINDOW_HEIGHT - DELETE_RULE_ROW_HEIGHT
+    }
+}
 
 #[cfg(target_os = "macos")]
 mod panel_macos {
@@ -160,9 +171,11 @@ pub fn open(app: &AppHandle) -> Result<(), String> {
         .get_webview_window(QUICK_SET_WINDOW_LABEL)
         .ok_or_else(|| "quick-set window missing".to_owned())?;
 
+    let shows_delete_rule = matches!(&prepared, Ok(session) if session.matched_rule_id.is_some());
+    let height = quick_set_window_height(shows_delete_rule);
     match &prepared {
-        Ok(session) => position_near_focus(app, &window, session)?,
-        Err(_) => position_centered_near_cursor(app, &window)?,
+        Ok(session) => position_near_focus(app, &window, session, height)?,
+        Err(_) => position_centered_near_cursor(app, &window, height)?,
     }
 
     // Keep Accessory while Quick Set is open so the Dock stays hidden in BG residency.
@@ -267,11 +280,11 @@ fn monitor_rect_for_physical_point(app: &AppHandle, x: f64, y: f64) -> Option<Lo
 }
 
 /// Place the popover near an AX frame, flipped above when it would overflow the bottom.
-fn place_near_anchor(anchor: LogicalRect, monitor: LogicalRect) -> (f64, f64) {
+fn place_near_anchor(anchor: LogicalRect, monitor: LogicalRect, window_height: f64) -> (f64, f64) {
     let mut x = anchor.x;
     let mut y = anchor.y + anchor.height + GAP;
-    if y + WINDOW_HEIGHT > monitor.y + monitor.height {
-        y = anchor.y - WINDOW_HEIGHT - GAP;
+    if y + window_height > monitor.y + monitor.height {
+        y = anchor.y - window_height - GAP;
     }
     if x + WINDOW_WIDTH > monitor.x + monitor.width {
         x = monitor.x + monitor.width - WINDOW_WIDTH - GAP;
@@ -282,21 +295,21 @@ fn place_near_anchor(anchor: LogicalRect, monitor: LogicalRect) -> (f64, f64) {
     if y < monitor.y {
         y = monitor.y + GAP;
     }
-    if y + WINDOW_HEIGHT > monitor.y + monitor.height {
-        y = (monitor.y + monitor.height - WINDOW_HEIGHT - GAP).max(monitor.y + GAP);
+    if y + window_height > monitor.y + monitor.height {
+        y = (monitor.y + monitor.height - window_height - GAP).max(monitor.y + GAP);
     }
     (x, y)
 }
 
-fn center_on_monitor(monitor: LogicalRect) -> (f64, f64) {
+fn center_on_monitor(monitor: LogicalRect, window_height: f64) -> (f64, f64) {
     (
         monitor.x + (monitor.width - WINDOW_WIDTH) / 2.0,
-        monitor.y + (monitor.height - WINDOW_HEIGHT) / 2.0,
+        monitor.y + (monitor.height - window_height) / 2.0,
     )
 }
 
-fn apply_window_position(window: &tauri::WebviewWindow, x: f64, y: f64) {
-    let _ = window.set_size(LogicalSize::new(WINDOW_WIDTH, WINDOW_HEIGHT));
+fn apply_window_position(window: &tauri::WebviewWindow, x: f64, y: f64, window_height: f64) {
+    let _ = window.set_size(LogicalSize::new(WINDOW_WIDTH, window_height));
     let _ = window.set_position(LogicalPosition::new(x, y));
 }
 
@@ -304,6 +317,7 @@ fn position_near_focus(
     app: &AppHandle,
     window: &tauri::WebviewWindow,
     session: &QuickSetSession,
+    window_height: f64,
 ) -> Result<(), String> {
     let frame = {
         #[cfg(target_os = "macos")]
@@ -322,7 +336,7 @@ fn position_near_focus(
     };
 
     let Some(frame) = frame else {
-        return position_centered_near_cursor(app, window);
+        return position_centered_near_cursor(app, window, window_height);
     };
 
     let anchor = LogicalRect {
@@ -335,14 +349,15 @@ fn position_near_focus(
     let probe_y = frame.y + frame.height / 2.0;
     let monitor = monitor_rect_for_logical_point(app, probe_x, probe_y)
         .ok_or_else(|| "no monitor available for quick-set placement".to_owned())?;
-    let (x, y) = place_near_anchor(anchor, monitor);
-    apply_window_position(window, x, y);
+    let (x, y) = place_near_anchor(anchor, monitor, window_height);
+    apply_window_position(window, x, y, window_height);
     Ok(())
 }
 
 fn position_centered_near_cursor(
     app: &AppHandle,
     window: &tauri::WebviewWindow,
+    window_height: f64,
 ) -> Result<(), String> {
     let monitor = match app.cursor_position() {
         Ok(cursor) => monitor_rect_for_physical_point(app, cursor.x, cursor.y),
@@ -350,10 +365,10 @@ fn position_centered_near_cursor(
     };
 
     let (x, y) = match monitor {
-        Some(rect) => center_on_monitor(rect),
+        Some(rect) => center_on_monitor(rect, window_height),
         None => (200.0, 200.0),
     };
-    apply_window_position(window, x, y);
+    apply_window_position(window, x, y, window_height);
     Ok(())
 }
 

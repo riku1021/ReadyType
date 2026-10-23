@@ -1,4 +1,7 @@
-use super::{center_on_monitor, place_near_anchor, LogicalRect, GAP, WINDOW_HEIGHT, WINDOW_WIDTH};
+use super::{
+    center_on_monitor, place_near_anchor, quick_set_window_height, LogicalRect, GAP, WINDOW_HEIGHT,
+    WINDOW_WIDTH,
+};
 
 #[test]
 fn places_below_anchor_when_space_allows() {
@@ -14,7 +17,7 @@ fn places_below_anchor_when_space_allows() {
         width: 200.0,
         height: 24.0,
     };
-    let (x, y) = place_near_anchor(anchor, monitor);
+    let (x, y) = place_near_anchor(anchor, monitor, WINDOW_HEIGHT);
     assert_eq!(x, 2000.0);
     assert_eq!(y, 100.0 + 24.0 + GAP);
 }
@@ -33,7 +36,7 @@ fn flips_above_when_overflowing_bottom_of_secondary_monitor() {
         width: 120.0,
         height: 20.0,
     };
-    let (x, y) = place_near_anchor(anchor, monitor);
+    let (x, y) = place_near_anchor(anchor, monitor, WINDOW_HEIGHT);
     assert_eq!(x, 2100.0);
     assert_eq!(y, 1000.0 - WINDOW_HEIGHT - GAP);
     assert!(y >= monitor.y);
@@ -53,7 +56,7 @@ fn clamps_horizontally_inside_secondary_monitor_not_primary() {
         width: 100.0,
         height: 20.0,
     };
-    let (x, _y) = place_near_anchor(anchor, monitor);
+    let (x, _y) = place_near_anchor(anchor, monitor, WINDOW_HEIGHT);
     assert!(x + WINDOW_WIDTH <= monitor.x + monitor.width);
     assert!(x >= monitor.x);
 }
@@ -66,7 +69,7 @@ fn centers_on_given_monitor() {
         width: 1920.0,
         height: 1080.0,
     };
-    let (x, y) = center_on_monitor(monitor);
+    let (x, y) = center_on_monitor(monitor, WINDOW_HEIGHT);
     assert!((x - (1920.0 + (1920.0 - WINDOW_WIDTH) / 2.0)).abs() < f64::EPSILON);
     assert!((y - (0.0 + (1080.0 - WINDOW_HEIGHT) / 2.0)).abs() < f64::EPSILON);
 }
@@ -81,4 +84,26 @@ fn logical_rect_contains_point_on_secondary() {
     };
     assert!(monitor.contains(2000.0, 100.0));
     assert!(!monitor.contains(100.0, 100.0));
+}
+
+#[test]
+fn shorter_window_stays_below_anchor_when_full_height_would_flip() {
+    let monitor = LogicalRect {
+        x: 0.0,
+        y: 0.0,
+        width: 1920.0,
+        height: 1080.0,
+    };
+    let anchor = LogicalRect {
+        x: 100.0,
+        y: 652.0,
+        width: 100.0,
+        height: 20.0,
+    };
+    let short = quick_set_window_height(false);
+    let (x, y_short) = place_near_anchor(anchor, monitor, short);
+    let (_, y_full) = place_near_anchor(anchor, monitor, WINDOW_HEIGHT);
+    assert_eq!(x, 100.0);
+    assert_eq!(y_short, 652.0 + 20.0 + GAP);
+    assert_eq!(y_full, 652.0 - WINDOW_HEIGHT - GAP);
 }
