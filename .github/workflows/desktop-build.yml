@@ -147,7 +147,9 @@ jobs:
             if [ -n "${args}" ]; then
               args="${args} "
             fi
-            args="${args}--target ${TAURI_TARGET} --bundles dmg"
+            # DMG alone is not an updater target. `app` makes Tauri emit
+            # ReadyType.app.tar.gz, which the updater installs.
+            args="${args}--target ${TAURI_TARGET} --bundles app,dmg"
           fi
           echo "TAURI_BUILD_ARGS=${args}" >> "$GITHUB_ENV"
 
@@ -187,9 +189,12 @@ jobs:
             local dest="$3"
             local include_bundle="$4"
             local matches=()
+            # macOS runners use bash 3.2, where failglob still errors after nullglob.
+            shopt -u failglob
             shopt -s nullglob
             matches=( "${dir}"/${glob} )
             shopt -u nullglob
+            shopt -s failglob
             if [ "${#matches[@]}" -eq 0 ]; then
               return 0
             fi
