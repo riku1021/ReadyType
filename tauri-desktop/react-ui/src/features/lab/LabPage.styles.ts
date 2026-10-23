@@ -4,7 +4,6 @@ export const page = css({
   display: "flex",
   flexDirection: "column",
   gap: "md",
-  maxWidth: "720px",
 });
 
 export const heading = css({

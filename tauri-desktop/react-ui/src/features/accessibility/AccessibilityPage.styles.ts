@@ -5,7 +5,6 @@ export const page = css({
   display: "flex",
   flexDirection: "column",
   gap: "sm",
-  maxWidth: "640px",
 });
 
 export const card = css(surfaceSub, {
