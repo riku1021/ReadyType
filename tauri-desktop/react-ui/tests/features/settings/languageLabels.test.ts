@@ -10,7 +10,7 @@ import {
 describe("languageLabels", () => {
   const translate = (key: typeof SYSTEM_LANGUAGE_LABEL_KEY) => {
     if (key === "settings.languageSystem") {
-      return "システム";
+      return "システムの設定を使う";
     }
     return key;
   };
@@ -18,12 +18,17 @@ describe("languageLabels", () => {
   const rows = () => languageListRows(translate, "ja");
 
   it("lists system first, then registry native names", () => {
-    expect(rows().map((row) => row.label)).toEqual(["システム", "日本語", "English", "中文"]);
+    expect(rows().map((row) => row.label)).toEqual([
+      "システムの設定を使う",
+      "日本語",
+      "English",
+      "中文",
+    ]);
     expect(rows().map((row) => row.preference)).toEqual(["system", "ja", "en", "zh"]);
   });
 
   it("maps preference to display labels", () => {
-    expect(getLanguageOptionLabel("system", translate)).toBe("システム");
+    expect(getLanguageOptionLabel("system", translate)).toBe("システムの設定を使う");
     expect(getLanguageOptionLabel("ja", translate)).toBe("日本語");
     expect(getLanguageOptionLabel("en", translate)).toBe("English");
     expect(getLanguageOptionLabel("zh", translate)).toBe("中文");
@@ -38,9 +43,9 @@ describe("languageLabels", () => {
     expect(filterLanguageListRows(rows(), "Ja").map((row) => row.preference)).toEqual(["ja"]);
     expect(filterLanguageListRows(rows(), "Japanese").map((row) => row.preference)).toEqual(["ja"]);
     expect(filterLanguageListRows(rows(), "Chinese").map((row) => row.preference)).toEqual(["zh"]);
-    expect(filterLanguageListRows(rows(), "システム").map((row) => row.preference)).toEqual([
-      "system",
-    ]);
+    expect(
+      filterLanguageListRows(rows(), "システムの設定を使う").map((row) => row.preference)
+    ).toEqual(["system"]);
     expect(filterLanguageListRows(rows(), "EN").map((row) => row.preference)).toEqual(["en"]);
     expect(filterLanguageListRows(rows(), "中国語").map((row) => row.preference)).toEqual(["zh"]);
     expect(filterLanguageListRows(rows(), "英語").map((row) => row.preference)).toEqual(["en"]);

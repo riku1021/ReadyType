@@ -46,7 +46,7 @@
     "sectionAppearance": "Appearance",
     "theme": "Theme",
     "displayLanguage": "Display language",
-    "languageSystem": "System",
+    "languageSystem": "Use system setting",
     "languageSearchPlaceholder": "Search languages...",
     "languageSearchAria": "Search display languages",
     "languageEmptySearch": "No matching languages",

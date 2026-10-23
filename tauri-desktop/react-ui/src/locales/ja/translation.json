@@ -46,7 +46,7 @@
     "sectionAppearance": "外観",
     "theme": "テーマ",
     "displayLanguage": "表示言語",
-    "languageSystem": "システム",
+    "languageSystem": "システムの設定を使う",
     "languageSearchPlaceholder": "言語を検索...",
     "languageSearchAria": "表示言語を検索",
     "languageEmptySearch": "該当する言語はありません",
