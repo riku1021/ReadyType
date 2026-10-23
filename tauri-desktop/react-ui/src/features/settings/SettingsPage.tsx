@@ -4,7 +4,8 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useAtom } from "jotai";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MdBugReport, MdContrast, MdLanguage, MdRocketLaunch, MdSwapHoriz } from "react-icons/md";
+import { FiTrash2 } from "react-icons/fi";
+import { MdContrast, MdLanguage, MdRocketLaunch, MdSwapHoriz } from "react-icons/md";
 
 import { themeAtom } from "@/atoms/theme";
 import { AlertDialog, LoadingDialog } from "@/components/Dialog";
@@ -159,7 +160,7 @@ export function SettingsPage() {
 
       <SettingsSection title={t("settings.sectionOther")}>
         <SettingItem
-          icon={MdBugReport}
+          icon={FiTrash2}
           title={t("settings.resetToDefaults")}
           type="action"
           danger
