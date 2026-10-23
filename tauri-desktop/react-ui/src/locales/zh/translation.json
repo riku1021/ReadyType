@@ -23,7 +23,6 @@
     "unknown": "未知",
     "emDash": "—",
     "unset": "未设置",
-    "saving": "保存中…",
     "saveFailed": "保存失败",
     "loadSettingsFailed": "设置加载失败",
     "resetFailed": "重置失败",

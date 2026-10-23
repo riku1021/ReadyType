@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { MdBugReport, MdContrast, MdLanguage, MdRocketLaunch, MdSwapHoriz } from "react-icons/md";
 
 import { themeAtom } from "@/atoms/theme";
-import { AlertDialog } from "@/components/Dialog";
+import { AlertDialog, LoadingDialog } from "@/components/Dialog";
 import { SettingItem } from "@/components/SettingItem";
 import { SettingsSection } from "@/components/SettingsSection";
 import { useInputSourceState } from "@/features/inputSource";
@@ -168,7 +168,7 @@ export function SettingsPage() {
       </SettingsSection>
 
       {error ? <p>{error}</p> : null}
-      {anyPending ? <p>{t("common.saving")}</p> : null}
+      <LoadingDialog isOpen={anyPending} />
 
       <AlertDialog
         isOpen={resetOpen}

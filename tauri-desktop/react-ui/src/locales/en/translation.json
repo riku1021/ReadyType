@@ -23,7 +23,6 @@
     "unknown": "Unknown",
     "emDash": "—",
     "unset": "Not set",
-    "saving": "Saving…",
     "saveFailed": "Failed to save",
     "loadSettingsFailed": "Failed to load settings",
     "resetFailed": "Failed to reset",

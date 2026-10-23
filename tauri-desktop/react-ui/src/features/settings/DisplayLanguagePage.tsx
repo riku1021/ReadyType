@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
+import { LoadingDialog } from "@/components/Dialog";
 import { SearchBar } from "@/components/SearchBar";
 import { useInputSourceState } from "@/features/inputSource";
 import { isUiLocalePreference, type UiLocalePreference } from "@/locales/i18n";
@@ -76,7 +77,7 @@ export function DisplayLanguagePage() {
         hideHeader
       />
       {error ? <p>{error}</p> : null}
-      {pending ? <p>{t("common.saving")}</p> : null}
+      <LoadingDialog isOpen={pending} />
     </div>
   );
 }
