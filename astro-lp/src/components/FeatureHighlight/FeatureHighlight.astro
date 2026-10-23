@@ -27,8 +27,20 @@ const rules = [
     label: "あ 日本語",
     tone: "ja",
   },
-  { icon: "</>", name: "コードエディタ", hint: "メインエディタ", label: "A 英語", tone: "en" },
-  { icon: "▣", name: "ターミナル", hint: "コマンド入力", label: "A 英語", tone: "en" },
+  {
+    icon: "lucide:code",
+    name: "コードエディタ",
+    hint: "メインエディタ",
+    label: "A 英語",
+    tone: "en",
+  },
+  {
+    icon: "lucide:square-terminal",
+    name: "ターミナル",
+    hint: "コマンド入力",
+    label: "A 英語",
+    tone: "en",
+  },
 ] as const;
 ---
 
@@ -52,7 +64,7 @@ const rules = [
           <div class={rule}><b>Cursor</b><small class={aside}>のルール</small></div>
           {rules.map((item) => (
             <div class={rule}>
-              <span aria-hidden="true">{item.icon.startsWith("lucide:") ? <Glyph name={item.icon} /> : item.icon}</span>
+              <span aria-hidden="true"><Glyph name={item.icon} /></span>
               <div>{item.name}<small class={hint}>{item.hint}</small></div>
               <span class={tag({ tone: item.tone })}>{item.label}</span>
             </div>
