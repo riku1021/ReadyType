@@ -1,4 +1,4 @@
-import { css, cva } from "@/styled-system/css";
+import { css } from "@/styled-system/css";
 
 export const page = css({
   display: "flex",
@@ -27,23 +27,11 @@ export const row = css({
   cursor: "pointer",
 });
 
-export const td = cva({
-  base: {
-    paddingBlock: "sm",
-    paddingInline: "xs",
-    paddingInlineStart: "sm",
-    verticalAlign: "middle",
-    minWidth: "0",
-    backgroundColor: "transparent",
-    borderInlineStartWidth: "3px",
-    borderInlineStartStyle: "solid",
-    borderInlineStartColor: "transparent",
-  },
-  variants: {
-    selected: {
-      true: {
-        borderInlineStartColor: "brand.main",
-      },
-    },
-  },
+export const td = css({
+  paddingBlock: "sm",
+  paddingInline: "xs",
+  paddingInlineStart: "sm",
+  verticalAlign: "middle",
+  minWidth: "0",
+  backgroundColor: "transparent",
 });

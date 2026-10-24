@@ -12,11 +12,9 @@ export const panel = css(surfaceSub, {
   height: "100%",
   overflow: "hidden",
   padding: "0",
-  borderWidth: "1px",
-  borderStyle: "solid",
-  borderColor: "border.primary",
-  borderRadius: "2xl",
-  boxShadow: "0 2px 8px {colors.shadow.primary}",
+  // SettingsSection.card と同じ枠線＋影＋角丸。枠を border にすると影の角が四角になる
+  boxShadow: "inset 0 0 0 1px {colors.border.primary}, 0 2px 8px {colors.shadow.primary}",
+  borderRadius: "12px",
 });
 
 export const tableHeader = css({
@@ -45,6 +43,13 @@ export const empty = css({
   color: "text.sub",
 });
 
+/** 最終行の下線はカード下端に余白として残る。項目間だけ線を引く */
+export const dataRow = css({
+  _last: {
+    borderBottomWidth: "0",
+  },
+});
+
 /** 行選択できる表。ホバー色は SettingItem に揃える */
 export const interactiveRow = "group";
 
@@ -54,5 +59,10 @@ export const interactiveCell = css({
   transitionTimingFunction: "ease",
   _groupHover: {
     backgroundColor: "background.hover",
+  },
+  "tr.group[aria-selected=true] &": {
+    _first: {
+      boxShadow: "inset 3px 0 0 {colors.brand.main}",
+    },
   },
 });

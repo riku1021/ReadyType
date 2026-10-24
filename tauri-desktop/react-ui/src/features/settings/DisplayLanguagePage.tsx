@@ -45,7 +45,7 @@ export function DisplayLanguagePage() {
     {
       id: "language",
       width: "100%",
-      cellClassName: (_row, selected) => styles.td({ selected }),
+      cellClassName: styles.td,
       cell: (row) => <span className={styles.name}>{row.label}</span>,
     },
   ];

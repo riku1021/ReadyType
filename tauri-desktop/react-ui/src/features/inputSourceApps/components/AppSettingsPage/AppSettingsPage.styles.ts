@@ -125,15 +125,11 @@ export const tdApp = cva({
     verticalAlign: "middle",
     minWidth: "0",
     backgroundColor: "transparent",
-    borderLeftWidth: "3px",
-    borderLeftStyle: "solid",
-    borderLeftColor: "transparent",
   },
   variants: {
     selected: {
       true: {
         backgroundColor: "background.hover",
-        borderLeftColor: "brand.main",
       },
     },
   },

@@ -40,6 +40,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
       <tr
         key={rowId}
         className={cx(
+          styles.dataRow,
           onRowSelect ? styles.interactiveRow : undefined,
           rowClassName?.(row, selected)
         )}
