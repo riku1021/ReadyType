@@ -13,6 +13,7 @@ const baseSettings = (): InputSourceSettingsDto => ({
   quickSetShortcut: "CommandOrControl+Shift+L",
   quickSetShortcutRegistered: true,
   onboardingCompleted: true,
+  showMenuBarIcon: true,
   inputSourceDisplayNames: {},
 });
 

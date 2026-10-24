@@ -24,6 +24,7 @@ import {
   resumeInputSourceSwitcher,
   setAutostartEnabled as setAutostartEnabledApi,
   setInputSourceSwitcherEnabled,
+  setShowMenuBarIcon as setShowMenuBarIconApi,
   setSnooze as setSnoozeApi,
   setUiLocale as setUiLocaleApi,
   shouldApplyFetchedRules,
@@ -316,6 +317,15 @@ export function useInputSourceState() {
     return switcher;
   }, [refreshRules, setFeature]);
 
+  const setShowMenuBarIcon = useCallback(
+    async (visible: boolean) => {
+      const settings = await setShowMenuBarIconApi(visible);
+      setFeature((current) => ({ ...current, settings }));
+      return settings;
+    },
+    [setFeature]
+  );
+
   const setUiLocale = useCallback(
     async (locale: string) => {
       const settings = await setUiLocaleApi(locale);
@@ -405,6 +415,8 @@ export function useInputSourceState() {
     deleteRule,
     reorderRules,
     resetDefaultRules,
+    showMenuBarIcon: feature.settings?.showMenuBarIcon ?? true,
+    setShowMenuBarIcon,
     setUiLocale,
     completeOnboarding,
     fetchInputSources,

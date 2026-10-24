@@ -43,6 +43,8 @@ export const requestAccessibilityPermission = () =>
 export const openAccessibilitySettings = () => invoke<void>("open_accessibility_settings");
 export const setUiLocale = (locale: string) =>
   invoke<InputSourceSettingsDto>("set_ui_locale", { locale });
+export const setShowMenuBarIcon = (visible: boolean) =>
+  invoke<InputSourceSettingsDto>("set_show_menu_bar_icon", { visible });
 export const completeOnboarding = () => invoke<InputSourceSettingsDto>("complete_onboarding");
 /** Lab 切替プリセットを既存ルールへ upsert。 */
 export const ensureLabSwitchRules = () => invoke<SwitcherStateDto>("ensure_lab_switch_rules");

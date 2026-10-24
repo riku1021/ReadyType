@@ -93,6 +93,8 @@ export interface InputSourceSettingsDto {
   quickSetShortcutRegistered: boolean;
   /** 初回オンボーディング完了済みか */
   onboardingCompleted: boolean;
+  /** メニューバーにアイコンを出すか */
+  showMenuBarIcon: boolean;
   /** 入力ソース id → 最終既知 LocalizedName（OS 削除後の UI 表示用） */
   inputSourceDisplayNames: Record<string, string>;
 }

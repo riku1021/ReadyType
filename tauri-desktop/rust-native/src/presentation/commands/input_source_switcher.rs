@@ -275,6 +275,26 @@ pub fn set_ui_locale(
 }
 
 #[tauri::command]
+pub fn set_show_menu_bar_icon(
+    visible: bool,
+    app: AppHandle,
+    controller: State<'_, Arc<SwitcherController>>,
+) -> Result<SettingsDto, IpcError> {
+    controller
+        .set_show_menu_bar_icon(visible)
+        .map_err(IpcError::from)?;
+    crate::infrastructure::desktop::tray::set_icon_visible(&app, visible).map_err(|error| {
+        IpcError {
+            message: error.to_string(),
+        }
+    })?;
+    controller
+        .settings()
+        .map(|settings| settings_dto_with_registration(&app, &settings))
+        .map_err(IpcError::from)
+}
+
+#[tauri::command]
 pub fn complete_onboarding(
     app: AppHandle,
     controller: State<'_, Arc<SwitcherController>>,

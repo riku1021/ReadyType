@@ -408,6 +408,12 @@ where
         self.commit_settings(candidate, None)
     }
 
+    pub fn set_show_menu_bar_icon(&mut self, visible: bool) -> Result<(), ApplicationError> {
+        let mut candidate = self.settings.clone();
+        candidate.show_menu_bar_icon = visible;
+        self.commit_settings(candidate, None)
+    }
+
     pub fn complete_onboarding(&mut self) -> Result<(), ApplicationError> {
         let mut candidate = self.settings.clone();
         candidate.onboarding_completed = true;

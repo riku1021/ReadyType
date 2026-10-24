@@ -509,6 +509,13 @@ impl SwitcherController {
         })
     }
 
+    pub fn set_show_menu_bar_icon(&self, visible: bool) -> Result<SwitcherState, ControllerError> {
+        self.mutate_switcher(|switcher| {
+            switcher.set_show_menu_bar_icon(visible)?;
+            Ok(switcher.state().clone())
+        })
+    }
+
     pub fn complete_onboarding(&self) -> Result<SwitcherState, ControllerError> {
         self.mutate_switcher(|switcher| {
             switcher.complete_onboarding()?;

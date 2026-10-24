@@ -5,7 +5,7 @@ import { useAtom } from "jotai";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FiTrash2 } from "react-icons/fi";
-import { MdContrast, MdLanguage, MdRocketLaunch, MdSwapHoriz } from "react-icons/md";
+import { MdContrast, MdLanguage, MdRocketLaunch, MdSwapHoriz, MdWebAsset } from "react-icons/md";
 
 import { themeAtom } from "@/atoms/theme";
 import { AlertDialog, LoadingDialog } from "@/components/Dialog";
@@ -20,7 +20,7 @@ import * as styles from "./SettingsPage.styles";
 import { ShortcutRecorder } from "./ShortcutRecorder";
 import { getThemeLabel, THEME_OPTIONS, themeFromTranslatedLabel } from "./themeLabels";
 
-type SettingsPendingKey = "enabled" | "autostart";
+type SettingsPendingKey = "enabled" | "autostart" | "menuBarIcon";
 
 type SettingsPendingMap = Partial<Record<SettingsPendingKey, true>>;
 
@@ -31,6 +31,8 @@ export function SettingsPage() {
   const {
     state,
     setEnabled,
+    showMenuBarIcon,
+    setShowMenuBarIcon,
     autostartEnabled,
     refreshAutostartEnabled,
     setAutostartEnabled,
@@ -127,6 +129,16 @@ export function SettingsPage() {
       </SettingsSection>
 
       <SettingsSection title={t("settings.sectionAppearance")}>
+        <SettingItem
+          icon={MdWebAsset}
+          title={t("settings.showMenuBarIcon")}
+          type="toggle"
+          toggleValue={showMenuBarIcon}
+          disabled={isPending("menuBarIcon")}
+          onToggleChanged={(visible) => {
+            runPending("menuBarIcon", () => setShowMenuBarIcon(visible));
+          }}
+        />
         <SettingItem
           icon={MdContrast}
           title={t("settings.theme")}

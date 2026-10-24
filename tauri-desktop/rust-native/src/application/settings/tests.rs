@@ -29,6 +29,7 @@ fn defaults_start_with_empty_language_preferences() {
     assert_eq!(settings.quick_set_shortcut, DEFAULT_QUICK_SET_SHORTCUT);
     assert_eq!(settings.ui_locale, DEFAULT_UI_LOCALE_PREFERENCE);
     assert!(!settings.onboarding_completed);
+    assert!(settings.show_menu_bar_icon);
     assert!(settings.validate().is_ok());
 }
 

@@ -92,6 +92,7 @@ describe("input source IPC", () => {
           quickSetShortcut: "CommandOrControl+Shift+L",
           quickSetShortcutRegistered: true,
           onboardingCompleted: true,
+          showMenuBarIcon: true,
           inputSourceDisplayNames: {},
         };
       }

@@ -12,7 +12,7 @@ use crate::application::{
     switcher_controller::SwitcherController,
     tray_strings::tray_strings,
 };
-use crate::infrastructure::desktop::main_window;
+use crate::infrastructure::desktop::{main_window, quick_set_window};
 
 pub const SNOOZE_MINUTES: [u64; 3] = [5, 15, 60];
 pub const TRAY_ID: &str = "readytype-main-tray";
@@ -86,10 +86,31 @@ fn item(id: &'static str, label: &str, enabled: bool) -> TrayMenuItemModel {
     }
 }
 
+/// Menu-bar template: black mark, transparent background. macOS recolors the alpha.
+#[cfg(any(target_os = "macos", test))]
+fn menu_bar_template_icon() -> tauri::Result<tauri::image::Image<'static>> {
+    tauri::image::Image::from_bytes(include_bytes!("../../../../icons/tray-template.png"))
+}
+
 fn resolve_ui_locale(app: &AppHandle) -> String {
     app.try_state::<Arc<SwitcherController>>()
         .map(|controller| controller.resolved_ui_locale())
         .unwrap_or_else(|| DEFAULT_RESOLVED_UI_LOCALE.to_owned())
+}
+
+/// 設定が読めないときは表示する。
+pub fn icon_visible_in_settings(app: &AppHandle) -> bool {
+    app.try_state::<Arc<SwitcherController>>()
+        .and_then(|controller| controller.settings().ok())
+        .map(|settings| settings.show_menu_bar_icon)
+        .unwrap_or(true)
+}
+
+pub fn set_icon_visible(app: &AppHandle, visible: bool) -> tauri::Result<()> {
+    if let Some(tray) = app.tray_by_id(TRAY_ID) {
+        tray.set_visible(visible)?;
+    }
+    Ok(())
 }
 
 pub fn install(app: &AppHandle, state: &SwitcherState, locale: &str) -> tauri::Result<()> {
@@ -108,11 +129,21 @@ pub fn install(app: &AppHandle, state: &SwitcherState, locale: &str) -> tauri::R
                     ..
                 }
             ) {
-                main_window::show_main_window(tray.app_handle(), None);
+                if let Err(error) = quick_set_window::open(tray.app_handle()) {
+                    eprintln!("quick-set open failed: {error}");
+                }
             }
         });
+    #[cfg(target_os = "macos")]
+    {
+        // The Dock icon is an opaque squircle. Template rendering keeps only alpha,
+        // so that asset becomes a solid menu-bar blob. Use the black mark instead.
+        let icon = menu_bar_template_icon()?;
+        builder = builder.icon(icon).icon_as_template(true);
+    }
+    #[cfg(not(target_os = "macos"))]
     if let Some(icon) = app.default_window_icon() {
-        builder = builder.icon(icon.clone()).icon_as_template(true);
+        builder = builder.icon(icon.clone());
     }
     builder.build(app)?;
     Ok(())

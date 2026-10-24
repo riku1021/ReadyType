@@ -124,6 +124,40 @@ fn missing_onboarding_completed_defaults_to_true_for_existing_files() {
     let outcome = repository(&directory).load().expect("decode");
 
     assert!(outcome.settings().onboarding_completed);
+    assert!(outcome.settings().show_menu_bar_icon);
+}
+
+#[test]
+fn missing_show_menu_bar_icon_defaults_to_true() {
+    let directory = TestDirectory::new("menu-bar-icon-missing");
+    write_settings(
+        &directory.join("settings.json"),
+        r#"{
+            "schemaVersion": 1,
+            "enabled": true,
+            "languagePreferences": {},
+            "rules": [],
+            "snoozedUntilUnixMs": null,
+            "onboardingCompleted": true
+        }"#,
+    );
+
+    let outcome = repository(&directory).load().expect("decode");
+
+    assert!(outcome.settings().show_menu_bar_icon);
+}
+
+#[test]
+fn show_menu_bar_icon_false_round_trips() {
+    let directory = TestDirectory::new("menu-bar-icon-false");
+    let repository = repository(&directory);
+    let mut expected = SwitcherSettings::defaults();
+    expected.show_menu_bar_icon = false;
+
+    repository.save(&expected).expect("save");
+    let outcome = repository.load().expect("load");
+
+    assert!(!outcome.settings().show_menu_bar_icon);
 }
 
 #[test]

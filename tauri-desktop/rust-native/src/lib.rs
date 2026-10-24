@@ -286,6 +286,10 @@ pub fn run() {
                 &initial_state,
                 &resolved_ui_locale,
             )?;
+            let _ = infrastructure::desktop::tray::set_icon_visible(
+                app.handle(),
+                infrastructure::desktop::tray::icon_visible_in_settings(app.handle()),
+            );
 
             #[cfg(target_os = "macos")]
             infrastructure::desktop::autostart::migrate_legacy_launch_agent();
@@ -382,6 +386,7 @@ pub fn run() {
             presentation::commands::input_source_switcher::get_accessibility_permission,
             presentation::commands::input_source_switcher::request_accessibility_permission,
             presentation::commands::input_source_switcher::open_accessibility_settings,
+            presentation::commands::input_source_switcher::set_show_menu_bar_icon,
             presentation::commands::input_source_switcher::set_ui_locale,
             presentation::commands::input_source_switcher::complete_onboarding,
             presentation::commands::input_source_switcher::ensure_lab_switch_rules,

@@ -28,6 +28,8 @@ pub struct SwitcherSettings {
     pub quick_set_shortcut: String,
     /// 初回オンボーディングを完了したか。
     pub onboarding_completed: bool,
+    /// メニューバーにトレイアイコンを出すか。
+    pub show_menu_bar_icon: bool,
     /// Last-known LocalizedName per input source id (kept after OS removal for UI).
     pub input_source_display_names: BTreeMap<String, String>,
 }
@@ -44,6 +46,7 @@ impl SwitcherSettings {
             ui_locale: DEFAULT_UI_LOCALE_PREFERENCE.to_owned(),
             quick_set_shortcut: DEFAULT_QUICK_SET_SHORTCUT.to_owned(),
             onboarding_completed: false,
+            show_menu_bar_icon: true,
             input_source_display_names: BTreeMap::new(),
         }
     }

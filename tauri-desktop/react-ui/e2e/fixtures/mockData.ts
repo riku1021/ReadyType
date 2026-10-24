@@ -22,6 +22,7 @@ export const mockSettings = {
   quickSetShortcut: "CommandOrControl+Shift+L",
   quickSetShortcutRegistered: true,
   onboardingCompleted: true,
+  showMenuBarIcon: true,
   inputSourceDisplayNames: {
     "com.apple.keylayout.ABC": "ABC",
     "com.apple.inputmethod.Kotoeri.RomajiTyping": "ひらがな",

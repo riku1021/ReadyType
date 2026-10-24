@@ -1,4 +1,4 @@
-use super::{TrayMenuModel, SNOOZE_MINUTES};
+use super::{menu_bar_template_icon, TrayMenuModel, SNOOZE_MINUTES};
 use crate::{
     application::switcher_state::SwitcherState,
     domain::input_source::{Platform, PlatformAppId},
@@ -90,4 +90,34 @@ fn tray_model_shows_install_only_when_update_is_ready() {
 #[test]
 fn tray_has_expected_snooze_durations() {
     assert_eq!(SNOOZE_MINUTES, [5, 15, 60]);
+}
+
+#[test]
+fn menu_bar_template_icon_is_a_transparent_mark() {
+    let icon = menu_bar_template_icon().expect("tray template decodes");
+    let width = icon.width();
+    let height = icon.height();
+    assert_eq!(width, height);
+    assert!(
+        (16..=512).contains(&width),
+        "menu bar asset should stay a modest square, got {width}"
+    );
+    let rgba = icon.rgba();
+    let alpha = |x: u32, y: u32| rgba[((y * width + x) * 4 + 3) as usize];
+    assert_eq!(alpha(0, 0), 0);
+    assert_eq!(alpha(width - 1, height - 1), 0);
+    let mut ink = 0usize;
+    for pixel in rgba.as_chunks::<4>().0 {
+        if pixel[3] == 0 {
+            continue;
+        }
+        ink += 1;
+        assert!(
+            pixel[0] <= 16 && pixel[1] <= 16 && pixel[2] <= 16,
+            "template mark should be black"
+        );
+    }
+    let total = (width * height) as usize;
+    assert!(ink > total / 4, "mark is missing");
+    assert!(ink < total * 7 / 10, "background is opaque");
 }

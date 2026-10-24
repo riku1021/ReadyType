@@ -22,6 +22,7 @@ commands.allow = [
   "get_accessibility_permission",
   "request_accessibility_permission",
   "open_accessibility_settings",
+  "set_show_menu_bar_icon",
   "set_ui_locale",
   "complete_onboarding",
   "ensure_lab_switch_rules",
