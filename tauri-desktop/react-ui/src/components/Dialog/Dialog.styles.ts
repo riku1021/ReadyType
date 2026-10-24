@@ -172,6 +172,8 @@ export const formPanel = css(surfaceSub, {
 export const formTitle = css({
   fontSize: "1.5rem",
   fontWeight: "semibold",
+  // 閉じるボタンの中心は padding-top（lg = 32px）と一致する。行ボックス半分上げて揃える。
+  marginTop: "-0.5lh",
   marginBottom: "md",
   paddingRight: "2.5rem",
   color: "text.main",
