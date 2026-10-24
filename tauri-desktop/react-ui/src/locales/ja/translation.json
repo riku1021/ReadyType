@@ -77,7 +77,6 @@
     "descriptionUnsupported": "{{pane}}権限によるフォーカス監視は、現在 macOS のみ対応しています。"
   },
   "apps": {
-    "intro": "アプリや入力欄に応じて、入力言語を自動で切り替えます。",
     "searchPlaceholder": "アプリを検索...",
     "searchAria": "アプリを検索",
     "addApp": "アプリを追加",

@@ -127,18 +127,16 @@ export function AppSettingsPage() {
   return (
     <div className={styles.page}>
       <div className={styles.toolbar}>
-        <p className={styles.intro}>{t("apps.intro")}</p>
-        <div className={styles.toolbarActions}>
-          <SearchBar
-            value={search}
-            onChange={setSearch}
-            placeholder={t("apps.searchPlaceholder")}
-            aria-label={t("apps.searchAria")}
-          />
-          <Button variant="secondary" iconLeft={<IoAdd />} onClick={() => undefined} disabled>
-            {t("apps.addApp")}
-          </Button>
-        </div>
+        <SearchBar
+          fullWidth
+          value={search}
+          onChange={setSearch}
+          placeholder={t("apps.searchPlaceholder")}
+          aria-label={t("apps.searchAria")}
+        />
+        <Button variant="secondary" iconLeft={<IoAdd />} onClick={() => undefined} disabled>
+          {t("apps.addApp")}
+        </Button>
       </div>
 
       <DataTable

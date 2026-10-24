@@ -77,7 +77,6 @@
     "descriptionUnsupported": "基于{{pane}}权限的焦点监视目前仅支持 macOS。"
   },
   "apps": {
-    "intro": "根据应用或输入区域自动切换输入语言。",
     "searchPlaceholder": "搜索应用...",
     "searchAria": "搜索应用",
     "addApp": "添加应用",

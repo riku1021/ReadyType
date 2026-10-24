@@ -77,7 +77,6 @@
     "descriptionUnsupported": "Focus monitoring via {{pane}} permission is currently supported on macOS only."
   },
   "apps": {
-    "intro": "Automatically switch input language based on the app and field.",
     "searchPlaceholder": "Search apps...",
     "searchAria": "Search apps",
     "addApp": "Add app",

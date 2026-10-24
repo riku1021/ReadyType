@@ -12,6 +12,7 @@ export const root = cva({
   variants: {
     fullWidth: {
       true: {
+        flex: "1",
         width: "100%",
         maxWidth: "none",
       },

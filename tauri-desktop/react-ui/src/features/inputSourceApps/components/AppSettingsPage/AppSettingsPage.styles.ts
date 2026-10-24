@@ -12,22 +12,8 @@ export const page = css({
 export const toolbar = css({
   display: "flex",
   alignItems: "center",
-  justifyContent: "space-between",
-  gap: "sm",
-  flexWrap: "wrap",
-});
-
-export const intro = css({
-  margin: "0",
-  fontSize: "sm",
-  color: "text.secondary",
-});
-
-export const toolbarActions = css({
-  display: "flex",
-  alignItems: "center",
   gap: "xs",
-  flexWrap: "wrap",
+  width: "100%",
 });
 
 export const appCell = css({
