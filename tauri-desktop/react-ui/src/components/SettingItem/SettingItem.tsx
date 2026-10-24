@@ -135,8 +135,14 @@ export function SettingItem(props: SettingItemProps) {
         </span>
       ) : null}
       <span className={styles.textStack}>
-        <span className={styles.title({ tone })}>{title}</span>
-        {description ? <span className={styles.description}>{description}</span> : null}
+        {description ? (
+          <span className={styles.textGroup}>
+            <span className={styles.title({ tone })}>{title}</span>
+            <span className={styles.description}>{description}</span>
+          </span>
+        ) : (
+          <span className={styles.title({ tone })}>{title}</span>
+        )}
       </span>
       {renderTrailing(props)}
     </>

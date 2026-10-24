@@ -85,6 +85,18 @@ export const textStack = css({
   flex: "1",
   minWidth: "0",
   gap: "0",
+  position: "relative",
+});
+
+/** タイトルとサブ文を1つの塊にし、行の中央へ置く。塊は行の高さに含めない */
+export const textGroup = css({
+  position: "absolute",
+  top: "50%",
+  insetInline: "0",
+  display: "flex",
+  flexDirection: "column",
+  minWidth: "0",
+  transform: "translateY(-50%)",
 });
 
 export const title = cva({
@@ -106,10 +118,15 @@ export const title = cva({
   },
 });
 
+/** 1行を超える分は省略する */
 export const description = css({
-  fontSize: "sm",
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
+  minWidth: "0",
+  fontSize: "xs",
   color: "text.placeholder",
-  lineHeight: "tight",
+  lineHeight: "none",
 });
 
 export const trailing = css({
