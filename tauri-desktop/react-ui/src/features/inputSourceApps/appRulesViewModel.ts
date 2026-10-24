@@ -1,7 +1,6 @@
 import type { TFunction } from "i18next";
 
 import type { RuleDto, RuleTarget } from "@/features/inputSource";
-import i18n from "@/locales/i18n";
 
 /** OS 表示名が取れないときだけ使う（ブラウザ単体 / ネイティブ未接続）。 */
 const FALLBACK_APP_LABELS: Record<string, string> = {
@@ -23,8 +22,19 @@ export type AppRuleGroup = {
   label: string;
   enabled: boolean;
   ruleCount: number;
+  /** ルール配列でこのアプリが最初に現れた位置。追加順のキー。 */
+  addedIndex: number;
   defaultRule: RuleDto | null;
   contextualRules: RuleDisplay[];
+};
+
+/** 一覧の並び。名前順が既定。 */
+export type AppListSort = "name" | "added" | "ruleCount";
+
+type AppListSortable = {
+  label: string;
+  ruleCount: number;
+  addedIndex: number;
 };
 
 /** OS 表示名 → オフライン用フォールバック → bundle id。 */
@@ -87,31 +97,65 @@ function contextSortKey(rule: RuleDto): number {
 }
 
 export function groupRulesByApp(rules: readonly RuleDto[], t: TFunction): AppRuleGroup[] {
-  const byApp = new Map<string, RuleDto[]>();
-  for (const rule of rules) {
-    const list = byApp.get(rule.appId) ?? [];
-    list.push(rule);
-    byApp.set(rule.appId, list);
+  const byApp = new Map<string, { addedIndex: number; rules: RuleDto[] }>();
+  for (const [index, rule] of rules.entries()) {
+    const bucket = byApp.get(rule.appId);
+    if (bucket) {
+      bucket.rules.push(rule);
+    } else {
+      byApp.set(rule.appId, { addedIndex: index, rules: [rule] });
+    }
   }
 
-  return [...byApp.entries()]
-    .map(([appId, appRules]) => {
-      const sorted = [...appRules].sort((left, right) => left.priority - right.priority);
-      const defaultRule = sorted.find((rule) => rule.conditions.length === 0) ?? null;
-      const contextualRules = sorted
-        .filter((rule) => rule.conditions.length > 0)
-        .sort((left, right) => contextSortKey(left) - contextSortKey(right))
-        .map((rule) => ({ rule, ...displayRuleLabel(rule, t) }));
-      return {
-        appId,
-        label: appDisplayName(appId),
-        enabled: appRules.some((rule) => rule.enabled),
-        ruleCount: appRules.length,
-        defaultRule,
-        contextualRules,
-      };
-    })
-    .sort((left, right) => left.label.localeCompare(right.label, i18n.language));
+  // 初出順。表示用の並びは sortAppListRows が解決済みの表示名で決める。
+  return [...byApp.entries()].map(([appId, { addedIndex, rules: appRules }]) => {
+    const sorted = [...appRules].sort((left, right) => left.priority - right.priority);
+    const defaultRule = sorted.find((rule) => rule.conditions.length === 0) ?? null;
+    const contextualRules = sorted
+      .filter((rule) => rule.conditions.length > 0)
+      .sort((left, right) => contextSortKey(left) - contextSortKey(right))
+      .map((rule) => ({ rule, ...displayRuleLabel(rule, t) }));
+    return {
+      appId,
+      label: appDisplayName(appId),
+      enabled: appRules.some((rule) => rule.enabled),
+      ruleCount: appRules.length,
+      addedIndex,
+      defaultRule,
+      contextualRules,
+    };
+  });
+}
+
+function compareByName(left: AppListSortable, right: AppListSortable, language: string): number {
+  const byLabel = left.label.localeCompare(right.label, language, {
+    numeric: true,
+    sensitivity: "accent",
+  });
+  if (byLabel !== 0) {
+    return byLabel;
+  }
+  return left.addedIndex - right.addedIndex;
+}
+
+/** 表示名が解決された行を並べる。同点は追加順で安定させる。 */
+export function sortAppListRows<T extends AppListSortable>(
+  rows: readonly T[],
+  sort: AppListSort,
+  language: string
+): T[] {
+  return [...rows].sort((left, right) => {
+    if (sort === "added") {
+      return left.addedIndex - right.addedIndex;
+    }
+    if (sort === "ruleCount") {
+      const byCount = right.ruleCount - left.ruleCount;
+      if (byCount !== 0) {
+        return byCount;
+      }
+    }
+    return compareByName(left, right, language);
+  });
 }
 
 export { resolvedInputSourceId } from "@/features/inputSource";

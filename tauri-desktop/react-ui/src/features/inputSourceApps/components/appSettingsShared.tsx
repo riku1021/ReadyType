@@ -107,6 +107,7 @@ export function LanguageSelect({
   wide = false,
   noneLabel,
   showWarningBadge,
+  className,
 }: {
   value: string;
   label: string;
@@ -116,6 +117,7 @@ export function LanguageSelect({
   /** 指定時、value="" の「設定しない」相当を選択肢に含める（選択中は常に最上段） */
   noneLabel?: string;
   showWarningBadge?: boolean;
+  className?: string;
 }) {
   const { t } = useTranslation();
   const visibleOptions = visibleInputSourceOptions(options, value);
@@ -130,7 +132,8 @@ export function LanguageSelect({
 
   const selectClassName = cx(
     styles.select,
-    wide ? (showWarningBadge ? styles.selectWideInRow : styles.selectWide) : undefined
+    wide ? (showWarningBadge ? styles.selectWideInRow : styles.selectWide) : undefined,
+    className
   );
 
   const select = (

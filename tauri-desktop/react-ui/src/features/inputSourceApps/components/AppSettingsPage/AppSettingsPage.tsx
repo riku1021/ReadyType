@@ -1,8 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useAtomValue } from "jotai";
+import { atom, useAtom, useAtomValue } from "jotai";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { IoAdd, IoChevronForward } from "react-icons/io5";
+import { IoAdd, IoChevronForward, IoSwapVertical } from "react-icons/io5";
 
 import { Button } from "@/components/Button";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
@@ -10,26 +10,32 @@ import { SearchBar } from "@/components/SearchBar";
 import { Toggle } from "@/components/Toggle";
 import {
   appHasMissingInputSource,
+  type InputSourceOption,
   inputSourceSourcesAtom,
   useInputSourceState,
 } from "@/features/inputSource";
 import { pageSlide } from "@/features/navigation";
 
 import {
+  type AppListSort,
   type AppRuleGroup,
   appDisplayName,
   filterAppListRows,
   groupRulesByApp,
+  sortAppListRows,
 } from "../../appRulesViewModel";
-import { AppIconView, useAppPresentations } from "../appSettingsShared";
+import { AppIconView, LanguageSelect, useAppPresentations } from "../appSettingsShared";
 import * as styles from "./AppSettingsPage.styles";
 
 type AppListRow = AppRuleGroup & {
   iconSrc?: string | null;
 };
 
+/** 詳細へ遷移して戻っても、このセッションの並びを保つ。 */
+const appListSortAtom = atom<AppListSort>("name");
+
 export function AppSettingsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { state, updateRule } = useInputSourceState();
   const rules = state?.rules ?? [];
@@ -39,6 +45,8 @@ export function AppSettingsPage() {
   const appIds = useMemo(() => groups.map((group) => group.appId), [groups]);
   const presentations = useAppPresentations(appIds);
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useAtom(appListSortAtom);
+  const language = i18n.resolvedLanguage ?? i18n.language;
 
   const rows: AppListRow[] = useMemo(
     () =>
@@ -53,7 +61,22 @@ export function AppSettingsPage() {
     [groups, presentations]
   );
 
-  const visibleRows = useMemo(() => filterAppListRows(rows, search), [rows, search]);
+  const sortedRows = useMemo(() => sortAppListRows(rows, sort, language), [language, rows, sort]);
+  const visibleRows = useMemo(() => filterAppListRows(sortedRows, search), [search, sortedRows]);
+
+  const sortLabelKey = {
+    name: "apps.sortName",
+    added: "apps.sortAdded",
+    ruleCount: "apps.sortRuleCount",
+  } as const satisfies Record<AppListSort, string>;
+  const sortOptions: InputSourceOption[] = (["name", "added", "ruleCount"] as const).map(
+    (value) => ({
+      value,
+      label: t(sortLabelKey[value]),
+      available: true,
+    })
+  );
+  const currentSortLabel = t(sortLabelKey[sort]);
 
   const setAppEnabled = async (group: AppRuleGroup, enabled: boolean) => {
     const targets = rules.filter((rule) => rule.appId === group.appId);
@@ -137,6 +160,29 @@ export function AppSettingsPage() {
         <Button variant="secondary" iconLeft={<IoAdd />} onClick={() => undefined} disabled>
           {t("apps.addApp")}
         </Button>
+        <span className={styles.sortControl}>
+          <span className={styles.sortVisual} aria-hidden="true">
+            <Button
+              variant="neutral"
+              iconLeft={<IoSwapVertical />}
+              tabIndex={-1}
+              onClick={() => undefined}
+            >
+              {t("apps.sort")}
+            </Button>
+          </span>
+          <LanguageSelect
+            className={styles.sortSelectHit}
+            value={sort}
+            label={t("apps.sortAria", { order: currentSortLabel })}
+            options={sortOptions}
+            onChange={(value) => {
+              if (value === "name" || value === "added" || value === "ruleCount") {
+                setSort(value);
+              }
+            }}
+          />
+        </span>
       </div>
 
       <DataTable

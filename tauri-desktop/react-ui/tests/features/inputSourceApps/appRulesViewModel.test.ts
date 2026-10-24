@@ -8,6 +8,7 @@ import {
   groupRulesByApp,
   resolvedInputSourceId,
   ruleTargetFromInputSourceId,
+  sortAppListRows,
 } from "@/features/inputSourceApps/appRulesViewModel";
 import type i18n from "@/locales/i18n";
 
@@ -125,6 +126,7 @@ describe("appRulesViewModel", () => {
     );
 
     expect(groups.map((group) => group.label)).toEqual(["Cursor", "Terminal"]);
+    expect(groups.map((group) => group.addedIndex)).toEqual([0, 2]);
     expect(groups[0]?.contextualRules.map((item) => item.title)).toEqual([
       "Cursor Composer",
       "Cursor Editor",
@@ -159,6 +161,74 @@ describe("appRulesViewModel", () => {
       kind: "exact",
       inputSourceId: "zh.id",
     });
+  });
+});
+
+describe("sortAppListRows", () => {
+  const rows = [
+    { label: "Terminal", ruleCount: 1, addedIndex: 0 },
+    { label: "Cursor", ruleCount: 3, addedIndex: 1 },
+    { label: "cursor", ruleCount: 3, addedIndex: 2 },
+  ];
+
+  it("sorts by resolved display name and breaks ties by added order", () => {
+    expect(sortAppListRows(rows, "name", "en").map((row) => row.addedIndex)).toEqual([1, 2, 0]);
+  });
+
+  it("orders embedded numbers by value", () => {
+    const numbered = [
+      { label: "App 10", ruleCount: 1, addedIndex: 0 },
+      { label: "App 2", ruleCount: 1, addedIndex: 1 },
+    ];
+    expect(sortAppListRows(numbered, "name", "en").map((row) => row.label)).toEqual([
+      "App 2",
+      "App 10",
+    ]);
+  });
+
+  it("sorts by the first time the app appears in the rules array", () => {
+    expect(sortAppListRows(rows, "added", "ja").map((row) => row.label)).toEqual([
+      "Terminal",
+      "Cursor",
+      "cursor",
+    ]);
+  });
+
+  it("sorts by rule count descending and breaks ties by name", () => {
+    expect(sortAppListRows(rows, "ruleCount", "en").map((row) => row.label)).toEqual([
+      "Cursor",
+      "cursor",
+      "Terminal",
+    ]);
+  });
+
+  it("keeps the first-seen index when later rules belong to an earlier app", () => {
+    const groups = groupRulesByApp(
+      [
+        rule({ id: "terminal", appId: "com.apple.Terminal" }),
+        rule({ id: "cursor", appId: "com.todesktop.230313mzl4w4u92" }),
+        rule({
+          id: "terminal-extra",
+          appId: "com.apple.Terminal",
+          conditions: [
+            {
+              attribute: "role",
+              operator: "contains",
+              scope: "focusedAndAncestors",
+              value: "text",
+            },
+          ],
+        }),
+      ],
+      t
+    );
+
+    expect(groups.map((group) => group.appId)).toEqual([
+      "com.apple.Terminal",
+      "com.todesktop.230313mzl4w4u92",
+    ]);
+    expect(groups.map((group) => group.addedIndex)).toEqual([0, 1]);
+    expect(groups.map((group) => group.ruleCount)).toEqual([2, 1]);
   });
 });
 

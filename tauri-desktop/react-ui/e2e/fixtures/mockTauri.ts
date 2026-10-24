@@ -1,11 +1,18 @@
+import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 
-import {
-  DEFAULT_RESOLVED_LANGUAGE,
-  LANGUAGE_PREFERENCES,
-  SUPPORTED_LANGUAGES,
-} from "../../src/locales/i18n";
 import { mockRules, mockSettings, mockSwitcherState } from "./mockData";
+
+type LocaleRegistry = {
+  defaultResolved: string;
+  locales: readonly { code: string }[];
+};
+
+const localeRegistry = JSON.parse(
+  readFileSync(new URL("../../src/locales/registry.json", import.meta.url), "utf8")
+) as LocaleRegistry;
+const supportedLanguages = localeRegistry.locales.map((locale) => locale.code);
+const languagePreferences = ["system", ...supportedLanguages];
 
 type MockPayload = {
   switcher: typeof mockSwitcherState;
@@ -25,9 +32,9 @@ export async function installTauriMocks(page: Page): Promise<void> {
     switcher: mockSwitcherState,
     settings: mockSettings,
     rules: mockRules,
-    languagePreferences: [...LANGUAGE_PREFERENCES],
-    supportedLanguages: [...SUPPORTED_LANGUAGES],
-    defaultResolved: DEFAULT_RESOLVED_LANGUAGE,
+    languagePreferences,
+    supportedLanguages,
+    defaultResolved: localeRegistry.defaultResolved,
   };
 
   await page.addInitScript((data: MockPayload) => {
@@ -128,12 +135,16 @@ export async function installTauriMocks(page: Page): Promise<void> {
           > = {};
           const pixel =
             "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+          const knownNames: Record<string, string> = {
+            "com.apple.Terminal": "Terminal",
+            "com.todesktop.230313mzl4w4u92": "Cursor",
+          };
           for (const id of ids) {
             if (typeof id === "string") {
               presentations[id] = {
                 icon: pixel,
                 iconRevision: null,
-                displayName: id.split(".").at(-1) ?? id,
+                displayName: knownNames[id] ?? id.split(".").at(-1) ?? id,
               };
             }
           }

@@ -10,6 +10,7 @@ type SharedButtonProps = {
   /** 親幅いっぱいに伸ばす */
   fullWidth?: boolean;
   disabled?: boolean;
+  tabIndex?: number;
   "aria-label"?: string;
   /** ラベル左のアイコン（なし可）。layout=icon のときは使わず children をアイコンとして扱う */
   iconLeft?: ReactNode;
@@ -39,6 +40,7 @@ export function Button(props: ButtonProps) {
     layout = "labeled",
     fullWidth = false,
     disabled,
+    tabIndex,
     "aria-label": ariaLabel,
     iconLeft,
     iconRight,
@@ -53,6 +55,7 @@ export function Button(props: ButtonProps) {
     <button
       type={type}
       disabled={disabled}
+      tabIndex={tabIndex}
       onClick={onClick}
       aria-label={ariaLabel}
       className={button({ variant, layout, fullWidth })}

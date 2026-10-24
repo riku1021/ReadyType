@@ -172,6 +172,37 @@ export const tdChevron = cva({
   },
 });
 
+export const sortControl = css({
+  position: "relative",
+  display: "inline-flex",
+});
+
+export const sortVisual = css({
+  display: "inline-flex",
+  pointerEvents: "none",
+});
+
+/** 見た目は neutral ボタン。開く一覧は LanguageSelect（入力言語と同じネイティブの select）。 */
+export const sortSelectHit = css({
+  position: "absolute",
+  inset: "0",
+  width: "100%",
+  height: "100%",
+  maxWidth: "100%",
+  minWidth: "0",
+  margin: "0",
+  opacity: "0",
+  cursor: "pointer",
+  boxSizing: "border-box",
+  outline: "none",
+  _focus: {
+    outline: "none",
+  },
+  _focusVisible: {
+    outline: "none",
+  },
+});
+
 export const chevron = css({
   display: "inline-flex",
   width: "24px",
