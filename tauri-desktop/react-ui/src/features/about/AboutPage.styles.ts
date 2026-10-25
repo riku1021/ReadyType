@@ -49,7 +49,10 @@ export const creditRow = css({
   gap: "sm",
   width: "100%",
   paddingInline: "sm",
-  paddingBlock: "sm",
+  // SettingItem の行高 52px に揃える。文言は約 24px なので上下 10px では足りず minHeight で揃える
+  boxSizing: "border-box",
+  paddingBlock: "10px",
+  minHeight: "52px",
   color: "text.main",
   fontSize: "base",
 });

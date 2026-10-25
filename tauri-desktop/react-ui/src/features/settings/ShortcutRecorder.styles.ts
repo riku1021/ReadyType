@@ -26,7 +26,10 @@ export const row = css({
   gap: "sm",
   width: "100%",
   paddingInline: "sm",
-  paddingBlock: "sm",
+  // SettingItem の行高 52px に揃える。右端のチップとリセットは 32px なので上下は 10px
+  boxSizing: "border-box",
+  paddingBlock: "10px",
+  minHeight: "52px",
 });
 
 export const title = css({

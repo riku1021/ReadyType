@@ -149,7 +149,7 @@ export function SettingItem(props: SettingItemProps) {
   );
 
   if (type === "toggle" || type === "button") {
-    return <div className={styles.row({ density: "compact", interactive: false })}>{content}</div>;
+    return <div className={styles.row({ interactive: false })}>{content}</div>;
   }
 
   if (type === "selection") {
@@ -158,7 +158,7 @@ export function SettingItem(props: SettingItemProps) {
         <button
           ref={triggerRef}
           type="button"
-          className={styles.row({ density: "default", interactive: true })}
+          className={styles.row({ interactive: true })}
           aria-haspopup="listbox"
           aria-expanded={isMenuOpen}
           disabled={props.disabled}
@@ -180,15 +180,11 @@ export function SettingItem(props: SettingItemProps) {
   }
 
   if (!props.onClick) {
-    return <div className={styles.row({ density: "default", interactive: false })}>{content}</div>;
+    return <div className={styles.row({ interactive: false })}>{content}</div>;
   }
 
   return (
-    <button
-      type="button"
-      className={styles.row({ density: "default", interactive: true })}
-      onClick={props.onClick}
-    >
+    <button type="button" className={styles.row({ interactive: true })} onClick={props.onClick}>
       {content}
     </button>
   );

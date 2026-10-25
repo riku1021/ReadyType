@@ -7,6 +7,10 @@ export const row = cva({
     width: "100%",
     gap: "sm",
     paddingInline: "sm",
+    // 右端アイコン行は中身 24px、トグル行はトラック 26px。上下 10px + minHeight でどちらも 46px にする
+    boxSizing: "border-box",
+    paddingBlock: "10px",
+    minHeight: "52px",
     border: "none",
     backgroundColor: "transparent",
     textAlign: "left",
@@ -26,14 +30,6 @@ export const row = cva({
     },
   },
   variants: {
-    density: {
-      default: {
-        paddingBlock: "sm",
-      },
-      compact: {
-        paddingBlock: "10px",
-      },
-    },
     interactive: {
       true: {},
       false: {
@@ -45,7 +41,6 @@ export const row = cva({
     },
   },
   defaultVariants: {
-    density: "default",
     interactive: true,
   },
 });
@@ -95,6 +90,7 @@ export const textGroup = css({
   insetInline: "0",
   display: "flex",
   flexDirection: "column",
+  gap: "2px",
   minWidth: "0",
   transform: "translateY(-50%)",
 });
