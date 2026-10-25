@@ -2,7 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { atom, useAtom, useAtomValue } from "jotai";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { IoAdd, IoChevronForward, IoSwapVertical } from "react-icons/io5";
+import { IoChevronForward, IoSwapVertical } from "react-icons/io5";
 
 import { Button } from "@/components/Button";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
@@ -157,9 +157,6 @@ export function AppSettingsPage() {
           placeholder={t("apps.searchPlaceholder")}
           aria-label={t("apps.searchAria")}
         />
-        <Button variant="secondary" iconLeft={<IoAdd />} onClick={() => undefined} disabled>
-          {t("apps.addApp")}
-        </Button>
         <span className={styles.sortControl}>
           <span className={styles.sortVisual} aria-hidden="true">
             <Button

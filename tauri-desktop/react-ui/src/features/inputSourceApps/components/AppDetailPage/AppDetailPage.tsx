@@ -305,7 +305,9 @@ export function AppDetailPage({ appId }: AppDetailPageProps) {
       </SettingsSection>
 
       <div className={styles.fieldBlock}>
-        <p className={styles.fieldLabel}>{t("apps.contextualRules")}</p>
+        <p className={styles.fieldLabel}>
+          {t("apps.contextualRules", { count: selected.contextualRules.length })}
+        </p>
       </div>
 
       <DataTable

@@ -17,7 +17,7 @@ test.describe("アプリごとの設定", () => {
     await expect(page.locator("header").getByText("アプリごとの設定")).toBeVisible();
     const search = page.getByPlaceholder("アプリを検索...");
     await expect(search).toBeEnabled();
-    await expect(page.getByRole("button", { name: "アプリを追加" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "アプリを追加" })).toHaveCount(0);
     await expect(page.getByText("Cursor", { exact: true })).toBeVisible();
     await expect(page.getByText("Terminal", { exact: true })).toBeVisible();
 
