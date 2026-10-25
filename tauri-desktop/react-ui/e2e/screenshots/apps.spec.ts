@@ -20,6 +20,8 @@ test.describe("アプリごとの設定", () => {
     await expect(page.getByRole("button", { name: "アプリを追加" })).toHaveCount(0);
     await expect(page.getByText("Cursor", { exact: true })).toBeVisible();
     await expect(page.getByText("Terminal", { exact: true })).toBeVisible();
+    await expect(page.getByRole("switch")).toHaveCount(0);
+    await expect(page.getByText(/\d+個/)).toHaveCount(0);
 
     await search.fill("Cursor");
     await expect(page.getByText("Cursor", { exact: true })).toBeVisible();

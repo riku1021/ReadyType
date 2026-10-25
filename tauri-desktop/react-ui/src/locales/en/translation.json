@@ -29,7 +29,6 @@
     "initSwitcherFailed": "Failed to initialize input source switching",
     "inputSourceUnavailable": "{{label}} (unavailable)",
     "enableAppAria": "Enable {{label}}",
-    "ruleCount": "{{count}}",
     "searchClearAria": "Clear search"
   },
   "dialog": {
@@ -86,8 +85,6 @@
     "sortAdded": "Added order",
     "sortRuleCount": "Most rules",
     "columnApp": "App",
-    "columnRules": "Rules",
-    "columnEnabled": "Enabled",
     "emptyList": "No app settings to show. You can add rules from the shortcut.",
     "emptySearch": "No matching apps",
     "detailTitle": "App details",

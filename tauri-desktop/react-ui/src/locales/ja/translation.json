@@ -29,7 +29,6 @@
     "initSwitcherFailed": "入力ソース切替の初期化に失敗しました",
     "inputSourceUnavailable": "{{label}}（利用不可）",
     "enableAppAria": "{{label}} を有効化",
-    "ruleCount": "{{count}}個",
     "searchClearAria": "検索をクリア"
   },
   "dialog": {
@@ -86,8 +85,6 @@
     "sortAdded": "追加順",
     "sortRuleCount": "ルール数が多い順",
     "columnApp": "アプリ",
-    "columnRules": "ルール",
-    "columnEnabled": "有効",
     "emptyList": "表示できるアプリ設定がありません。ショートカットからルールを追加できます。",
     "emptySearch": "該当するアプリはありません",
     "detailTitle": "アプリ詳細",

@@ -7,7 +7,6 @@ import { IoChevronForward, IoSwapVertical } from "react-icons/io5";
 import { Button } from "@/components/Button";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { SearchBar } from "@/components/SearchBar";
-import { Toggle } from "@/components/Toggle";
 import {
   appHasMissingInputSource,
   type InputSourceOption,
@@ -37,7 +36,7 @@ const appListSortAtom = atom<AppListSort>("name");
 export function AppSettingsPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { state, updateRule } = useInputSourceState();
+  const { state } = useInputSourceState();
   const rules = state?.rules ?? [];
   const languagePreferences = state?.languagePreferences ?? {};
   const sources = useAtomValue(inputSourceSourcesAtom);
@@ -78,16 +77,10 @@ export function AppSettingsPage() {
   );
   const currentSortLabel = t(sortLabelKey[sort]);
 
-  const setAppEnabled = async (group: AppRuleGroup, enabled: boolean) => {
-    const targets = rules.filter((rule) => rule.appId === group.appId);
-    await Promise.all(targets.map((rule) => updateRule({ ...rule, enabled })));
-  };
-
   const columns: DataTableColumn<AppListRow>[] = [
     {
       id: "app",
       header: t("apps.columnApp"),
-      width: "55%",
       headerClassName: styles.thApp,
       cellClassName: (_row, selected) => styles.tdApp({ selected }),
       cell: (group) => (
@@ -102,35 +95,6 @@ export function AppSettingsPage() {
           />
           <span className={styles.appName}>{group.label}</span>
         </div>
-      ),
-    },
-    {
-      id: "rules",
-      header: t("apps.columnRules"),
-      width: "6.5rem",
-      headerClassName: styles.th,
-      cellClassName: (_row, selected) => styles.td({ selected }),
-      cell: (group) => (
-        <span className={styles.ruleCount}>
-          {t("common.ruleCount", { count: group.ruleCount })}
-        </span>
-      ),
-    },
-    {
-      id: "enabled",
-      header: t("apps.columnEnabled"),
-      width: "5.5rem",
-      headerClassName: styles.thEnabled,
-      cellClassName: (_row, selected) => styles.tdEnabled({ selected }),
-      stopPropagation: true,
-      cell: (group) => (
-        <Toggle
-          checked={group.enabled}
-          aria-label={t("common.enableAppAria", { label: group.label })}
-          onChange={(enabled) => {
-            void setAppEnabled(group, enabled);
-          }}
-        />
       ),
     },
     {

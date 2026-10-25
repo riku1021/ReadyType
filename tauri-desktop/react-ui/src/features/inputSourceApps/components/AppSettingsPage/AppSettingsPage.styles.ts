@@ -34,24 +34,6 @@ export const appName = css({
   minWidth: "0",
 });
 
-export const ruleCount = css({
-  fontSize: "sm",
-  color: "text.main",
-});
-
-export const th = css(surfaceSub, {
-  paddingBlock: "sm",
-  paddingInline: "xs",
-  fontSize: "xs",
-  fontWeight: "semibold",
-  color: "text.sub",
-  textAlign: "left",
-  borderBottomWidth: "1px",
-  borderBottomStyle: "solid",
-  borderBottomColor: "border.primary",
-  whiteSpace: "nowrap",
-});
-
 export const thApp = css(surfaceSub, {
   paddingBlock: "sm",
   paddingInline: "xs",
@@ -60,19 +42,6 @@ export const thApp = css(surfaceSub, {
   fontWeight: "semibold",
   color: "text.sub",
   textAlign: "left",
-  borderBottomWidth: "1px",
-  borderBottomStyle: "solid",
-  borderBottomColor: "border.primary",
-  whiteSpace: "nowrap",
-});
-
-export const thEnabled = css(surfaceSub, {
-  paddingBlock: "sm",
-  paddingInline: "xs",
-  fontSize: "xs",
-  fontWeight: "semibold",
-  color: "text.sub",
-  textAlign: "right",
   borderBottomWidth: "1px",
   borderBottomStyle: "solid",
   borderBottomColor: "border.primary",
@@ -100,23 +69,6 @@ export const row = css({
   cursor: "pointer",
 });
 
-export const td = cva({
-  base: {
-    paddingBlock: "sm",
-    paddingInline: "xs",
-    verticalAlign: "middle",
-    minWidth: "0",
-    backgroundColor: "transparent",
-  },
-  variants: {
-    selected: {
-      true: {
-        backgroundColor: "background.hover",
-      },
-    },
-  },
-});
-
 export const tdApp = cva({
   base: {
     paddingBlock: "sm",
@@ -125,24 +77,6 @@ export const tdApp = cva({
     verticalAlign: "middle",
     minWidth: "0",
     backgroundColor: "transparent",
-  },
-  variants: {
-    selected: {
-      true: {
-        backgroundColor: "background.hover",
-      },
-    },
-  },
-});
-
-export const tdEnabled = cva({
-  base: {
-    paddingBlock: "sm",
-    paddingInline: "xs",
-    verticalAlign: "middle",
-    minWidth: "0",
-    backgroundColor: "transparent",
-    textAlign: "right",
   },
   variants: {
     selected: {
