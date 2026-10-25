@@ -1,0 +1,61 @@
+name: static-analysis
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/**
+      - '**/*.sh'
+      - terraform/**/*.tf
+      - terraform/**/*.tfvars.example
+      - terraform/**/.terraform.lock.hcl
+      - .mise.toml
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/**
+      - '**/*.sh'
+      - terraform/**/*.tf
+      - terraform/**/*.tfvars.example
+      - terraform/**/.terraform.lock.hcl
+      - .mise.toml
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    env:
+      MISE_ENABLE_TOOLS: actionlint,shellcheck
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: jdx/mise-action@v5
+
+      - name: Lint GitHub Actions workflows
+        run: actionlint
+
+      - name: Lint shell scripts
+        run: git ls-files -z -- '*.sh' | xargs -0 shellcheck
+
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.5
+
+      - name: Check Terraform formatting
+        run: terraform fmt -check -recursive terraform
+
+      - name: Initialize Terraform without backend
+        working-directory: terraform/aws/environments/prd/astro-lp
+        run: terraform init -backend=false -input=false -lockfile=readonly
+
+      - name: Validate Terraform configuration
+        working-directory: terraform/aws/environments/prd/astro-lp
+        run: terraform validate -no-color

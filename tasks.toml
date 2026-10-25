@@ -128,6 +128,48 @@ description = "Format astro-lp"
 dir = "astro-lp"
 run = "pnpm format"
 
+["astro-lp:infra:plan"]
+description = "Initialize, validate, and create a Terraform plan for astro-lp infrastructure"
+run = """
+set -euo pipefail
+ROOT="$(git rev-parse --show-toplevel)"
+TF_ROOT="$ROOT/terraform/aws/environments/prd/astro-lp"
+cd "$ROOT"
+
+terraform -chdir="$TF_ROOT" init -input=false
+find "$ROOT/terraform/aws" -path '*/.terraform' -prune -o -type f -name '*.tf' -print0 | xargs -0 terraform fmt -check
+terraform -chdir="$TF_ROOT" validate
+AWS_PROFILE="${AWS_PROFILE:-readytype}" terraform -chdir="$TF_ROOT" plan
+"""
+
+["astro-lp:infra:apply"]
+description = "Validate and interactively apply astro-lp Terraform infrastructure changes"
+run = """
+set -euo pipefail
+ROOT="$(git rev-parse --show-toplevel)"
+TF_ROOT="$ROOT/terraform/aws/environments/prd/astro-lp"
+cd "$ROOT"
+
+terraform -chdir="$TF_ROOT" init -input=false
+find "$ROOT/terraform/aws" -path '*/.terraform' -prune -o -type f -name '*.tf' -print0 | xargs -0 terraform fmt -check
+terraform -chdir="$TF_ROOT" validate
+AWS_PROFILE="${AWS_PROFILE:-readytype}" terraform -chdir="$TF_ROOT" apply
+"""
+
+["astro-lp:deploy"]
+description = "Build and manually deploy astro-lp to S3 and CloudFront"
+run = """
+set -euo pipefail
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+AWS_PROFILE="${AWS_PROFILE:-readytype}"
+SITE_BUCKET="$(terraform -chdir=terraform/aws/environments/prd/astro-lp output -raw site_bucket_name)"
+AWS_PROFILE="$AWS_PROFILE" \
+AWS_REGION=ap-southeast-2 \
+AWS_S3_BUCKET="$SITE_BUCKET" \
+./scripts/deploy-astro-lp.sh
+"""
+
 ["rust-native:lab-smoke"]
 description = "macOS Lab input-source smoke (AppKit window on process main; needs AX)"
 dir = "tauri-desktop/rust-native"

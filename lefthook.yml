@@ -47,3 +47,18 @@ pre-commit:
         - "astro-lp/*.{astro,ts,tsx,js,jsx,mjs,cjs}"
       run: pnpm run typecheck
       description: "Type check astro-lp"
+
+    - name: github-actions:actionlint
+      glob: ".github/workflows/*.{yml,yaml}"
+      run: actionlint
+      description: "Lint GitHub Actions workflows"
+
+    - name: scripts:shellcheck
+      glob: "**/*.sh"
+      run: git ls-files -z -- '*.sh' | xargs -0 shellcheck
+      description: "Lint shell scripts"
+
+    - name: terraform:format-check
+      glob: "terraform/**/*.tf"
+      run: git ls-files -z -- 'terraform/**/*.tf' | xargs -0 terraform fmt -check
+      description: "Check Terraform formatting"

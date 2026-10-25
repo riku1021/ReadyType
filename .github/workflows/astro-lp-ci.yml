@@ -1,0 +1,53 @@
+name: astro-lp-ci
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/astro-lp-ci.yml
+      - astro-lp/**
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/astro-lp-ci.yml
+      - astro-lp/**
+
+concurrency:
+  group: astro-lp-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.5.1
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+          cache-dependency-path: astro-lp/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: astro-lp
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        working-directory: astro-lp
+        run: pnpm lint
+
+      - name: Typecheck
+        working-directory: astro-lp
+        run: pnpm typecheck
+
+      - name: Build Astro site
+        working-directory: astro-lp
+        run: pnpm build

@@ -1,0 +1,4 @@
+aws_region        = "ap-southeast-2"
+site_bucket_name  = "readytype-lp-prod"
+github_repository = "riku1021/ReadyType"
+enable_github_actions_oidc = false

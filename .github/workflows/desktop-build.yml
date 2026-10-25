@@ -192,6 +192,8 @@ jobs:
             # macOS runners use bash 3.2, where failglob still errors after nullglob.
             shopt -u failglob
             shopt -s nullglob
+            # Expand the caller-provided artifact pattern while keeping the directory quoted.
+            # shellcheck disable=SC2206
             matches=( "${dir}"/${glob} )
             shopt -u nullglob
             shopt -s failglob
