@@ -28,6 +28,10 @@ pub trait FocusMonitor: Send {
     fn permission_status(&self) -> AccessibilityPermission;
     fn request_permission(&self) -> Result<AccessibilityPermission, FocusMonitorError>;
     fn open_settings(&self) -> Result<(), FocusMonitorError>;
+    /// Returns the foreground window's explicit AUMID when it belongs to this process.
+    fn foreground_app_user_model_id(&self, _process_id: i32) -> Option<String> {
+        None
+    }
     /// 現在の前面アプリ（Quick Set の stale snapshot ガード用）。
     fn frontmost_app(&self) -> Option<PlatformAppId> {
         None

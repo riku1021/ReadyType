@@ -22,6 +22,42 @@ impl<R: AppDisplayNameResolver> CachedAppDisplayNameResolver<R> {
 
 impl<R: AppDisplayNameResolver> AppDisplayNameResolver for CachedAppDisplayNameResolver<R> {
     fn resolve(&self, bundle_id: &str) -> Option<String> {
+        if !self.inner.is_bundle_resolution_cacheable() {
+            return self.inner.resolve(bundle_id);
+        }
+        self.resolve_cached(bundle_id, || self.inner.resolve(bundle_id))
+    }
+
+    fn resolve_for_process(&self, bundle_id: &str, process_id: i32) -> Option<String> {
+        let cache_key = format!("{bundle_id}\0{process_id}");
+        self.resolve_cached(&cache_key, || {
+            self.inner.resolve_for_process(bundle_id, process_id)
+        })
+    }
+
+    fn resolve_for_process_with_aumid(
+        &self,
+        bundle_id: &str,
+        process_id: i32,
+        app_user_model_id: Option<&str>,
+    ) -> Option<String> {
+        let cache_key = format!(
+            "{bundle_id}\0{process_id}\0{}",
+            app_user_model_id.unwrap_or_default()
+        );
+        self.resolve_cached(&cache_key, || {
+            self.inner
+                .resolve_for_process_with_aumid(bundle_id, process_id, app_user_model_id)
+        })
+    }
+}
+
+impl<R: AppDisplayNameResolver> CachedAppDisplayNameResolver<R> {
+    fn resolve_cached(
+        &self,
+        bundle_id: &str,
+        resolve: impl FnOnce() -> Option<String>,
+    ) -> Option<String> {
         if bundle_id.is_empty() {
             return None;
         }
@@ -32,7 +68,7 @@ impl<R: AppDisplayNameResolver> AppDisplayNameResolver for CachedAppDisplayNameR
             }
         }
 
-        let resolved = self.inner.resolve(bundle_id);
+        let resolved = resolve();
         if let Ok(mut memory) = self.memory.lock() {
             memory.insert(bundle_id.to_owned(), resolved.clone());
         }

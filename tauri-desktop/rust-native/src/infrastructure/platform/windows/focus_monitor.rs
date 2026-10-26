@@ -8,11 +8,13 @@ use std::{
 use windows::{
     core::implement,
     Win32::{
-        Foundation::{CloseHandle, HANDLE},
+        Foundation::{CloseHandle, HANDLE, HWND},
+        Storage::EnhancedStorage::PKEY_AppUserModel_ID,
         System::{
             Com::{
-                CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_INPROC_SERVER,
-                COINIT_MULTITHREADED,
+                CoCreateInstance, CoInitializeEx, CoTaskMemFree, CoUninitialize,
+                StructuredStorage::{PropVariantClear, PropVariantToStringAlloc},
+                CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED,
             },
             Threading::{
                 OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_FORMAT,
@@ -29,7 +31,10 @@ use windows::{
             UIA_PaneControlTypeId, UIA_ProcessIdPropertyId, UIA_TextControlTypeId,
             UIA_TreeControlTypeId, UIA_WindowControlTypeId,
         },
-        UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId},
+        UI::{
+            Shell::PropertiesSystem::{IPropertyStore, SHGetPropertyStoreForWindow},
+            WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId},
+        },
     },
 };
 
@@ -172,6 +177,10 @@ impl FocusMonitor for WindowsFocusMonitor {
 
     fn frontmost_app(&self) -> Option<PlatformAppId> {
         foreground_app()
+    }
+
+    fn foreground_app_user_model_id(&self, process_id: i32) -> Option<String> {
+        foreground_window_for_process(process_id as u32).and_then(window_app_user_model_id)
     }
 }
 
@@ -412,6 +421,38 @@ fn focus_cache_request(
         ))?;
     }
     Ok(cache_request)
+}
+
+fn window_app_user_model_id(window: HWND) -> Option<String> {
+    let _com = ComScope::new().ok()?;
+    // SAFETY: callers verify that this is the foreground HWND for the requested process.
+    let store: IPropertyStore = unsafe { SHGetPropertyStoreForWindow(window) }.ok()?;
+    // SAFETY: the property key is the documented AppUserModelID window property.
+    let mut value = unsafe { store.GetValue(&PKEY_AppUserModel_ID) }.ok()?;
+    // SAFETY: the property variant is initialized by IPropertyStore::GetValue.
+    let allocated = match unsafe { PropVariantToStringAlloc(&value) } {
+        Ok(allocated) => allocated,
+        Err(_) => {
+            // SAFETY: value is initialized and no longer needed.
+            let _ = unsafe { PropVariantClear(&mut value) };
+            return None;
+        }
+    };
+    let result = unsafe { allocated.to_string().ok() };
+    // SAFETY: this pointer was allocated by PropVariantToStringAlloc.
+    unsafe { CoTaskMemFree(Some(allocated.0.cast())) };
+    // SAFETY: value was initialized by GetValue and is no longer needed.
+    let _ = unsafe { PropVariantClear(&mut value) };
+    result.filter(|id| !id.trim().is_empty())
+}
+
+fn foreground_window_for_process(process_id: u32) -> Option<HWND> {
+    // SAFETY: GetForegroundWindow does not require caller-provided pointers.
+    let window = unsafe { GetForegroundWindow() };
+    let mut foreground_process_id = 0;
+    // SAFETY: foreground_process_id is a valid writable output pointer.
+    let thread_id = unsafe { GetWindowThreadProcessId(window, Some(&mut foreground_process_id)) };
+    (thread_id != 0 && foreground_process_id == process_id).then_some(window)
 }
 
 fn control_type_role(control_type: i32) -> &'static str {

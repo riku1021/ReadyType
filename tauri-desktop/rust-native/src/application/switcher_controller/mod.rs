@@ -584,9 +584,9 @@ impl SwitcherController {
             ));
         }
         // ReadyType 前面時に他アプリの古い last_snapshot で Quick Set しない。
-        let mismatch = {
+        let (mismatch, app_user_model_id) = {
             let monitor = self.lock_monitor()?;
-            monitor.frontmost_app().and_then(|frontmost| {
+            let mismatch = monitor.frontmost_app().and_then(|frontmost| {
                 (frontmost.app_id() != snapshot.app().app_id()).then(|| {
                     format!(
                         "focus snapshot is for {} but frontmost is {}; focus a field in the frontmost app first",
@@ -594,7 +594,9 @@ impl SwitcherController {
                         frontmost.app_id()
                     )
                 })
-            })
+            });
+            let app_user_model_id = monitor.foreground_app_user_model_id(snapshot.app().pid());
+            (mismatch, app_user_model_id)
         };
         if let Some(message) = mismatch {
             return Err(ControllerError::InvalidRequest(message));
@@ -603,7 +605,11 @@ impl SwitcherController {
         let settings = self.settings()?;
         // Match app-settings LanguageSelect: always refresh OS input sources.
         let sources = self.list_input_sources(true)?;
-        let app_display_name = self.app_display_names.resolve(snapshot.app().app_id());
+        let app_display_name = self.app_display_names.resolve_for_process_with_aumid(
+            snapshot.app().app_id(),
+            snapshot.app().pid(),
+            app_user_model_id.as_deref(),
+        );
         let session =
             build_quick_set_session(snapshot, &rules, &settings, &sources, app_display_name);
         *self.lock_quick_set_session()? = Some(session.clone());
