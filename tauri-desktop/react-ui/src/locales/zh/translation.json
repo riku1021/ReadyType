@@ -48,6 +48,7 @@
     "launchAtLogin": "登录时启动",
     "sectionAppearance": "外观",
     "showMenuBarIcon": "在菜单栏显示图标",
+    "showSystemTrayIcon": "在系统托盘显示图标",
     "theme": "主题",
     "displayLanguage": "显示语言",
     "languageSystem": "使用系统设置",

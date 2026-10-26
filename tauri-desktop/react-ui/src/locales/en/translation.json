@@ -48,6 +48,7 @@
     "launchAtLogin": "Launch at login",
     "sectionAppearance": "Appearance",
     "showMenuBarIcon": "Show menu bar icon",
+    "showSystemTrayIcon": "Show system tray icon",
     "theme": "Theme",
     "displayLanguage": "Display language",
     "languageSystem": "Use system setting",

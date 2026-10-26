@@ -48,6 +48,7 @@
     "launchAtLogin": "ログイン時に起動",
     "sectionAppearance": "外観",
     "showMenuBarIcon": "メニューバーにアイコンを表示",
+    "showSystemTrayIcon": "システムトレイにアイコンを表示",
     "theme": "テーマ",
     "displayLanguage": "表示言語",
     "languageSystem": "システムの設定を使う",

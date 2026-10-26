@@ -21,6 +21,7 @@ import { SettingsSection } from "@/components/SettingsSection";
 import { useInputSourceState } from "@/features/inputSource";
 import { pageSlide } from "@/features/navigation";
 import { isUiLocalePreference, type UiLocalePreference } from "@/locales/i18n";
+import { getHostOs } from "@/platform";
 
 import { getLanguageOptionLabel } from "./languageLabels";
 import * as styles from "./SettingsPage.styles";
@@ -148,7 +149,11 @@ export function SettingsPage() {
       <SettingsSection title={t("settings.sectionAppearance")}>
         <SettingItem
           icon={MdWebAsset}
-          title={t("settings.showMenuBarIcon")}
+          title={
+            getHostOs() === "macOs"
+              ? t("settings.showMenuBarIcon")
+              : t("settings.showSystemTrayIcon")
+          }
           type="toggle"
           toggleValue={showMenuBarIcon}
           disabled={isPending("menuBarIcon")}
