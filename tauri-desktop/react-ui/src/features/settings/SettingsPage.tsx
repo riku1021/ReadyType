@@ -5,7 +5,14 @@ import { useAtom } from "jotai";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FiTrash2 } from "react-icons/fi";
-import { MdContrast, MdLanguage, MdRocketLaunch, MdSwapHoriz, MdWebAsset } from "react-icons/md";
+import {
+  MdContrast,
+  MdLanguage,
+  MdPsychology,
+  MdRocketLaunch,
+  MdSwapHoriz,
+  MdWebAsset,
+} from "react-icons/md";
 
 import { themeAtom } from "@/atoms/theme";
 import { AlertDialog, LoadingDialog } from "@/components/Dialog";
@@ -115,6 +122,16 @@ export function SettingsPage() {
             }
             runPending("enabled", () => setEnabled(enabled));
           }}
+        />
+        <SettingItem
+          icon={MdPsychology}
+          title={t("settings.learnedAutoAssign")}
+          badge={t("settings.betaBadge")}
+          description={t("settings.learnedAutoAssignDescription")}
+          type="toggle"
+          toggleValue={false}
+          disabled
+          onToggleChanged={() => {}}
         />
         <SettingItem
           icon={MdRocketLaunch}

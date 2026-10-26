@@ -114,6 +114,25 @@ export const title = cva({
   },
 });
 
+export const titleRow = css({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "xs",
+  minWidth: "0",
+});
+
+export const badge = css({
+  flexShrink: "0",
+  paddingInline: "6px",
+  paddingBlock: "2px",
+  borderRadius: "full",
+  backgroundColor: "background.hover",
+  color: "text.placeholder",
+  fontSize: "xs",
+  fontWeight: "semibold",
+  lineHeight: "tight",
+});
+
 /** 1行を超える分は省略する */
 export const description = css({
   overflow: "hidden",

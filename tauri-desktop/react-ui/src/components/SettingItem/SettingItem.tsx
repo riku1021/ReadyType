@@ -13,6 +13,7 @@ import * as styles from "./SettingItem.styles";
 type SettingItemBase = {
   icon?: IconType;
   title: string;
+  badge?: string;
   description?: string;
   danger?: boolean;
 };
@@ -121,7 +122,7 @@ function renderTrailing(props: SettingItemProps) {
 }
 
 export function SettingItem(props: SettingItemProps) {
-  const { icon: Icon, title, description, danger = false, type } = props;
+  const { icon: Icon, title, badge, description, danger = false, type } = props;
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -137,11 +138,17 @@ export function SettingItem(props: SettingItemProps) {
       <span className={styles.textStack}>
         {description ? (
           <span className={styles.textGroup}>
-            <span className={styles.title({ tone })}>{title}</span>
+            <span className={styles.titleRow}>
+              <span className={styles.title({ tone })}>{title}</span>
+              {badge ? <span className={styles.badge}>{badge}</span> : null}
+            </span>
             <span className={styles.description}>{description}</span>
           </span>
         ) : (
-          <span className={styles.title({ tone })}>{title}</span>
+          <span className={styles.titleRow}>
+            <span className={styles.title({ tone })}>{title}</span>
+            {badge ? <span className={styles.badge}>{badge}</span> : null}
+          </span>
         )}
       </span>
       {renderTrailing(props)}
