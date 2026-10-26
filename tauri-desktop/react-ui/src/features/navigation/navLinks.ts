@@ -7,12 +7,14 @@ import {
 } from "react-icons/io5";
 import { MdInfoOutline as About } from "react-icons/md";
 
+import { getHostOs } from "@/platform/hostOs";
+
 import type { NavLink } from "./types";
 
 /**
  * アプリケーション全体で使用するナビゲーションリンクの定義
  */
-export const navLinks: NavLink[] = [
+const allNavLinks: NavLink[] = [
   {
     to: "/accessibility",
     labelKey: "nav.accessibility",
@@ -44,6 +46,11 @@ export const navLinks: NavLink[] = [
     icon: Lab,
   },
 ];
+
+const hostOs = getHostOs();
+export const navLinks: NavLink[] = allNavLinks.filter(
+  (link) => !(hostOs === "windows" && link.to === "/accessibility")
+);
 
 /**
  * パス名から対応するナビゲーションリンクを取得する。
