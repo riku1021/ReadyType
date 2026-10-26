@@ -14,7 +14,8 @@
   "os": {
     "permissionPane": {
       "accessibility": "Accessibility",
-      "deviceControl": "Device Control and Data Access"
+      "deviceControl": "Device Control and Data Access",
+      "focusMonitoring": "Focus monitoring"
     }
   },
   "common": {
@@ -71,6 +72,7 @@
   "accessibility": {
     "usageDescription": "Used to detect input field focus and automatically switch to the appropriate input language based on the app or field.",
     "statusGranted": "Granted",
+    "statusNotRequired": "No permission required",
     "statusRequired": "Permission required",
     "deniedGuidance": "Focus monitoring and input source switching require permission under System Settings → {{pane}}.",
     "openSystemSettings": "Open System Settings...",

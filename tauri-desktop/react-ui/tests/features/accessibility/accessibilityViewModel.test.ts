@@ -42,6 +42,23 @@ describe("toAccessibilityViewModel", () => {
     expect(view.detailMessage).toBeNull();
   });
 
+  it("Windows reports that no separate accessibility permission is needed", () => {
+    const view = toAccessibilityViewModel(
+      {
+        ready: true,
+        permission: "granted",
+        initError: null,
+      },
+      t,
+      "windows"
+    );
+
+    expect(view.showNotRequiredBadge).toBe(true);
+    expect(view.showGrantedBadge).toBe(false);
+    expect(view.showOpenSettings).toBe(false);
+    expect(view.detailMessage).toBeNull();
+  });
+
   it("denied prompts for settings after TCC registration", () => {
     const view = toAccessibilityViewModel(
       {

@@ -14,7 +14,8 @@
   "os": {
     "permissionPane": {
       "accessibility": "辅助功能",
-      "deviceControl": "设备的控制与数据访问"
+      "deviceControl": "设备的控制与数据访问",
+      "focusMonitoring": "焦点监视"
     }
   },
   "common": {
@@ -71,6 +72,7 @@
   "accessibility": {
     "usageDescription": "用于检测输入框焦点，并根据应用或输入框自动切换到合适的输入语言。",
     "statusGranted": "已授权",
+    "statusNotRequired": "无需权限",
     "statusRequired": "需要授权",
     "deniedGuidance": "焦点监视和输入源切换需要在系统设置的「{{pane}}」中授权。",
     "openSystemSettings": "打开系统设置...",

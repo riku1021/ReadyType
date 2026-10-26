@@ -200,5 +200,14 @@ impl InputSourceGateway for UnsupportedInputSourceGateway {
     }
 }
 
+#[cfg(target_os = "windows")]
+pub use super::windows::input_source::WindowsInputSourceGateway;
+
+#[cfg(any(target_os = "windows", test))]
+pub(crate) mod windows_id;
+
+#[cfg(test)]
+mod windows_id_tests;
+
 #[cfg(test)]
 mod tests;

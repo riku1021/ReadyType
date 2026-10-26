@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
 
 import type { AccessibilityPermission } from "@/features/inputSource";
-import { focusPermissionPaneLabel } from "@/platform";
+import { focusPermissionPaneLabel, getHostOs, type HostOs } from "@/platform";
 
 export type AccessibilityStatusKind = "loading" | "granted" | "denied" | "unsupported" | "error";
 
@@ -13,6 +13,7 @@ export type AccessibilityViewModel = {
   permissionPane: string;
   noticeTone: AccessibilityNoticeTone;
   showGrantedBadge: boolean;
+  showNotRequiredBadge: boolean;
   showRequiredStatus: boolean;
   showOpenSettings: boolean;
   /** 未許可時は TCC 登録のあと設定を開く */
@@ -69,20 +70,23 @@ export function toAccessibilityViewModel(
     permission: AccessibilityPermission | null;
     initError: string | null;
   },
-  t: TFunction
+  t: TFunction,
+  hostOs: HostOs = getHostOs()
 ): AccessibilityViewModel {
-  const permissionPane = focusPermissionPaneLabel(t);
+  const permissionPane = focusPermissionPaneLabel(t, hostOs);
   const kind = resolveKind(input);
   const isDenied = kind === "denied";
   const isGranted = kind === "granted";
+  const permissionNotRequired = isGranted && hostOs === "windows";
 
   return {
     kind,
     permissionPane,
     noticeTone: isDenied || kind === "error" ? "error" : "info",
-    showGrantedBadge: isGranted,
+    showGrantedBadge: isGranted && !permissionNotRequired,
+    showNotRequiredBadge: permissionNotRequired,
     showRequiredStatus: isDenied,
-    showOpenSettings: isGranted || isDenied,
+    showOpenSettings: isDenied || (isGranted && !permissionNotRequired),
     requestBeforeOpenSettings: isDenied,
     openSettingsVariant: isDenied ? "primary" : "neutral",
     showPrivacy: isGranted || isDenied,

@@ -97,7 +97,11 @@ pub fn run() {
                         )?,
                     )
                 }
-                #[cfg(not(target_os = "macos"))]
+                #[cfg(target_os = "windows")]
+                {
+                    Box::new(infrastructure::platform::input_source::WindowsInputSourceGateway::new())
+                }
+                #[cfg(not(any(target_os = "macos", target_os = "windows")))]
                 {
                     Box::new(infrastructure::platform::input_source::UnsupportedInputSourceGateway)
                 }
@@ -107,7 +111,11 @@ pub fn run() {
                 {
                     Box::new(infrastructure::platform::macos::MacOsFocusMonitor::new())
                 }
-                #[cfg(not(target_os = "macos"))]
+                #[cfg(target_os = "windows")]
+                {
+                    Box::new(infrastructure::platform::windows::WindowsFocusMonitor::default())
+                }
+                #[cfg(not(any(target_os = "macos", target_os = "windows")))]
                 {
                     Box::new(infrastructure::platform::focus_monitor::UnsupportedFocusMonitor)
                 }
@@ -128,7 +136,15 @@ pub fn run() {
                         ),
                     )
                 }
-                #[cfg(not(target_os = "macos"))]
+                #[cfg(target_os = "windows")]
+                {
+                    Arc::new(
+                        infrastructure::platform::app_display_name_cache::CachedAppDisplayNameResolver::new(
+                            infrastructure::platform::windows::WindowsAppDisplayNameResolver,
+                        ),
+                    )
+                }
+                #[cfg(not(any(target_os = "macos", target_os = "windows")))]
                 {
                     Arc::new(
                         infrastructure::platform::app_display_name::UnsupportedAppDisplayNameResolver,
@@ -145,7 +161,13 @@ pub fn run() {
                         ),
                     )
                 }
-                #[cfg(not(target_os = "macos"))]
+                #[cfg(target_os = "windows")]
+                {
+                    Box::new(
+                        infrastructure::platform::windows::WindowsCurrentInputSourceChangeMonitor::default(),
+                    )
+                }
+                #[cfg(not(any(target_os = "macos", target_os = "windows")))]
                 {
                     Box::new(
                         application::ports::current_input_source_change::NoopCurrentInputSourceChangeMonitor,

@@ -69,6 +69,12 @@ export function AccessibilityPage() {
                 {t("accessibility.statusGranted")}
               </span>
             ) : null}
+            {view.showNotRequiredBadge ? (
+              <span className={styles.statusBadge({ tone: "success" })}>
+                <IoCheckmarkCircle aria-hidden="true" />
+                {t("accessibility.statusNotRequired")}
+              </span>
+            ) : null}
             {view.showRequiredStatus ? (
               <span className={styles.statusBadge({ tone: "error" })}>
                 <IoAlertCircle aria-hidden="true" />

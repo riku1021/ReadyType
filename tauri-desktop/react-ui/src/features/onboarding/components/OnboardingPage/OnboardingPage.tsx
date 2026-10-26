@@ -6,6 +6,7 @@ import { IoShieldCheckmark } from "react-icons/io5";
 
 import { Button } from "@/components/Button";
 import { useInputSourceState } from "@/features/inputSource";
+import { getHostOs } from "@/platform";
 
 import { PermissionAskStep } from "../PermissionAskStep/PermissionAskStep";
 import { PermissionConfirmStep } from "../PermissionConfirmStep/PermissionConfirmStep";
@@ -19,12 +20,15 @@ type StepIndex = 0 | 1 | 2 | 3 | 4;
 
 const STEP_COUNT = STEP_IDS.length;
 
-function Progress({ step }: { step: StepIndex }) {
+function Progress({ step, skipPermission }: { step: StepIndex; skipPermission: boolean }) {
+  const visibleSteps = skipPermission ? [0, 3, 4] : [0, 1, 2, 3, 4];
+  const currentIndex = visibleSteps.indexOf(step);
   return (
     <div className={styles.progressBlock}>
       <div className={styles.progressTrack} aria-hidden="true">
-        {STEP_IDS.map((id, index) => {
-          const state = index === step ? "current" : "upcoming";
+        {visibleSteps.map((stepId, index) => {
+          const id = STEP_IDS[stepId];
+          const state = index === currentIndex ? "current" : "upcoming";
           return <span key={id} className={styles.progressDot({ state })} />;
         })}
       </div>
@@ -51,6 +55,7 @@ export function OnboardingPage({ preview = false }: OnboardingPageProps) {
   const [step, setStep] = useState<StepIndex>(0);
   const [completing, setCompleting] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const skipPermission = getHostOs() === "windows";
 
   const permission = state?.permission ?? null;
   const granted = permission === "granted";
@@ -73,11 +78,21 @@ export function OnboardingPage({ preview = false }: OnboardingPageProps) {
   }, [refreshPermission, step]);
 
   const goBack = () => {
-    setStep((current) => (current > 0 ? ((current - 1) as StepIndex) : current));
+    setStep((current) => {
+      if (skipPermission) {
+        return current === 3 ? 0 : current === 4 ? 3 : current;
+      }
+      return current > 0 ? ((current - 1) as StepIndex) : current;
+    });
   };
 
   const goNext = () => {
-    setStep((current) => (current < STEP_COUNT - 1 ? ((current + 1) as StepIndex) : current));
+    setStep((current) => {
+      if (skipPermission) {
+        return current === 0 ? 3 : current === 3 ? 4 : current;
+      }
+      return current < STEP_COUNT - 1 ? ((current + 1) as StepIndex) : current;
+    });
   };
 
   const handleOpenSettings = async () => {
@@ -123,12 +138,12 @@ export function OnboardingPage({ preview = false }: OnboardingPageProps) {
 
   return (
     <div className={styles.page}>
-      <Progress step={step} />
+      <Progress step={step} skipPermission={skipPermission} />
 
       <div className={styles.content}>
         {step === 0 ? <WelcomeStep /> : null}
-        {step === 1 ? <PermissionAskStep /> : null}
-        {step === 2 ? <PermissionConfirmStep granted={granted} /> : null}
+        {!skipPermission && step === 1 ? <PermissionAskStep /> : null}
+        {!skipPermission && step === 2 ? <PermissionConfirmStep granted={granted} /> : null}
         {step === 3 ? <QuickSetTutorialStep /> : null}
 
         {step === 4 ? <WelcomeStep copy="ready" /> : null}
