@@ -244,8 +244,9 @@ fn available_source(
     name: String,
     language_code: Option<String>,
 ) -> Result<AvailableInputSource, GatewayError> {
+    let id = format_windows_source_id(&key);
     Ok(AvailableInputSource {
-        id: InputSourceId::parse(format_windows_source_id(&key)).map_err(operation_error)?,
+        id: InputSourceId::parse(&id).map_err(operation_error)?,
         name,
         language_code,
         available: true,
@@ -253,7 +254,8 @@ fn available_source(
 }
 
 fn input_source_id(source: &WindowsSourceId) -> Result<InputSourceId, GatewayError> {
-    InputSourceId::parse(format_windows_source_id(source)).map_err(operation_error)
+    let id = format_windows_source_id(source);
+    InputSourceId::parse(&id).map_err(operation_error)
 }
 
 fn source_from_profile(profile: &TF_INPUTPROCESSORPROFILE) -> WindowsSourceId {
