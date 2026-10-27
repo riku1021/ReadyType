@@ -26,7 +26,10 @@ use application::ports::{
     input_source::InputSourceGateway, platform::PlatformGateway,
     settings_repository::SettingsRepository, switcher_events::SwitcherEventPublisher,
 };
-use tauri::{Emitter, Manager};
+use tauri::Manager;
+
+#[cfg(target_os = "macos")]
+use tauri::Emitter;
 
 /// Composition helper kept so platform adapters stay wired into the crate graph.
 #[allow(dead_code)]
@@ -422,16 +425,16 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|app_handle, event| {
+        .run(|_app_handle, _event| {
             // macOS Dock: hide 後にアイコンをクリックすると Reopen が来る。
             // 可視ウィンドウが無いときだけ main を戻す（close-to-tray の定番）。
             #[cfg(target_os = "macos")]
             if let tauri::RunEvent::Reopen {
                 has_visible_windows: false,
                 ..
-            } = event
+            } = _event
             {
-                infrastructure::desktop::main_window::show_main_window(app_handle, None);
+                infrastructure::desktop::main_window::show_main_window(_app_handle, None);
             }
         });
 }

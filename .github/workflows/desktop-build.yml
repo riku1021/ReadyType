@@ -94,15 +94,13 @@ jobs:
             patchelf \
             xdg-utils
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/setup@v3
         with:
           version: 12.5.1
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24.21.0
-          cache: pnpm
+          runtime: node@24.21.0
+          cache: true
           cache-dependency-path: tauri-desktop/react-ui/pnpm-lock.yaml
+          install: false
 
       # @1.98.1 matches rust-toolchain.toml. @stable would ignore that pin.
       # Extra targets are only needed for the macOS cross builds.
@@ -235,7 +233,7 @@ jobs:
               ;;
           esac
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: desktop-installer-${{ matrix.installer }}
           path: release-assets/*
@@ -248,7 +246,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: desktop-installer-*
           merge-multiple: true

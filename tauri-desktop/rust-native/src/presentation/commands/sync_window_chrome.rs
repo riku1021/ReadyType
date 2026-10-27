@@ -1,6 +1,9 @@
 //! Sync native window chrome with the resolved light/dark theme.
 
-use tauri::{AppHandle, Manager, Runtime};
+use tauri::{AppHandle, Runtime};
+
+#[cfg(target_os = "macos")]
+use tauri::Manager;
 
 #[derive(Debug, Clone, Copy, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
