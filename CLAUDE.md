@@ -52,10 +52,8 @@ cd tauri-desktop/rust-native && cargo test
 
 ### Lefthook
 
-```bash
-lefthook install          # once per clone
-# pre-commit: react-ui:format-lint + typecheck, rust-native:format + lint
-```
+`mise install` installs Lefthook and registers Git hooks automatically outside CI.
+The pre-commit hook runs the configured checks for changed files.
 
 ## Architecture
 
