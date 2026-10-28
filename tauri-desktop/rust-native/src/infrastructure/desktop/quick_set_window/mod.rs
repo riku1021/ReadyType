@@ -4,7 +4,7 @@
 //! fullscreen Space (`FullScreenAuxiliary`) without kicking the frontmost app
 //! out of fullscreen (non-activating + `orderFrontRegardless`).
 
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 use tauri::{AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, Monitor};
 
@@ -152,9 +152,32 @@ pub fn open(app: &AppHandle) -> Result<(), String> {
         .try_state::<Arc<SwitcherController>>()
         .ok_or_else(|| "switcher controller unavailable".to_owned())?;
 
+    let stage_started = Instant::now();
+    record_stage(&controller, "shortcutReceived", "ok", stage_started, None);
+
     // Capture focus BEFORE showing ReadyType UI. On failure still open the window with an
     // empty state (Raycast-style feedback) — never apply a stale foreign snapshot.
+    let stage_started = Instant::now();
+    record_stage(
+        &controller,
+        "prepareSession",
+        "started",
+        stage_started,
+        None,
+    );
     let prepared = controller.prepare_quick_set_session();
+    let prepare_error = prepared.as_ref().err().map(ToString::to_string);
+    record_stage(
+        &controller,
+        "prepareSession",
+        if prepare_error.is_some() {
+            "error"
+        } else {
+            "ok"
+        },
+        stage_started,
+        prepare_error.as_deref(),
+    );
     let event = match &prepared {
         Ok(session) => QuickSetOpenEventDto::Ready {
             session: Box::new(QuickSetSessionDto::from(session)),
@@ -166,34 +189,121 @@ pub fn open(app: &AppHandle) -> Result<(), String> {
         }
     };
 
-    ensure_window(app)?;
-    let window = app
-        .get_webview_window(QUICK_SET_WINDOW_LABEL)
-        .ok_or_else(|| "quick-set window missing".to_owned())?;
+    let stage_started = Instant::now();
+    record_stage(&controller, "ensureWindow", "started", stage_started, None);
+    if let Err(error) = ensure_window(app) {
+        record_stage(
+            &controller,
+            "ensureWindow",
+            "error",
+            stage_started,
+            Some(&error),
+        );
+        return Err(error);
+    }
+    record_stage(&controller, "ensureWindow", "ok", stage_started, None);
+    let stage_started = Instant::now();
+    record_stage(&controller, "getWindow", "started", stage_started, None);
+    let Some(window) = app.get_webview_window(QUICK_SET_WINDOW_LABEL) else {
+        let error = "quick-set window missing";
+        record_stage(
+            &controller,
+            "getWindow",
+            "error",
+            stage_started,
+            Some(error),
+        );
+        return Err(error.to_owned());
+    };
+    record_stage(&controller, "getWindow", "ok", stage_started, None);
 
     let shows_delete_rule = matches!(&prepared, Ok(session) if session.matched_rule_id.is_some());
     let height = quick_set_window_height(shows_delete_rule);
-    match &prepared {
-        Ok(session) => position_near_focus(app, &window, session, height)?,
-        Err(_) => position_centered_near_cursor(app, &window, height)?,
+    let stage_started = Instant::now();
+    record_stage(
+        &controller,
+        "positionWindow",
+        "started",
+        stage_started,
+        None,
+    );
+    let position_result = match &prepared {
+        Ok(session) => position_near_focus(app, &window, session, height),
+        Err(_) => position_centered_near_cursor(app, &window, height),
+    };
+    if let Err(error) = position_result {
+        record_stage(
+            &controller,
+            "positionWindow",
+            "error",
+            stage_started,
+            Some(&error),
+        );
+        return Err(error);
     }
+    record_stage(&controller, "positionWindow", "ok", stage_started, None);
 
     // Keep Accessory while Quick Set is open so the Dock stays hidden in BG residency.
     // Main UI still switches to Regular via `show_main_window` / `show_main_for_app`.
 
     // Webview-targeted emit; FE listens via getCurrentWebviewWindow().listen.
-    let _ = app.emit_to(QUICK_SET_WINDOW_LABEL, QUICK_SET_EVENT, &event);
+    let stage_started = Instant::now();
+    record_stage(&controller, "emitEvent", "started", stage_started, None);
+    let emit_result = app.emit_to(QUICK_SET_WINDOW_LABEL, QUICK_SET_EVENT, &event);
+    let emit_error = emit_result.as_ref().err().map(ToString::to_string);
+    record_stage(
+        &controller,
+        "emitEvent",
+        if emit_error.is_some() { "error" } else { "ok" },
+        stage_started,
+        emit_error.as_deref(),
+    );
 
+    let stage_started = Instant::now();
+    record_stage(&controller, "showWindow", "started", stage_started, None);
+    let mut show_error: Option<String> = None;
     #[cfg(target_os = "macos")]
     {
-        panel_macos::show(app)?;
+        if let Err(error) = panel_macos::show(app) {
+            show_error = Some(error);
+        }
     }
     #[cfg(not(target_os = "macos"))]
     {
-        let _ = window.show();
-        let _ = window.set_focus();
+        let show_result = window.show();
+        let focus_result = window.set_focus();
+        show_error = show_result
+            .err()
+            .or_else(|| focus_result.err())
+            .map(|error| error.to_string());
+    }
+    record_stage(
+        &controller,
+        "showWindow",
+        if show_error.is_some() { "error" } else { "ok" },
+        stage_started,
+        show_error.as_deref(),
+    );
+    #[cfg(target_os = "macos")]
+    if let Some(error) = show_error {
+        return Err(error);
     }
     Ok(())
+}
+
+fn record_stage(
+    controller: &SwitcherController,
+    stage: &str,
+    outcome: &str,
+    started_at: Instant,
+    error: Option<&str>,
+) {
+    let elapsed_micros = if outcome == "started" {
+        0
+    } else {
+        u64::try_from(started_at.elapsed().as_micros()).unwrap_or(u64::MAX)
+    };
+    controller.record_quick_set_stage(stage, outcome, elapsed_micros, error, None);
 }
 
 pub fn hide(app: &AppHandle) {

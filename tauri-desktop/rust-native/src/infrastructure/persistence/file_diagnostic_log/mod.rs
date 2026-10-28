@@ -26,12 +26,14 @@ use serde::Serialize;
 
 use crate::application::{
     input_source_switcher::SwitchDecision,
-    ports::diagnostic_log::{DiagnosticLogSink, QuickSetElementLog, QuickSetLogEntry},
+    ports::diagnostic_log::{
+        DiagnosticLogSink, QuickSetElementLog, QuickSetLogEntry, QuickSetStageLogEntry,
+    },
     switch_ablation, switch_proto,
     switcher_state::SwitchLogEntry,
 };
 
-const SCHEMA_VERSION: u32 = 2;
+const SCHEMA_VERSION: u32 = 3;
 /// 1 本の JSONL がこのサイズ以上になったら `sessions/` へ退避する。
 const MAX_FILE_BYTES: u64 = 10 * 1024 * 1024;
 /// `current` + `sessions` の合計上限。
@@ -107,6 +109,17 @@ impl DiagnosticLogSink for FileDiagnosticLogSink {
 
     fn append_quick_set(&self, entry: &QuickSetLogEntry) {
         let record = QuickSetFileRecord::from_entry(entry);
+        let Ok(line) = serde_json::to_string(&record) else {
+            return;
+        };
+        let Ok(mut state) = self.state.lock() else {
+            return;
+        };
+        let _ = state.append_line(&line);
+    }
+
+    fn append_quick_set_stage(&self, entry: &QuickSetStageLogEntry) {
+        let record = QuickSetStageFileRecord::from_entry(entry);
         let Ok(line) = serde_json::to_string(&record) else {
             return;
         };
@@ -241,6 +254,24 @@ struct QuickSetFileRecord<'a> {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+struct QuickSetStageFileRecord<'a> {
+    v: u32,
+    kind: &'static str,
+    timestamp_unix_ms: u64,
+    shortcut: &'a str,
+    stage: &'a str,
+    outcome: &'a str,
+    elapsed_micros: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<&'a str>,
+    app_id: &'a str,
+    pid: i32,
+    generation: u64,
+    flags: FlagSnapshot,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct QuickSetElementRecord<'a> {
     depth: u32,
     #[serde(skip_serializing_if = "str::is_empty")]
@@ -281,6 +312,25 @@ impl<'a> QuickSetFileRecord<'a> {
                 .iter()
                 .map(QuickSetElementRecord::from)
                 .collect(),
+            flags: FlagSnapshot::capture(),
+        }
+    }
+}
+
+impl<'a> QuickSetStageFileRecord<'a> {
+    fn from_entry(entry: &'a QuickSetStageLogEntry) -> Self {
+        Self {
+            v: SCHEMA_VERSION,
+            kind: "quickSetStage",
+            timestamp_unix_ms: entry.timestamp_unix_ms,
+            shortcut: entry.shortcut.as_str(),
+            stage: entry.stage.as_str(),
+            outcome: entry.outcome.as_str(),
+            elapsed_micros: entry.elapsed_micros,
+            error: entry.error.as_deref(),
+            app_id: entry.app_id.as_str(),
+            pid: entry.pid,
+            generation: entry.generation,
             flags: FlagSnapshot::capture(),
         }
     }

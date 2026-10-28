@@ -13,6 +13,56 @@ pub trait DiagnosticLogSink: Send + Sync {
     /// Quick Set ショートカット起動と、そのとき使った AX ツリー。
     /// 既定は何もしない（切替ログだけ実装したテストダブル向け）。
     fn append_quick_set(&self, _entry: &QuickSetLogEntry) {}
+
+    /// Quick Set 起動処理の段階ログ。実装しない sink では何もしない。
+    fn append_quick_set_stage(&self, _entry: &QuickSetStageLogEntry) {}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QuickSetStageLogEntry {
+    pub timestamp_unix_ms: u64,
+    pub shortcut: String,
+    pub stage: String,
+    pub outcome: String,
+    pub elapsed_micros: u64,
+    pub error: Option<String>,
+    pub app_id: String,
+    pub pid: i32,
+    pub generation: u64,
+}
+
+impl QuickSetStageLogEntry {
+    pub fn new(
+        timestamp_unix_ms: u64,
+        shortcut: &str,
+        stage: &str,
+        outcome: &str,
+        elapsed_micros: u64,
+        error: Option<&str>,
+        snapshot: Option<&FocusSnapshot>,
+    ) -> Self {
+        let (app_id, pid, generation) = snapshot.map_or_else(
+            || (String::new(), 0, 0),
+            |snapshot| {
+                (
+                    snapshot.app().app_id().to_owned(),
+                    snapshot.app().pid(),
+                    snapshot.generation(),
+                )
+            },
+        );
+        Self {
+            timestamp_unix_ms,
+            shortcut: shortcut.to_owned(),
+            stage: stage.to_owned(),
+            outcome: outcome.to_owned(),
+            elapsed_micros,
+            error: error.map(str::to_owned),
+            app_id,
+            pid,
+            generation,
+        }
+    }
 }
 
 /// ショートカット起動 1 回分。要素 0 がフォーカス、以降が祖先。

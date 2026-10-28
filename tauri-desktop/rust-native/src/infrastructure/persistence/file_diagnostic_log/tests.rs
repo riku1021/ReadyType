@@ -42,14 +42,14 @@ fn writes_jsonl_switch_records_with_flag_snapshot() {
     let body = fs::read_to_string(sink.path()).expect("read");
     assert!(body.contains("\"kind\":\"session_start\""));
     assert!(body.contains("\"kind\":\"switch\""));
-    assert!(body.contains("\"v\":2"));
+    assert!(body.contains("\"v\":3"));
     assert!(body.contains("\"decision\":\"switched\""));
     assert!(body.contains("postSelect=match"));
     assert!(body.contains("\"processingMicros\":1"));
     assert!(body.contains("\"prepareMicros\":2"));
     assert!(body.contains("\"currentMicros\":3"));
     assert!(body.contains("\"selectMicros\":4"));
-    // schema v2: enabled READYTYPE_* overrides (empty arrays = production defaults)
+    // schema v3: enabled READYTYPE_* overrides (empty arrays = production defaults)
     assert!(body.contains("\"flags\""));
     assert!(body.contains("\"ablation\""));
     assert!(body.contains("\"proto\""));

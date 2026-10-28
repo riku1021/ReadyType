@@ -13,7 +13,7 @@ use super::{
     current_source_cache::CurrentInputSourceCache,
     ports::{
         clock::Clock,
-        diagnostic_log::{QuickSetLogEntry, SharedDiagnosticLogSink},
+        diagnostic_log::{QuickSetLogEntry, QuickSetStageLogEntry, SharedDiagnosticLogSink},
         input_source::{GatewayError, InputSourceGateway},
         settings_repository::{SettingsError, SettingsRepository},
         switcher_events::SwitcherEventPublisher,
@@ -276,6 +276,29 @@ where
             self.clock.now_unix_ms(),
             shortcut,
             outcome,
+            snapshot,
+        ));
+    }
+
+    pub fn note_quick_set_stage(
+        &self,
+        shortcut: &str,
+        stage: &str,
+        outcome: &str,
+        elapsed_micros: u64,
+        error: Option<&str>,
+        snapshot: Option<&FocusSnapshot>,
+    ) {
+        let Some(sink) = &self.diagnostic_log else {
+            return;
+        };
+        sink.append_quick_set_stage(&QuickSetStageLogEntry::new(
+            self.clock.now_unix_ms(),
+            shortcut,
+            stage,
+            outcome,
+            elapsed_micros,
+            error,
             snapshot,
         ));
     }

@@ -627,6 +627,37 @@ impl SwitcherController {
         switcher.note_quick_set_launch(&shortcut, outcome, snapshot);
     }
 
+    pub fn record_quick_set_stage(
+        &self,
+        stage: &str,
+        outcome: &str,
+        elapsed_micros: u64,
+        error: Option<&str>,
+        snapshot: Option<&FocusSnapshot>,
+    ) {
+        let latest_snapshot = snapshot.cloned().or_else(|| {
+            self.last_snapshot
+                .lock()
+                .ok()
+                .and_then(|snapshot| snapshot.clone())
+        });
+        let shortcut = self
+            .settings()
+            .map(|settings| settings.quick_set_shortcut)
+            .unwrap_or_default();
+        let Ok(switcher) = self.lock_switcher() else {
+            return;
+        };
+        switcher.note_quick_set_stage(
+            &shortcut,
+            stage,
+            outcome,
+            elapsed_micros,
+            error,
+            latest_snapshot.as_ref(),
+        );
+    }
+
     pub fn quick_set_session(&self) -> Result<Option<QuickSetSession>, ControllerError> {
         Ok(self.lock_quick_set_session()?.clone())
     }
