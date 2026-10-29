@@ -81,6 +81,7 @@ fn log_startup_error<E: std::fmt::Display>(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    eprintln!("startup: native_entrypoint entered");
     let _ = current_platform_name();
 
     let mut builder = tauri::Builder::default();
@@ -106,6 +107,8 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
+            eprintln!("startup: tauri_setup entered");
+            eprintln!("startup: diagnostic_log_open started");
             let diagnostic_sink = match infrastructure::persistence::FileDiagnosticLogSink::open_default() {
                 Ok(sink) => {
                     eprintln!(
