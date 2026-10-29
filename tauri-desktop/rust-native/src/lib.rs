@@ -23,8 +23,11 @@ pub fn run_lab_switch_smoke() -> Result<(), String> {
 use std::sync::Arc;
 
 use application::ports::{
-    input_source::InputSourceGateway, platform::PlatformGateway,
-    settings_repository::SettingsRepository, switcher_events::SwitcherEventPublisher,
+    diagnostic_log::{SharedDiagnosticLogSink, StartupStageLogEntry},
+    input_source::InputSourceGateway,
+    platform::PlatformGateway,
+    settings_repository::SettingsRepository,
+    switcher_events::SwitcherEventPublisher,
 };
 use tauri::Manager;
 
@@ -35,6 +38,45 @@ use tauri::Emitter;
 #[allow(dead_code)]
 fn current_platform_name() -> &'static str {
     infrastructure::platform::CurrentPlatform.display_name()
+}
+
+fn log_startup_stage(
+    sink: Option<&SharedDiagnosticLogSink>,
+    stage: &str,
+    outcome: &str,
+    started: std::time::Instant,
+    error: Option<&str>,
+) {
+    let elapsed = started.elapsed();
+    let entry = StartupStageLogEntry::new(
+        stage,
+        outcome,
+        u64::try_from(elapsed.as_micros()).unwrap_or(u64::MAX),
+        error,
+    );
+    if let Some(sink) = sink {
+        sink.append_startup_stage(&entry);
+    }
+    match error {
+        Some(error) => eprintln!(
+            "startup: stage={stage} outcome={outcome} elapsed_ms={} error={error}",
+            elapsed.as_millis()
+        ),
+        None => eprintln!(
+            "startup: stage={stage} outcome={outcome} elapsed_ms={}",
+            elapsed.as_millis()
+        ),
+    }
+}
+
+fn log_startup_error<E: std::fmt::Display>(
+    sink: Option<&SharedDiagnosticLogSink>,
+    stage: &str,
+    started: std::time::Instant,
+    error: &E,
+) {
+    let message = error.to_string();
+    log_startup_stage(sink, stage, "error", started, Some(&message));
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -64,21 +106,79 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
+            let diagnostic_sink = match infrastructure::persistence::FileDiagnosticLogSink::open_default() {
+                Ok(sink) => {
+                    eprintln!(
+                        "input-source diagnostics: writing {}",
+                        sink.path().display()
+                    );
+                    Some(Arc::new(sink) as SharedDiagnosticLogSink)
+                }
+                Err(error) => {
+                    eprintln!("input-source diagnostics: file log disabled ({error})");
+                    None
+                }
+            };
+            let setup_started = std::time::Instant::now();
+            log_startup_stage(
+                diagnostic_sink.as_ref(),
+                "setup",
+                "started",
+                setup_started,
+                None,
+            );
+
             // AE は消費され得るので setup 先頭で一度だけキャッシュ（DidFinishLaunching 相当）。
             #[cfg(target_os = "macos")]
             infrastructure::desktop::autostart::capture_login_launch_apple_event();
 
-            let config_directory = app.path().app_config_dir()?;
-            std::fs::create_dir_all(&config_directory)?;
+            let settings_started = std::time::Instant::now();
+            log_startup_stage(
+                diagnostic_sink.as_ref(),
+                "settings_load",
+                "started",
+                settings_started,
+                None,
+            );
+            let config_directory = app.path().app_config_dir().inspect_err(|error| {
+                log_startup_error(
+                    diagnostic_sink.as_ref(),
+                    "settings_load",
+                    settings_started,
+                    error,
+                );
+            })?;
+            std::fs::create_dir_all(&config_directory).inspect_err(|error| {
+                log_startup_error(
+                    diagnostic_sink.as_ref(),
+                    "settings_load",
+                    settings_started,
+                    error,
+                );
+            })?;
             let repository: Arc<dyn SettingsRepository> =
                 Arc::new(infrastructure::persistence::JsonSettingsRepository::new(
                     config_directory.join("input-source-switcher.json"),
                 ));
-            let load_outcome = repository.load()?;
+            let load_outcome = repository.load().inspect_err(|error| {
+                log_startup_error(
+                    diagnostic_sink.as_ref(),
+                    "settings_load",
+                    settings_started,
+                    error,
+                );
+            })?;
             if let Some(warning) = load_outcome.warning() {
                 eprintln!("settings: {warning}");
             }
             let settings = load_outcome.settings().clone();
+            log_startup_stage(
+                diagnostic_sink.as_ref(),
+                "settings_load",
+                "ok",
+                settings_started,
+                None,
+            );
             let update_runtime = infrastructure::desktop::app_update::AppUpdateRuntime::load(
                 app.handle().clone(),
                 infrastructure::persistence::AppUpdateScheduleStore::new(
@@ -91,6 +191,14 @@ pub fn run() {
             let ui_locale_preference = settings.ui_locale.clone();
             let resolved_ui_locale =
                 application::settings::SwitcherSettings::resolve_ui_locale(&ui_locale_preference);
+            let adapters_started = std::time::Instant::now();
+            log_startup_stage(
+                diagnostic_sink.as_ref(),
+                "platform_adapters",
+                "started",
+                adapters_started,
+                None,
+            );
             let gateway: Box<dyn InputSourceGateway> = {
                 #[cfg(target_os = "macos")]
                 {
@@ -177,6 +285,21 @@ pub fn run() {
                     )
                 }
             };
+            log_startup_stage(
+                diagnostic_sink.as_ref(),
+                "platform_adapters",
+                "ok",
+                adapters_started,
+                None,
+            );
+            let controller_started = std::time::Instant::now();
+            log_startup_stage(
+                diagnostic_sink.as_ref(),
+                "controller_initialize",
+                "started",
+                controller_started,
+                None,
+            );
             let controller = application::switcher_controller::SwitcherController::new(
                 application::switcher_controller::SwitcherControllerDeps {
                     settings,
@@ -188,27 +311,31 @@ pub fn run() {
                     app_display_names: Arc::clone(&app_display_name_resolver),
                     tis_change_monitor,
                 },
-            )?;
+            )
+            .inspect_err(|error| {
+                log_startup_error(
+                    diagnostic_sink.as_ref(),
+                    "controller_initialize",
+                    controller_started,
+                    error,
+                );
+            })?;
+            controller.set_diagnostic_log_sink(diagnostic_sink.clone());
+            log_startup_stage(
+                diagnostic_sink.as_ref(),
+                "controller_initialize",
+                "ok",
+                controller_started,
+                None,
+            );
             #[cfg(target_os = "macos")]
             {
                 controller.bind_followup_reselect_log(|sink| {
                     infrastructure::platform::macos::set_followup_reselect_log_sink(Some(sink));
                 });
             }
-            match infrastructure::persistence::FileDiagnosticLogSink::open_default() {
-                Ok(sink) => {
-                    eprintln!(
-                        "input-source diagnostics: writing {}",
-                        sink.path().display()
-                    );
-                    controller.set_diagnostic_log_sink(Some(Arc::new(sink)));
-                }
-                Err(error) => {
-                    eprintln!("input-source diagnostics: file log disabled ({error})");
-                }
-            }
-            controller.refresh_permission()?;
             let initial_state = controller.state()?;
+            let startup_controller = Arc::clone(&controller);
             app.manage(controller);
             app.manage(app_display_name_resolver);
 
@@ -306,11 +433,34 @@ pub fn run() {
                 });
             }
 
+            let tray_started = std::time::Instant::now();
+            log_startup_stage(
+                diagnostic_sink.as_ref(),
+                "tray_install",
+                "started",
+                tray_started,
+                None,
+            );
             infrastructure::desktop::tray::install(
                 app.handle(),
                 &initial_state,
                 &resolved_ui_locale,
-            )?;
+            )
+            .inspect_err(|error| {
+                log_startup_error(
+                    diagnostic_sink.as_ref(),
+                    "tray_install",
+                    tray_started,
+                    error,
+                );
+            })?;
+            log_startup_stage(
+                diagnostic_sink.as_ref(),
+                "tray_install",
+                "ok",
+                tray_started,
+                None,
+            );
             let _ = infrastructure::desktop::tray::set_icon_visible(
                 app.handle(),
                 infrastructure::desktop::tray::icon_visible_in_settings(app.handle()),
@@ -346,9 +496,120 @@ pub fn run() {
             // ACL / フロント準備前でも手動起動では窓を出す（visible:false のフォールバック）
             if !silent_login {
                 if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.show();
-                    let _ = window.set_focus();
+                    let show_started = std::time::Instant::now();
+                    log_startup_stage(
+                        diagnostic_sink.as_ref(),
+                        "main_window_show",
+                        "started",
+                        show_started,
+                        None,
+                    );
+                    match window.show() {
+                        Ok(()) => log_startup_stage(
+                            diagnostic_sink.as_ref(),
+                            "main_window_show",
+                            "ok",
+                            show_started,
+                            None,
+                        ),
+                        Err(error) => log_startup_stage(
+                            diagnostic_sink.as_ref(),
+                            "main_window_show",
+                            "error",
+                            show_started,
+                            Some(&error.to_string()),
+                        ),
+                    }
+                    let focus_started = std::time::Instant::now();
+                    log_startup_stage(
+                        diagnostic_sink.as_ref(),
+                        "main_window_focus",
+                        "started",
+                        focus_started,
+                        None,
+                    );
+                    match window.set_focus() {
+                        Ok(()) => log_startup_stage(
+                            diagnostic_sink.as_ref(),
+                            "main_window_focus",
+                            "ok",
+                            focus_started,
+                            None,
+                        ),
+                        Err(error) => log_startup_error(
+                            diagnostic_sink.as_ref(),
+                            "main_window_focus",
+                            focus_started,
+                            &error,
+                        ),
+                    }
+                } else {
+                    log_startup_stage(
+                        diagnostic_sink.as_ref(),
+                        "main_window_show",
+                        "error",
+                        std::time::Instant::now(),
+                        Some("main webview window was not found"),
+                    );
                 }
+            }
+
+            let (startup_done_sender, startup_done_receiver) = std::sync::mpsc::channel();
+            let watchdog_controller = Arc::clone(&startup_controller);
+            let startup_watchdog = std::thread::Builder::new()
+                .name("readytype-startup-watchdog".to_owned())
+                .spawn(move || {
+                    if matches!(
+                        startup_done_receiver.recv_timeout(std::time::Duration::from_secs(10)),
+                        Err(std::sync::mpsc::RecvTimeoutError::Timeout)
+                    ) {
+                        watchdog_controller.note_startup_stage(
+                            "focus_monitor_start",
+                            "slow",
+                            std::time::Duration::from_secs(10),
+                            None,
+                        );
+                    }
+                });
+            if let Err(error) = startup_watchdog {
+                eprintln!("startup: failed to spawn focus monitor watchdog: {error}");
+            }
+
+            let worker_controller = Arc::clone(&startup_controller);
+            let startup_worker = std::thread::Builder::new()
+                .name("readytype-startup-monitor".to_owned())
+                .spawn(move || {
+                    let started = std::time::Instant::now();
+                    worker_controller.note_startup_stage(
+                        "focus_monitor_start",
+                        "started",
+                        std::time::Duration::ZERO,
+                        None,
+                    );
+                    match worker_controller.refresh_permission() {
+                        Ok(_) => worker_controller.note_startup_stage(
+                            "focus_monitor_start",
+                            "ok",
+                            started.elapsed(),
+                            None,
+                        ),
+                        Err(error) => worker_controller.note_startup_stage(
+                            "focus_monitor_start",
+                            "error",
+                            started.elapsed(),
+                            Some(&error.to_string()),
+                        ),
+                    }
+                    let _ = startup_done_sender.send(());
+                });
+            if let Err(error) = startup_worker {
+                eprintln!("startup: failed to spawn focus monitor worker: {error}");
+                startup_controller.note_startup_stage(
+                    "focus_monitor_start",
+                    "error",
+                    std::time::Duration::ZERO,
+                    Some(&error.to_string()),
+                );
             }
 
             let _ = infrastructure::desktop::quick_set_window::ensure_window(app.handle());
@@ -360,14 +621,32 @@ pub fn run() {
                 eprintln!("quick-set shortcut: {error}");
             }
 
+            log_startup_stage(
+                diagnostic_sink.as_ref(),
+                "setup",
+                "ok",
+                setup_started,
+                None,
+            );
+
             Ok(())
         })
         .on_window_event(|window, event| match event {
             tauri::WindowEvent::Focused(true) => {
-                let controller =
-                    window.state::<Arc<application::switcher_controller::SwitcherController>>();
-                let _ = controller.inner().refresh_permission();
-                let _ = controller.inner().refresh_resolved_ui_locale();
+                let controller = Arc::clone(
+                    window
+                        .state::<Arc<application::switcher_controller::SwitcherController>>()
+                        .inner(),
+                );
+                std::mem::drop(tauri::async_runtime::spawn_blocking(move || {
+                    #[cfg(target_os = "macos")]
+                    if let Err(error) = controller.refresh_permission() {
+                        eprintln!("focus event: permission refresh failed: {error}");
+                    }
+                    if let Err(error) = controller.refresh_resolved_ui_locale() {
+                        eprintln!("focus event: locale refresh failed: {error}");
+                    }
+                }));
             }
             tauri::WindowEvent::CloseRequested { api, .. } => {
                 api.prevent_close();

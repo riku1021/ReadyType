@@ -13,8 +13,10 @@ use super::{
     current_source_cache::CurrentInputSourceCache,
     ports::{
         clock::Clock,
-        diagnostic_log::{QuickSetLogEntry, QuickSetStageLogEntry, SharedDiagnosticLogSink},
-        input_source::{GatewayError, InputSourceGateway},
+        diagnostic_log::{
+            QuickSetLogEntry, QuickSetStageLogEntry, SharedDiagnosticLogSink, StartupStageLogEntry,
+        },
+        input_source::{AvailableInputSource, GatewayError, InputSourceGateway},
         settings_repository::{SettingsError, SettingsRepository},
         switcher_events::SwitcherEventPublisher,
     },
@@ -92,6 +94,7 @@ pub struct InputSourceSwitcher<G, R, C, E> {
     suppress_tis_as_manual: bool,
     /// UI ログと並行してファイル等へ書く（未配線なら None）。
     diagnostic_log: Option<SharedDiagnosticLogSink>,
+    input_sources_initialized: bool,
     /// Shared with TIS notify / switch_input_source (PROTO_CURRENT_CACHE).
     current_cache: Arc<Mutex<CurrentInputSourceCache>>,
 }
@@ -193,46 +196,6 @@ where
         settings
             .validate()
             .map_err(|error| ApplicationError::InvalidSettings(error.to_string()))?;
-        let mut settings = settings;
-        let list_locale = SwitcherSettings::resolve_ui_locale(&settings.ui_locale);
-        if let Ok(mut guard) = gateway.lock() {
-            if let Ok(sources) = guard.list(false, &list_locale) {
-                let seeded_or_reconciled = if settings.language_preferences.is_empty() {
-                    let current = guard.current().ok();
-                    super::settings::seed_language_preferences_from_sources(
-                        &sources,
-                        current.as_ref(),
-                    )
-                } else {
-                    super::settings::reconcile_language_preferences(
-                        &settings.language_preferences,
-                        &sources,
-                    )
-                };
-                let next_preferences = super::settings::ensure_preferences_for_rule_languages(
-                    &seeded_or_reconciled,
-                    &sources,
-                    &settings.rules,
-                );
-                let preferences_changed = !next_preferences.is_empty()
-                    && next_preferences != settings.language_preferences;
-                if preferences_changed {
-                    settings.language_preferences = next_preferences;
-                }
-                let names_changed = super::settings::merge_input_source_display_names(
-                    &mut settings.input_source_display_names,
-                    &sources,
-                );
-                if preferences_changed || names_changed {
-                    match repository.save(&settings) {
-                        Ok(()) => {}
-                        // Corrupt recovery: keep in-memory seed, do not clobber quarantined data.
-                        Err(SettingsError::WritesSuspended) => {}
-                        Err(error) => return Err(ApplicationError::from(error)),
-                    }
-                }
-            }
-        }
         let rules = RuleSet::new(settings.rules.clone())
             .map_err(|error| ApplicationError::InvalidSettings(error.to_string()))?;
         let state = SwitcherState::new(settings.enabled, settings.snoozed_until_unix_ms);
@@ -254,8 +217,62 @@ where
             last_auto_target: None,
             suppress_tis_as_manual: false,
             diagnostic_log: None,
+            input_sources_initialized: false,
             current_cache: Arc::new(Mutex::new(CurrentInputSourceCache::new())),
         })
+    }
+
+    pub fn needs_current_input_source_for_initialization(&self) -> bool {
+        !self.input_sources_initialized && self.settings.language_preferences.is_empty()
+    }
+
+    pub fn initialize_input_sources(
+        &mut self,
+        sources: &[AvailableInputSource],
+        current: Option<&InputSourceId>,
+    ) -> Result<(), ApplicationError> {
+        if self.input_sources_initialized {
+            return Ok(());
+        }
+
+        let seeded_or_reconciled = if self.settings.language_preferences.is_empty() {
+            super::settings::seed_language_preferences_from_sources(sources, current)
+        } else {
+            super::settings::reconcile_language_preferences(
+                &self.settings.language_preferences,
+                sources,
+            )
+        };
+        let next_preferences = super::settings::ensure_preferences_for_rule_languages(
+            &seeded_or_reconciled,
+            sources,
+            &self.settings.rules,
+        );
+        let preferences_changed =
+            !next_preferences.is_empty() && next_preferences != self.settings.language_preferences;
+        if preferences_changed {
+            self.settings.language_preferences = next_preferences;
+        }
+        let names_changed = super::settings::merge_input_source_display_names(
+            &mut self.settings.input_source_display_names,
+            sources,
+        );
+        if preferences_changed || names_changed {
+            match self.repository.save(&self.settings) {
+                Ok(()) => {}
+                // Corrupt recovery: keep in-memory seed, do not clobber quarantined data.
+                Err(SettingsError::WritesSuspended) => {}
+                Err(error) => return Err(ApplicationError::from(error)),
+            }
+        }
+        self.input_sources_initialized = true;
+        Ok(())
+    }
+
+    pub fn note_startup_stage(&self, entry: &StartupStageLogEntry) {
+        if let Some(sink) = &self.diagnostic_log {
+            sink.append_startup_stage(entry);
+        }
     }
 
     pub fn set_diagnostic_log_sink(&mut self, sink: Option<SharedDiagnosticLogSink>) {

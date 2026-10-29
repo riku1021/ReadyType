@@ -1,4 +1,8 @@
-use std::sync::Arc;
+use std::{
+    sync::{mpsc, Arc},
+    thread,
+    time::{Duration, Instant},
+};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, State};
@@ -144,14 +148,60 @@ pub fn resume_input_source_switcher(
 }
 
 #[tauri::command]
-pub fn list_input_sources(
+pub async fn list_input_sources(
     refresh: Option<bool>,
     controller: State<'_, Arc<SwitcherController>>,
 ) -> Result<Vec<InputSourceDto>, IpcError> {
-    controller
-        .list_input_sources(refresh.unwrap_or(false))
-        .map(|sources| sources.into_iter().map(InputSourceDto::from).collect())
-        .map_err(IpcError::from)
+    let controller = Arc::clone(controller.inner());
+    let refresh = refresh.unwrap_or(false);
+    let started = Instant::now();
+    controller.note_startup_stage("input_source_list", "started", Duration::ZERO, None);
+
+    let watchdog_controller = Arc::clone(&controller);
+    let (completed_sender, completed_receiver) = mpsc::channel();
+    let _watchdog = thread::Builder::new()
+        .name("readytype-input-source-list-watchdog".to_owned())
+        .spawn(move || {
+            if completed_receiver
+                .recv_timeout(Duration::from_secs(10))
+                .is_err()
+            {
+                watchdog_controller.note_startup_stage(
+                    "input_source_list",
+                    "slow",
+                    Duration::from_secs(10),
+                    None,
+                );
+            }
+        });
+
+    let task_controller = Arc::clone(&controller);
+    let result =
+        tauri::async_runtime::spawn_blocking(move || task_controller.list_input_sources(refresh))
+            .await;
+    let _ = completed_sender.send(());
+    let elapsed = started.elapsed();
+
+    match result {
+        Ok(Ok(sources)) => {
+            controller.note_startup_stage("input_source_list", "ok", elapsed, None);
+            Ok(sources.into_iter().map(InputSourceDto::from).collect())
+        }
+        Ok(Err(error)) => {
+            controller.note_startup_stage(
+                "input_source_list",
+                "error",
+                elapsed,
+                Some(&error.to_string()),
+            );
+            Err(IpcError::from(error))
+        }
+        Err(error) => {
+            let message = format!("input source worker failed: {error}");
+            controller.note_startup_stage("input_source_list", "error", elapsed, Some(&message));
+            Err(IpcError { message })
+        }
+    }
 }
 
 #[tauri::command]
@@ -262,16 +312,23 @@ pub fn open_accessibility_settings(
 }
 
 #[tauri::command]
-pub fn set_ui_locale(
+pub async fn set_ui_locale(
     locale: String,
     app: AppHandle,
     controller: State<'_, Arc<SwitcherController>>,
 ) -> Result<SettingsDto, IpcError> {
-    controller.set_ui_locale(&locale).map_err(IpcError::from)?;
-    controller
-        .settings()
-        .map(|settings| settings_dto_with_registration(&app, &settings))
-        .map_err(IpcError::from)
+    let controller = Arc::clone(controller.inner());
+    tauri::async_runtime::spawn_blocking(move || {
+        controller.set_ui_locale(&locale).map_err(IpcError::from)?;
+        controller
+            .settings()
+            .map(|settings| settings_dto_with_registration(&app, &settings))
+            .map_err(IpcError::from)
+    })
+    .await
+    .map_err(|error| IpcError {
+        message: format!("UI locale worker failed: {error}"),
+    })?
 }
 
 #[tauri::command]

@@ -24,7 +24,7 @@ use super::{
         app_display_name::AppDisplayNameResolver,
         clock::Clock,
         current_input_source_change::CurrentInputSourceChangeMonitor,
-        diagnostic_log::SharedDiagnosticLogSink,
+        diagnostic_log::{SharedDiagnosticLogSink, StartupStageLogEntry},
         focus_monitor::{AccessibilityPermission, FocusMonitor, FocusMonitorError},
         input_source::{AvailableInputSource, InputSourceGateway},
         settings_repository::SettingsRepository,
@@ -197,6 +197,30 @@ impl SwitcherController {
     pub fn set_diagnostic_log_sink(&self, sink: Option<SharedDiagnosticLogSink>) {
         if let Ok(mut switcher) = self.switcher.lock() {
             switcher.set_diagnostic_log_sink(sink);
+        }
+    }
+
+    pub fn note_startup_stage(
+        &self,
+        stage: &str,
+        outcome: &str,
+        elapsed: Duration,
+        error: Option<&str>,
+    ) {
+        let elapsed_micros = u64::try_from(elapsed.as_micros()).unwrap_or(u64::MAX);
+        let entry = StartupStageLogEntry::new(stage, outcome, elapsed_micros, error);
+        if let Ok(switcher) = self.switcher.lock() {
+            switcher.note_startup_stage(&entry);
+        }
+        match error {
+            Some(error) => eprintln!(
+                "startup: stage={stage} outcome={outcome} elapsed_ms={} error={error}",
+                elapsed.as_millis()
+            ),
+            None => eprintln!(
+                "startup: stage={stage} outcome={outcome} elapsed_ms={}",
+                elapsed.as_millis()
+            ),
         }
     }
 
@@ -379,20 +403,43 @@ impl SwitcherController {
         refresh: bool,
     ) -> Result<Vec<AvailableInputSource>, ControllerError> {
         let locale = self.ui_locale.load();
-        let gateway = self.lock_switcher()?.gateway_handle();
-        let sources = {
+        let (gateway, needs_current) = {
+            let switcher = self.lock_switcher()?;
+            (
+                switcher.gateway_handle(),
+                switcher.needs_current_input_source_for_initialization(),
+            )
+        };
+        let (sources, current, current_error) = {
             let mut gateway = gateway
                 .lock()
                 .map_err(|_| ControllerError::InvalidRequest("gateway lock poisoned".to_owned()))?;
-            gateway
+            let sources = gateway
                 .list(refresh, &locale)
-                .map_err(ApplicationError::from)?
+                .map_err(ApplicationError::from)?;
+            let (current, current_error) = if needs_current {
+                match gateway.current() {
+                    Ok(current) => (Some(current), None),
+                    Err(error) => (None, Some(error.to_string())),
+                }
+            } else {
+                (None, None)
+            };
+            (sources, current, current_error)
         };
         // gateway ロックを解放してから switcher を取る（他経路は switcher → gateway の順）。
         // 表示名の保存失敗で一覧取得を失敗させない。
-        let _ = self
-            .lock_switcher()?
-            .record_input_source_display_names(&sources);
+        if let Some(error) = current_error {
+            self.note_startup_stage(
+                "current_input_source_initialization",
+                "error",
+                Duration::ZERO,
+                Some(&error),
+            );
+        }
+        let mut switcher = self.lock_switcher()?;
+        switcher.initialize_input_sources(&sources, current.as_ref())?;
+        let _ = switcher.record_input_source_display_names(&sources);
         Ok(sources)
     }
 

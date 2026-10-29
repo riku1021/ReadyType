@@ -10,12 +10,41 @@ use crate::{
 pub trait DiagnosticLogSink: Send + Sync {
     fn append_switch_log(&self, entry: &SwitchLogEntry);
 
+    /// Startup stages and blocking platform calls.
+    fn append_startup_stage(&self, _entry: &StartupStageLogEntry) {}
+
     /// Quick Set ショートカット起動と、そのとき使った AX ツリー。
     /// 既定は何もしない（切替ログだけ実装したテストダブル向け）。
     fn append_quick_set(&self, _entry: &QuickSetLogEntry) {}
 
     /// Quick Set 起動処理の段階ログ。実装しない sink では何もしない。
     fn append_quick_set_stage(&self, _entry: &QuickSetStageLogEntry) {}
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StartupStageLogEntry {
+    pub timestamp_unix_ms: u64,
+    pub stage: String,
+    pub outcome: String,
+    pub elapsed_micros: u64,
+    pub error: Option<String>,
+}
+
+impl StartupStageLogEntry {
+    pub fn new(stage: &str, outcome: &str, elapsed_micros: u64, error: Option<&str>) -> Self {
+        let timestamp_unix_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |duration| {
+                duration.as_millis().try_into().unwrap_or(u64::MAX)
+            });
+        Self {
+            timestamp_unix_ms,
+            stage: stage.to_owned(),
+            outcome: outcome.to_owned(),
+            elapsed_micros,
+            error: error.map(str::to_owned),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

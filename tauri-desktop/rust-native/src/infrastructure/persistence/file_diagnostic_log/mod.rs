@@ -28,6 +28,7 @@ use crate::application::{
     input_source_switcher::SwitchDecision,
     ports::diagnostic_log::{
         DiagnosticLogSink, QuickSetElementLog, QuickSetLogEntry, QuickSetStageLogEntry,
+        StartupStageLogEntry,
     },
     switch_ablation, switch_proto,
     switcher_state::SwitchLogEntry,
@@ -98,6 +99,17 @@ impl FileDiagnosticLogSink {
 impl DiagnosticLogSink for FileDiagnosticLogSink {
     fn append_switch_log(&self, entry: &SwitchLogEntry) {
         let record = SwitchLogFileRecord::from_entry(entry);
+        let Ok(line) = serde_json::to_string(&record) else {
+            return;
+        };
+        let Ok(mut state) = self.state.lock() else {
+            return;
+        };
+        let _ = state.append_line(&line);
+    }
+
+    fn append_startup_stage(&self, entry: &StartupStageLogEntry) {
+        let record = StartupStageFileRecord::from_entry(entry);
         let Ok(line) = serde_json::to_string(&record) else {
             return;
         };
@@ -211,6 +223,32 @@ struct SessionMetaRecord {
     path: String,
     note: &'static str,
     flags: FlagSnapshot,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct StartupStageFileRecord<'a> {
+    v: u32,
+    kind: &'static str,
+    timestamp_unix_ms: u64,
+    stage: &'a str,
+    outcome: &'a str,
+    elapsed_micros: u64,
+    error: Option<&'a str>,
+}
+
+impl<'a> StartupStageFileRecord<'a> {
+    fn from_entry(entry: &'a StartupStageLogEntry) -> Self {
+        Self {
+            v: SCHEMA_VERSION,
+            kind: "startup_stage",
+            timestamp_unix_ms: entry.timestamp_unix_ms,
+            stage: &entry.stage,
+            outcome: &entry.outcome,
+            elapsed_micros: entry.elapsed_micros,
+            error: entry.error.as_deref(),
+        }
+    }
 }
 
 #[derive(Serialize)]
