@@ -317,8 +317,10 @@ fn focused_snapshot(
     attributes: &[AxAttribute],
     debug_capture: bool,
 ) -> Option<(PlatformAppId, Vec<AxElementSnapshot>)> {
-    // SAFETY: UI Automation returns the focused element and cached ancestor properties.
+    // SAFETY: UI Automation returns the focused element with the requested cache.
     let focused = unsafe { automation.GetFocusedElementBuildCache(cache_request) }.ok()?;
+    // SAFETY: the raw view walker traverses the same tree used by the cache request.
+    let raw_view_walker = unsafe { automation.RawViewWalker() }.ok()?;
     // SAFETY: ProcessId was included in the cache request.
     let process_id = unsafe { focused.CachedProcessId() }.ok()?;
     let app_id = process_image_name(process_id as u32)?;
@@ -357,8 +359,9 @@ fn focused_snapshot(
             }
         }
         elements.push(snapshot);
-        // SAFETY: the cache request included all ancestors in the raw view.
-        element = unsafe { current.GetCachedParent() }.ok();
+        // SAFETY: each parent is retrieved in the raw view and cached with the same request.
+        element =
+            unsafe { raw_view_walker.GetParentElementBuildCache(&current, cache_request) }.ok();
     }
     Some((app, elements))
 }
@@ -411,14 +414,12 @@ fn focus_cache_request(
         // SAFETY: these are standard UIA property identifiers supported by cache requests.
         unsafe { cache_request.AddProperty(property)? };
     }
-    // SAFETY: use the same raw tree as the existing parent traversal.
+    // SAFETY: use the same raw tree as the parent traversal.
     let raw_view = unsafe { automation.RawViewCondition()? };
     unsafe {
         cache_request.SetTreeFilter(&raw_view)?;
-        cache_request.SetTreeScope(windows::Win32::UI::Accessibility::TreeScope(
-            windows::Win32::UI::Accessibility::TreeScope_Element.0
-                | windows::Win32::UI::Accessibility::TreeScope_Ancestors.0,
-        ))?;
+        // UI Automation cache requests do not support TreeScope_Ancestors.
+        cache_request.SetTreeScope(windows::Win32::UI::Accessibility::TreeScope_Element)?;
     }
     Ok(cache_request)
 }

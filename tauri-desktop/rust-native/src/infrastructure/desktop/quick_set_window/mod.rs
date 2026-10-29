@@ -261,22 +261,17 @@ pub fn open(app: &AppHandle) -> Result<(), String> {
 
     let stage_started = Instant::now();
     record_stage(&controller, "showWindow", "started", stage_started, None);
-    let mut show_error: Option<String> = None;
     #[cfg(target_os = "macos")]
-    {
-        if let Err(error) = panel_macos::show(app) {
-            show_error = Some(error);
-        }
-    }
+    let show_error = panel_macos::show(app).err();
     #[cfg(not(target_os = "macos"))]
-    {
+    let show_error = {
         let show_result = window.show();
         let focus_result = window.set_focus();
-        show_error = show_result
+        show_result
             .err()
             .or_else(|| focus_result.err())
-            .map(|error| error.to_string());
-    }
+            .map(|error| error.to_string())
+    };
     record_stage(
         &controller,
         "showWindow",
