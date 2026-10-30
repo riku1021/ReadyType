@@ -22,6 +22,9 @@ pub fn run_lab_switch_smoke() -> Result<(), String> {
 
 use std::sync::Arc;
 
+const STARTUP_STAGE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
+const STARTUP_TIMEOUT_EXIT_CODE: i32 = 70;
+
 use application::ports::{
     diagnostic_log::{SharedDiagnosticLogSink, StartupStageLogEntry},
     input_source::InputSourceGateway,
@@ -29,6 +32,7 @@ use application::ports::{
     settings_repository::SettingsRepository,
     switcher_events::SwitcherEventPublisher,
 };
+use tauri::webview::PageLoadEvent;
 use tauri::Manager;
 
 #[cfg(target_os = "macos")]
@@ -38,6 +42,77 @@ use tauri::Emitter;
 #[allow(dead_code)]
 fn current_platform_name() -> &'static str {
     infrastructure::platform::CurrentPlatform.display_name()
+}
+
+#[derive(Clone)]
+struct StartupWatchdog {
+    state: Arc<std::sync::Mutex<StartupWatchdogState>>,
+}
+
+struct StartupWatchdogState {
+    stage: String,
+    stage_started: std::time::Instant,
+    completed: bool,
+}
+
+impl StartupWatchdog {
+    fn start() -> Self {
+        let state = Arc::new(std::sync::Mutex::new(StartupWatchdogState {
+            stage: "native_entrypoint".to_owned(),
+            stage_started: std::time::Instant::now(),
+            completed: false,
+        }));
+        let watchdog_state = Arc::clone(&state);
+
+        if let Err(error) = std::thread::Builder::new()
+            .name("readytype-startup-timeout-watchdog".to_owned())
+            .spawn(move || loop {
+                std::thread::sleep(std::time::Duration::from_secs(1));
+
+                let timed_out = match watchdog_state.lock() {
+                    Ok(state) if state.completed => return,
+                    Ok(state) => {
+                        let elapsed = state.stage_started.elapsed();
+                        (elapsed >= STARTUP_STAGE_TIMEOUT)
+                            .then(|| (state.stage.clone(), elapsed))
+                    }
+                    Err(poisoned) => {
+                        let state = poisoned.into_inner();
+                        let elapsed = state.stage_started.elapsed();
+                        (elapsed >= STARTUP_STAGE_TIMEOUT)
+                            .then(|| (state.stage.clone(), elapsed))
+                    }
+                };
+
+                if let Some((stage, elapsed)) = timed_out {
+                    eprintln!(
+                        "startup watchdog: stage={stage} timed out after {}s; exiting with code {STARTUP_TIMEOUT_EXIT_CODE}",
+                        elapsed.as_secs()
+                    );
+                    std::process::exit(STARTUP_TIMEOUT_EXIT_CODE);
+                }
+            })
+        {
+            eprintln!("startup watchdog: failed to start ({error})");
+        }
+
+        Self { state }
+    }
+
+    fn enter_stage(&self, stage: &str) {
+        let Ok(mut state) = self.state.lock() else {
+            eprintln!("startup watchdog: state lock poisoned at stage={stage}");
+            return;
+        };
+        state.stage = stage.to_owned();
+        state.stage_started = std::time::Instant::now();
+    }
+
+    fn complete(&self) {
+        if let Ok(mut state) = self.state.lock() {
+            state.completed = true;
+        }
+    }
 }
 
 fn log_startup_stage(
@@ -82,8 +157,10 @@ fn log_startup_error<E: std::fmt::Display>(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     eprintln!("startup: native_entrypoint entered");
+    let startup_watchdog = StartupWatchdog::start();
     let _ = current_platform_name();
 
+    startup_watchdog.enter_stage("tauri_builder");
     let mut builder = tauri::Builder::default();
 
     #[cfg(target_os = "macos")]
@@ -101,13 +178,33 @@ pub fn run() {
         );
     }
 
+    startup_watchdog.enter_stage("tauri_run");
+    let setup_watchdog = startup_watchdog.clone();
+    let page_load_watchdog = startup_watchdog.clone();
     builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .setup(|app| {
+        .on_page_load(move |webview, payload| {
+            if webview.label() != "main" {
+                return;
+            }
+            match payload.event() {
+                PageLoadEvent::Started => {
+                    page_load_watchdog.enter_stage("main_webview_load");
+                    eprintln!("startup: main_webview_load started");
+                }
+                PageLoadEvent::Finished => {
+                    eprintln!("startup: main_webview_load finished");
+                    page_load_watchdog.complete();
+                }
+            }
+        })
+        .setup(move |app| {
+            setup_watchdog.enter_stage("setup");
             eprintln!("startup: tauri_setup entered");
+            setup_watchdog.enter_stage("diagnostic_log_open");
             eprintln!("startup: diagnostic_log_open started");
             let diagnostic_sink = match infrastructure::persistence::FileDiagnosticLogSink::open_default() {
                 Ok(sink) => {
@@ -136,6 +233,7 @@ pub fn run() {
             infrastructure::desktop::autostart::capture_login_launch_apple_event();
 
             let settings_started = std::time::Instant::now();
+            setup_watchdog.enter_stage("settings_load");
             log_startup_stage(
                 diagnostic_sink.as_ref(),
                 "settings_load",
@@ -194,6 +292,7 @@ pub fn run() {
             let ui_locale_preference = settings.ui_locale.clone();
             let resolved_ui_locale =
                 application::settings::SwitcherSettings::resolve_ui_locale(&ui_locale_preference);
+            setup_watchdog.enter_stage("platform_adapters");
             let adapters_started = std::time::Instant::now();
             log_startup_stage(
                 diagnostic_sink.as_ref(),
@@ -296,6 +395,7 @@ pub fn run() {
                 None,
             );
             let controller_started = std::time::Instant::now();
+            setup_watchdog.enter_stage("controller_initialize");
             log_startup_stage(
                 diagnostic_sink.as_ref(),
                 "controller_initialize",
@@ -437,6 +537,7 @@ pub fn run() {
             }
 
             let tray_started = std::time::Instant::now();
+            setup_watchdog.enter_stage("tray_install");
             log_startup_stage(
                 diagnostic_sink.as_ref(),
                 "tray_install",
@@ -500,6 +601,7 @@ pub fn run() {
             if !silent_login {
                 if let Some(window) = app.get_webview_window("main") {
                     let show_started = std::time::Instant::now();
+                    setup_watchdog.enter_stage("main_window_show");
                     log_startup_stage(
                         diagnostic_sink.as_ref(),
                         "main_window_show",
@@ -615,6 +717,7 @@ pub fn run() {
                 );
             }
 
+            setup_watchdog.enter_stage("finish_setup");
             let _ = infrastructure::desktop::quick_set_window::ensure_window(app.handle());
 
             if let Err(error) = infrastructure::desktop::quick_set_shortcut::register(
@@ -631,6 +734,8 @@ pub fn run() {
                 setup_started,
                 None,
             );
+            setup_watchdog.enter_stage("setup_complete");
+            setup_watchdog.enter_stage("await_main_webview_load");
 
             Ok(())
         })
